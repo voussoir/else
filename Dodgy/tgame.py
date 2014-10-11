@@ -216,6 +216,7 @@ class tgame:
 			self.entlist = []
 			self.stepstaken = 0
 			self.collections = 0
+			self.bombs = 0
 			self.isdeath = False
 			spawncandy()
 			self.datalabel.configure(fg='Black')
