@@ -35,7 +35,7 @@ class tgame:
 		self.poslabel = Label(self.labelframe, text=str(self.xpos) + " " + str(self.ypos), font=('Consolas', 10), bg="#ccc")
 		self.poslabel.grid(row=0, column=3)
 
-		self.helplabel = Label(tkvar, text="<WASD>=Movement <J>=Bomb <R>=Restart", font=('Consolas', 8))
+		self.helplabel = Label(tkvar, text="Press H for help ->", font=('Consolas', 8))
 		self.helplabel.grid(row=2, column=0, columnspan=100)
 
 		tkvar.bind('w', lambda data=self.data: mfresh(ymove=-1))
@@ -50,6 +50,7 @@ class tgame:
 		tkvar.bind('j', lambda data=self.data: spawnbomb())
 		tkvar.bind('z', lambda data=self.data: spawnbomb())
 		tkvar.bind('r', lambda data=self.data: restart())
+		tkvar.bind('h', lambda data=self.data: helpreel())
 		tkvar.bind('<Control-w>', quit)
 		self.candylist = []
 		self.enemylist = []
@@ -63,6 +64,15 @@ class tgame:
 		self.enemyspawnmindist = 6
 		self.isdeath = False
 		self.bombcost = 4
+		self.helplabelindex = -1
+		self.helplabeltexts = [
+		"<WASD>=Movement <J>=Bomb <R>=Restart ->", 
+		"<UDLR>=Movement <Z>=Bomb <R>=Restart ->",
+		"<LMB>=Movement <RMB>=Bomb <MMB>=Restart ->",
+		"Avoid the Exclamators '" + enemy.symbol + "' ->",
+		"Collect candy '" + candy.symbol + "' to earn bombs '" + bomb.symbol + "' ->",
+		"Drop bombs to snare Exclamators ->",
+		"Enjoy •"]
 
 
 		def mfresh(xmove=0, ymove=0):
@@ -151,6 +161,33 @@ class tgame:
 				self.bomblabel.configure(text=str(self.bombs) + " bombs")
 				self.poslabel.configure(text=str(self.xpos) + " " + str(self.ypos))
 
+
+		def translatemouse(event):
+			event.x -= 6
+			event.y -= 14
+			#485
+
+			event.x /= 8
+			event.y /= 12
+			#print(event.x, event.y)
+			xdif = event.x - self.xpos
+			ydif = event.y - self.ypos
+			if abs(xdif) >= abs(ydif):
+				xdif /= abs(xdif)
+				xdif = int(xdif)
+				mfresh(xmove= xdif)
+			else:
+				ydif /= abs(ydif)
+				ydif = int(ydif)
+				mfresh(ymove= ydif)
+		tkvar.bind('<Button-1>', translatemouse)
+
+		def helpreel():
+			self.helplabelindex += 1
+			if self.helplabelindex > (len(self.helplabeltexts) - 1):
+				self.helplabelindex = 0
+			self.helplabel.configure(text=self.helplabeltexts[self.helplabelindex])
+
 		def spawnbomb():
 			goodtogo = True
 			for bombs in self.bomblist:
@@ -163,6 +200,8 @@ class tgame:
 					self.bomblist.append(newbomb)
 					self.entlist.append(newbomb)
 					mfresh()
+		tkvar.bind('<Button-2>', lambda data=self.data: restart())
+		tkvar.bind('<Button-3>', lambda data=self.data: spawnbomb())
 
 		def spawncandy():
 			newx = random.randint(1, arenasize-2)
@@ -238,19 +277,21 @@ class tgame:
 		tkvar.mainloop()
 
 class candy:
+	symbol = "@"
 	def __init__(self, x, y):
 		self.x = x
 		self.y = y
-		self.symbol = "@"
+		self.symbol = candy.symbol
 
 class enemy:
+	symbol = "!"
 	def __init__(self, x, y, anger):
+		self.symbol = enemy.symbol
 		self.x = x
 		self.y = y
 		self.anger = anger
 		self.movementx = 0
 		self.movementy = 0
-		self.symbol = "!"
 
 	def approach(self, targx, targy):
 		hasmoved = False
@@ -276,10 +317,11 @@ class enemy:
 			self.y += self.movementy
 
 class bomb:
+	symbol = "X"
 	def __init__(self, x, y):
 		self.x = x
 		self.y = y
-		self.symbol = "X"
+		self.symbol = bomb.symbol
 
 
 t = tgame()
