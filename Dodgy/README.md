@@ -7,7 +7,9 @@ Get chased by exclamators. Collect candies to get bombs. Blow up exclamators. Re
 
 ![Screenshot](/../master/.GitImages/Dodgy01.png?raw=true)
 
-Ideas:
+
+
+Ideas for later:
 
 Smokescreen pickup: Exclamators cannot detect player. Will wander randomly for 5-10 steps
 
