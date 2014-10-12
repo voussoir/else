@@ -15,8 +15,6 @@ Smokescreen pickup: Exclamators cannot detect player. Will wander randomly for 5
 
 Gold candy: Special candy which gives quadruple points. Is invisible, flashes every 5 steps, relocates if not found fast enough
 
-Decoy: Create a phantom player which will move opposite of the player's controls. Exclamators will follow it instead of the player. Fades after 10 steps
-
 Hats.
 
 Enemies spawn in larger numbers as the game goes on
