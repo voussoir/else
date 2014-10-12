@@ -5,8 +5,8 @@ import random
 class tgame:
 	def __init__(self):
 		tkvar = Tk()
-		tkvar.wm_title("Dodger")
-		tkvar.iconbitmap('H.ico')
+		tkvar.wm_title("Dodgy")
+		tkvar.iconbitmap('Excl.ico')
 
 		arenasize = 40
 		self.xpos = int((arenasize-1)/2)
@@ -69,8 +69,12 @@ class tgame:
 		"<WASD>=Movement <J>=Bomb <R>=Restart ->", 
 		"<UDLR>=Movement <Z>=Bomb <R>=Restart ->",
 		"<LMB>=Movement <RMB>=Bomb <MMB>=Restart ->",
-		"Avoid the Exclamators '" + enemy.symbol + "' ->",
-		"Collect candy '" + candy.symbol + "' to earn bombs '" + bomb.symbol + "' ->",
+		self.symbols['char'] + " = You ->",
+		enemy.symbol + " = Exclamator ->",
+		candy.symbol + " = Candy ->",
+		bomb.symbol + " = Bomb ->",
+		"Avoid the Exclamators ->",
+		"Collect candy to earn bombs ->",
 		"Drop bombs to snare Exclamators ->",
 		"Enjoy •"]
 
