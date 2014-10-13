@@ -17,8 +17,6 @@ Gold candy: Special candy which gives quadruple points. Is invisible, flashes ev
 
 Hats.
 
-Enemies spawn in larger numbers as the game goes on
-
 Enemies move faster as the game goes on
 
 Randomzied walls in the middle of the arena
@@ -26,8 +24,6 @@ Randomzied walls in the middle of the arena
 Arena walls may be boobytrapped. Running alongside a wall may result in death/stun to disincentivize this tactic
 
 Save game scores in db
-
-Exclamators should not be able to fall into the same tile
 
 Hats.
 

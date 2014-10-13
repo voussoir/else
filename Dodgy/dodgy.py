@@ -32,8 +32,11 @@ class tgame:
 		self.bomblabel = Label(self.labelframe, text='0', font=('Consolas', 10))
 		self.bomblabel.grid(row=0, column=2)
 
-		self.poslabel = Label(self.labelframe, text=str(self.xpos) + " " + str(self.ypos), font=('Consolas', 10), bg="#ccc")
-		self.poslabel.grid(row=0, column=3)
+		self.phantlabel = Label(self.labelframe, text='0',font=('Consolas', 10),  bg="#ccc")
+		self.phantlabel.grid(row=0, column=3)
+
+		self.poslabel = Label(self.labelframe, text=str(self.xpos) + " " + str(self.ypos), font=('Consolas', 10))
+		self.poslabel.grid(row=0, column=4)
 
 		self.helplabel = Label(tkvar, text="Press H for help ->", font=('Consolas', 8))
 		self.helplabel.grid(row=2, column=0, columnspan=100)
@@ -50,6 +53,7 @@ class tgame:
 		tkvar.bind('j', lambda data=self.data: spawnbomb())
 		tkvar.bind('z', lambda data=self.data: spawnbomb())
 		tkvar.bind('k', lambda data=self.data: spawnphantom())
+		tkvar.bind('x', lambda data=self.data: spawnphantom())
 		tkvar.bind('r', lambda data=self.data: restart())
 		tkvar.bind('h', lambda data=self.data: helpreel())
 		tkvar.bind('<Control-w>', quit)
@@ -65,6 +69,7 @@ class tgame:
 
 		self.enemyspawnrate = 50
 		self.enemyspawnmindist = 6
+		self.enemydocollide = False
 		self.candyspawnrate = 4
 
 		self.isdeath = False
@@ -73,9 +78,9 @@ class tgame:
 		self.helplabelindex = -1
 
 		self.helplabeltexts = [
-		"<WASD>=Movement <J>=Bomb <R>=Restart ->", 
-		"<UDLR>=Movement <Z>=Bomb <R>=Restart ->",
-		"<LMB>=Movement <RMB>=Bomb <MMB>=Restart ->",
+		"<WASD>=Movement <J>=Bomb <K>=Phantom <R>=Restart ->", 
+		"<UDLR>=Movement <Z>=Bomb <X>=Phantom <R>=Restart ->",
+		"<LMB>=Movement <RMB>=Bomb <MMB>=Phantom/Restart ->",
 		self.symbols['char'] + " = You ->",
 		enemy.symbol + " = Exclamator ->",
 		candy.symbol + " = Candy ->",
@@ -83,6 +88,9 @@ class tgame:
 		"Avoid the Exclamators ->",
 		"Collect candy to earn bombs ->",
 		"Drop bombs to snare Exclamators ->",
+		"Deploy phantoms to distract Exclamators ->",
+		"Deploying phantom will consume all candy ->",
+		"More candy consumed = longer phantom lifespan ->",
 		"Enjoy •"]
 
 
@@ -137,7 +145,7 @@ class tgame:
 					for candies in self.candylist:
 						if candies.y == ycoord:
 							if candies.x == self.xpos and candies.y == self.ypos:
-								print('Collection')
+								#print('Collection')
 								collect(1)
 								self.candylist.remove(candies)
 								self.entlist.remove(candies)
@@ -162,6 +170,8 @@ class tgame:
 						spawncandy()
 					if self.stepstaken % self.enemyspawnrate == 0:
 						spawnenemy()
+						for x in range(self.stepstaken // 200):
+							spawnenemy()
 
 					for en in self.enemylist:
 						oldx = en.x
@@ -171,12 +181,13 @@ class tgame:
 						else:
 							ph = self.phantomlist[0]
 							en.approach(ph.x, ph.y)
-						for otheren in self.enemylist:
-							if en != otheren:
-								if en.x == otheren.x and en.y == otheren.y:
-									#print('Enemy collision at', en.x, en.y)
-									en.x = oldx
-									en.y = oldy
+						if self.enemydocollide:
+							for otheren in self.enemylist:
+								if en != otheren:
+									if en.x == otheren.x and en.y == otheren.y:
+										print('[ ' + enemy.symbol +  ' ] Enemy collision at', en.x, en.y)
+										en.x = oldx
+										en.y = oldy
 						#print(dist(en.x, en.y, self.xpos, self.ypos))
 						if en.x < 1:
 							en.x = 1
@@ -204,9 +215,13 @@ class tgame:
 				self.collectlabel.configure(text=str(self.collections) + " candy")
 				self.bomblabel.configure(text=str(self.bombs) + " bombs")
 				self.poslabel.configure(text=str(self.xpos) + " " + str(self.ypos))
+				if self.collections >= self.phantomcost:
+					self.phantlabel.configure(text='1 phantom')
+				else:
+					self.phantlabel.configure(text='0 phantom')
 
 
-		def translatemouse(event):
+		def translatemouse(event, middlemouse=False):
 			event.x -= 9
 			event.y -= 9
 			#485
@@ -225,8 +240,14 @@ class tgame:
 					ydif /= abs(ydif)
 					ydif = int(ydif)
 					mfresh(ymove= ydif)
+
+		def middlemouse():
+			if self.isdeath:
+				restart()
+			else:
+				spawnphantom()
 		tkvar.bind('<Button-1>', translatemouse)
-		tkvar.bind('<Button-2>', lambda data=self.data: restart())
+		tkvar.bind('<Button-2>', lambda data=self.data: middlemouse())
 		tkvar.bind('<Button-3>', lambda data=self.data: spawnbomb())
 
 		def helpreel():
@@ -265,6 +286,7 @@ class tgame:
 				life = 10
 				self.collections = 0
 				life += round(self.collections / 3)
+				print('[ ' + self.symbols['char'] + ' ] New phantom with ' + str(life) + ' life')
 				newphantom = phantom(self.xpos, self.ypos, life)
 				self.phantomlist.append(newphantom)
 				self.entlist.append(newphantom)
@@ -281,7 +303,7 @@ class tgame:
 					if candies.x == newx and candies.y == newy:
 						goodtogo = False
 			if goodtogo:
-				print('New candy at', newx, newy)
+				print('[ ' + candy.symbol + ' ] New candy at', newx, newy)
 				newcan = candy(newx, newy)
 				self.candylist.append(newcan)
 				self.entlist.append(newcan)
@@ -307,13 +329,14 @@ class tgame:
 					if ens.x == newx and ens.y == newy:
 						goodtogo = False
 			if goodtogo:
-				print('New enemy at', newx, newy)
+				print('[ ' + enemy.symbol +  ' ] New enemy at', newx, newy)
 				newen = enemy(newx, newy, 1)
 				self.enemylist.append(newen)
 				self.entlist.append(newen)
 				mfresh()
 
 		def restart():
+			print('Resetting game.')
 			self.xpos = int((arenasize-1)/2)
 			self.ypos = int((arenasize-1)/2)
 			while self.entlist != []:
