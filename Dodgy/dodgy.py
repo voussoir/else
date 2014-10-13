@@ -74,7 +74,7 @@ class tgame:
 
 		self.isdeath = False
 		self.bombcost = 4
-		self.phantomcost = 10
+		self.phantomcost = 100
 		self.helplabelindex = -1
 
 		self.helplabeltexts = [
@@ -283,7 +283,7 @@ class tgame:
 				goodtogo = False
 
 			if goodtogo:
-				life = 10
+				life = 15
 				self.collections = 0
 				life += round(self.collections / 3)
 				print('[ ' + self.symbols['char'] + ' ] New phantom with ' + str(life) + ' life')

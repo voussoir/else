@@ -7,6 +7,8 @@ Get chased by exclamators. Collect candies to get bombs. Blow up exclamators. Re
 
 ![Screenshot](/../master/.GitImages/Dodgy01.png?raw=true)
 
+![Screenshot](/../master/.GitImages/Dodgy02.png?raw=true)
+
 
 
 Ideas for later:
