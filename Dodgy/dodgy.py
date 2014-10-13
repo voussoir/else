@@ -207,8 +207,8 @@ class tgame:
 
 
 		def translatemouse(event):
-			event.x -= 6
-			event.y -= 14
+			event.x -= 9
+			event.y -= 9
 			#485
 
 			event.x /= 8
@@ -216,14 +216,15 @@ class tgame:
 			#print(event.x, event.y)
 			xdif = event.x - self.xpos
 			ydif = event.y - self.ypos
-			if abs(xdif) >= abs(ydif):
-				xdif /= abs(xdif)
-				xdif = int(xdif)
-				mfresh(xmove= xdif)
-			else:
-				ydif /= abs(ydif)
-				ydif = int(ydif)
-				mfresh(ymove= ydif)
+			if abs(xdif) >= 0.5 or abs(ydif) >= 0.5:
+				if abs(xdif) >= abs(ydif):
+					xdif /= abs(xdif)
+					xdif = int(xdif)
+					mfresh(xmove= xdif)
+				else:
+					ydif /= abs(ydif)
+					ydif = int(ydif)
+					mfresh(ymove= ydif)
 		tkvar.bind('<Button-1>', translatemouse)
 		tkvar.bind('<Button-2>', lambda data=self.data: restart())
 		tkvar.bind('<Button-3>', lambda data=self.data: spawnbomb())
@@ -380,7 +381,7 @@ class enemy:
 					self.movementy = 1
 				if self.movementy < -1:
 					self.movementy = -1
-					
+
 		if not hasmoved:
 			self.x += self.movementx
 		if not hasmoved:
