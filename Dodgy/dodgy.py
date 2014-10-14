@@ -1,3 +1,5 @@
+#14 October 12:33
+
 import tkinter
 from tkinter import Tk, Label, Frame
 import random
@@ -134,35 +136,19 @@ class tgame:
 				for x in range(arenasize-2):
 					self.data[1:1] = [self.symbols['wall'] + self.symbols['floor']*(arenasize-2) + self.symbols['wall']]
 
-				for ycoord in range(len(self.data)):
-					yl = self.data[ycoord]
-					if ycoord == self.ypos:
-						#print(ycoord)
-						yl = yl[:self.xpos] + self.symbols['char'] + yl[self.xpos+1:]
-						#print(yl)
+				for candies in self.candylist:
+					if candies.x == self.xpos and candies.y == self.ypos:
+						#print('Collection')
+						collect(1)
+						self.candylist.remove(candies)
+						self.entlist.remove(candies)
+						del candies
 
-					cs = []
-					for candies in self.candylist:
-						if candies.y == ycoord:
-							if candies.x == self.xpos and candies.y == self.ypos:
-								#print('Collection')
-								collect(1)
-								self.candylist.remove(candies)
-								self.entlist.remove(candies)
-								del candies
-
-					for enemies in self.enemylist:
-						if enemies.y == ycoord:
-							if enemies.x == self.xpos and enemies.y == self.ypos:
-								print('Death')
-								self.isdeath = True
-								self.datalabel.configure(fg='Red')
-
-					self.entlist.sort(key=lambda p: p.x)
-					for entities in self.entlist:
-						if entities.y == ycoord:
-							yl = yl[:entities.x] + entities.symbol + yl[entities.x+1:]
-					self.data[ycoord] = yl
+				for enemies in self.enemylist:
+					if enemies.x == self.xpos and enemies.y == self.ypos:
+						print('[ ' + self.symbols['char'] + ' ] Death')
+						self.isdeath = True
+						self.datalabel.configure(fg='Red')
 
 				if hasmoved:
 					self.stepstaken += 1
@@ -207,8 +193,22 @@ class tgame:
 							self.enemylist.remove(enemies)
 							self.entlist.remove(bombs)
 							self.entlist.remove(enemies)
-							print('Bang')
+							print('[ ' + bomb.symbol + ' ] Bang')
 							mfresh()
+
+
+				for ycoord in range(len(self.data)):
+					yl = self.data[ycoord]
+					if ycoord == self.ypos:
+						#print(ycoord)
+						yl = yl[:self.xpos] + self.symbols['char'] + yl[self.xpos+1:]
+						#print(yl)
+					self.entlist.sort(key=lambda p: p.x)
+					for entities in self.entlist:
+						if entities.y == ycoord:
+							yl = yl[:entities.x] + entities.symbol + yl[entities.x+1:]
+					self.data[ycoord] = yl
+
 
 				self.datalabel.configure(text='\n'.join(self.data))
 				self.stepslabel.configure(text=str(self.stepstaken) + " steps")
@@ -228,6 +228,7 @@ class tgame:
 
 			event.x /= 8
 			event.y /= 12
+			#spawncandy(round(event.x), round(event.y))
 			#print(event.x, event.y)
 			xdif = event.x - self.xpos
 			ydif = event.y - self.ypos
@@ -278,6 +279,7 @@ class tgame:
 		def spawnphantom():
 			goodtogo = True
 			if self.collections < self.phantomcost:
+				print('[   ] Not enough Candy. ' + str(self.collections) + '/' + str(self.phantomcost) + '. -' + str(self.phantomcost-self.collections))
 				goodtogo = False
 			if self.phantomlist != []:
 				goodtogo = False
@@ -292,10 +294,14 @@ class tgame:
 				self.entlist.append(newphantom)
 				mfresh()
 
-		def spawncandy():
-			newx = random.randint(1, arenasize-2)
-			newy = random.randint(1, arenasize-2)
+		def spawncandy(forcex=None, forcey=None):
 			goodtogo = True
+			if forcex == None or forcey == None:
+				newx = random.randint(1, arenasize-2)
+				newy = random.randint(1, arenasize-2)
+			else:
+				newx = forcex
+				newy = forcey
 			if self.xpos == newx and self.ypos == newy:
 				goodtogo = False
 			if goodtogo:

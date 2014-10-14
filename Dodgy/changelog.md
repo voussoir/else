@@ -27,3 +27,5 @@
 = Prints contain the relevant Symbol to make messages clearer at a glance
 
 = No hats yet
+
+= Changed priority and efficiency of entity collisions
