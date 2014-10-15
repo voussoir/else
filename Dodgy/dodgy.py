@@ -1,4 +1,4 @@
-#14 October 12:33
+#14 October 12:47
 
 import tkinter
 from tkinter import Tk, Label, Frame
@@ -63,6 +63,7 @@ class tgame:
 		self.enemylist = []
 		self.bomblist = []
 		self.phantomlist = []
+		self.goldcandylist = []
 		self.entlist = []
 		self.symbols = {'char':'H', 'wall':'#', 'floor':' '}
 		self.stepstaken = 0
@@ -70,14 +71,18 @@ class tgame:
 		self.bombs = 0
 
 		self.enemyspawnrate = 50
-		self.enemyspawnmindist = 6
+		self.enemyspawnmindist = 9
 		self.enemydocollide = False
 		self.candyspawnrate = 4
 
 		self.isdeath = False
 		self.bombcost = 4
-		self.phantomcost = 100
+		self.phantomcost = 60
 		self.helplabelindex = -1
+
+		self.goldcandyflashrate = 8
+		self.goldcandyspawnrate = 40
+		self.goldcandyspawnrand = 4
 
 		self.helplabeltexts = [
 		"<WASD>=Movement <J>=Bomb <K>=Phantom <R>=Restart ->", 
@@ -144,6 +149,13 @@ class tgame:
 						self.entlist.remove(candies)
 						del candies
 
+				for goldcandies in self.goldcandylist:
+					if goldcandies.x == self.xpos and goldcandies.y == self.ypos:
+						print('[ ' + goldcandy.symbol + ' ] Gold collection with ' + str(goldcandies.lifespan) + ' remaining')
+						collect(5)
+						self.goldcandylist.remove(goldcandies)
+						self.entlist.remove(goldcandies)
+
 				for enemies in self.enemylist:
 					if enemies.x == self.xpos and enemies.y == self.ypos:
 						print('[ ' + self.symbols['char'] + ' ] Death')
@@ -154,6 +166,11 @@ class tgame:
 					self.stepstaken += 1
 					if self.stepstaken % self.candyspawnrate == 0:
 						spawncandy()
+
+					goldchance = random.randint(self.stepstaken-self.goldcandyspawnrand, self.stepstaken+self.goldcandyspawnrand)
+					#print(goldchance)
+					if goldchance % self.goldcandyspawnrate == 0:
+						spawngoldcandy()
 					if self.stepstaken % self.enemyspawnrate == 0:
 						spawnenemy()
 						for x in range(self.stepstaken // 200):
@@ -185,6 +202,13 @@ class tgame:
 						if en.y > (arenasize-2):
 							en.y = arenasize-2
 						mfresh()
+
+					for goldcandies in self.goldcandylist:
+						goldcandies.tick(self.goldcandyflashrate)
+						if goldcandies.lifespan <= 0:
+							self.goldcandylist.remove(goldcandies)
+							self.entlist.remove(goldcandies)
+							del goldcandies
 
 				for bombs in self.bomblist:
 					for enemies in self.enemylist:
@@ -315,6 +339,38 @@ class tgame:
 				self.entlist.append(newcan)
 				mfresh()
 
+
+		def spawngoldcandy(forcex=None, forcey=None):
+			goodtogo = True
+			if forcex == None or forcey == None:
+				newx = random.randint(1, arenasize-2)
+				newy = random.randint(1, arenasize-2)
+				spawntries = 0
+				while (dist(self.xpos, self.ypos, newx, newy) < self.enemyspawnmindist):
+					newx = random.randint(1, arenasize-2)
+					newy = random.randint(1, arenasize-2)
+					spawntries += 1
+					#print('Rerolling from', newx, newy)
+					if spawntries == 20:
+						#print('Could not spawn enemy')
+						goodtogo = False
+						break
+			else:
+				newx = forcex
+				newy = forcey
+			if goodtogo:
+				for entity in self.entlist:
+					if entity.x == newx and entity.y == newy:
+						goodtogo = False
+			if goodtogo:
+				lifespan= dist(self.xpos, self.ypos, newx, newy)
+				lifespan *= 2
+				print('[ ' + goldcandy.symbol + ' ] New gold candy')
+				newcan = goldcandy(newx, newy, lifespan)
+				self.goldcandylist.append(newcan)
+				self.entlist.append(newcan)
+				mfresh()
+
 		def spawnenemy():
 			newx = random.randint(1, arenasize-2)
 			newy = random.randint(1, arenasize-2)
@@ -324,7 +380,7 @@ class tgame:
 				newx = random.randint(1, arenasize-2)
 				newy = random.randint(1, arenasize-2)
 				spawntries += 1
-				print('Rerolling from', newx, newy)
+				#print('Rerolling from', newx, newy)
 				if spawntries == 10:
 					print('Could not spawn enemy')
 					goodtogo = False
@@ -430,5 +486,19 @@ class phantom:
 		self.y = y
 		self.lifespan  = lifespan
 		self.symbol = phantom.symbol
+
+class goldcandy:
+    symbol = "$"
+    def __init__(self, x, y, lifespan):
+        self.x = x
+        self.y = y
+        self.lifespan = lifespan
+        self.symbol = goldcandy.symbol
+    def tick(self, flashrate):
+        self.lifespan -= 1
+        if self.lifespan % flashrate == 0 or self.lifespan % flashrate == 1:
+            self.symbol = goldcandy.symbol
+        else:
+            self.symbol = candy.symbol
 
 t = tgame()

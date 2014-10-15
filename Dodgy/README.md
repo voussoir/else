@@ -15,8 +15,6 @@ Ideas for later:
 
 Smokescreen pickup: Exclamators cannot detect player. Will wander randomly for 5-10 steps
 
-Gold candy: Special candy which gives quadruple points. Is invisible, flashes every 5 steps, relocates if not found fast enough
-
 Hats.
 
 Enemies move faster as the game goes on

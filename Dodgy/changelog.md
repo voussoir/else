@@ -29,3 +29,9 @@
 = No hats yet
 
 = Changed priority and efficiency of entity collisions
+
+
+###14 October 2014
+
+\+ Added Gold candy. Has randomized chance of spawning. Looks like normal candy except it flashes differently every few steps
+
