@@ -1,12 +1,13 @@
-#14 October 12:47
-
+#29 October 11:34
+import threading
 import tkinter
 from tkinter import Tk, Label, Frame
 import random
 
-class tgame:
+class dodgygame:
 	def __init__(self):
 		tkvar = Tk()
+		tkvar.resizable(0,0)
 		tkvar.wm_title("Dodgy")
 		tkvar.iconbitmap('Excl.ico')
 
@@ -43,6 +44,11 @@ class tgame:
 		self.helplabel = Label(tkvar, text="Press H for help ->", font=('Consolas', 8))
 		self.helplabel.grid(row=2, column=0, columnspan=100)
 
+		self.consolelabel = Label(tkvar, text="Welcome", font=("Terminal", 8), width=arenasize, height=4)
+		self.consolelabeldata = []
+		self.consolelabel.configure(anchor="nw", justify="left")
+		self.consolelabel.grid(row=3, column=0)
+
 		tkvar.bind('w', lambda data=self.data: mfresh(ymove=-1))
 		tkvar.bind('<Up>', lambda data=self.data: mfresh(ymove=-1))
 		tkvar.bind('s', lambda data=self.data: mfresh(ymove=1))
@@ -66,24 +72,26 @@ class tgame:
 		self.goldcandylist = []
 		self.entlist = []
 		self.symbols = {'char':'H', 'wall':'#', 'floor':' '}
+
 		self.stepstaken = 0
+		self.isdeath = False
+
+		self.candyspawnrate = 4
 		self.collections = 0
-		self.bombs = 0
 
 		self.enemyspawnrate = 50
 		self.enemyspawnmindist = 9
 		self.enemydocollide = False
-		self.candyspawnrate = 4
 
-		self.isdeath = False
+		self.bombs = 0
 		self.bombcost = 4
 		self.phantomcost = 60
-		self.helplabelindex = -1
 
 		self.goldcandyflashrate = 8
 		self.goldcandyspawnrate = 40
 		self.goldcandyspawnrand = 4
 
+		self.helplabelindex = -1
 		self.helplabeltexts = [
 		"<WASD>=Movement <J>=Bomb <K>=Phantom <R>=Restart ->", 
 		"<UDLR>=Movement <Z>=Bomb <X>=Phantom <R>=Restart ->",
@@ -96,7 +104,8 @@ class tgame:
 		"Collect candy to earn bombs ->",
 		"Drop bombs to snare Exclamators ->",
 		"Deploy phantoms to distract Exclamators ->",
-		"Deploying phantom will consume all candy ->",
+		"Phantoms have a minimum cost of " + str(self.phantomcost) + " ->",
+		"But deploying phantom will consume all candy ->",
 		"More candy consumed = longer phantom lifespan ->",
 		"Enjoy •"]
 
@@ -137,9 +146,6 @@ class tgame:
 							self.entlist.remove(ph)
 							del ph
 				#print(self.xpos, self.ypos, '|', self.stepstaken)
-				self.data = [self.symbols['wall']*arenasize, self.symbols['wall']*arenasize]
-				for x in range(arenasize-2):
-					self.data[1:1] = [self.symbols['wall'] + self.symbols['floor']*(arenasize-2) + self.symbols['wall']]
 
 				for candies in self.candylist:
 					if candies.x == self.xpos and candies.y == self.ypos:
@@ -151,17 +157,22 @@ class tgame:
 
 				for goldcandies in self.goldcandylist:
 					if goldcandies.x == self.xpos and goldcandies.y == self.ypos:
-						print('[ ' + goldcandy.symbol + ' ] Gold collection with ' + str(goldcandies.lifespan) + ' remaining')
+						tempvar = '[ ' + goldcandy.symbol + ' ] Got gold'
+						print(tempvar)
+						printr(tempvar)
 						collect(5)
 						self.goldcandylist.remove(goldcandies)
 						self.entlist.remove(goldcandies)
 
 				for enemies in self.enemylist:
 					if enemies.x == self.xpos and enemies.y == self.ypos:
-						print('[ ' + self.symbols['char'] + ' ] Death')
+						tempvar = '[ ' + self.symbols['char'] + ' ] Death'
+						print(tempvar)
+						printr(tempvar)
 						self.isdeath = True
 						self.datalabel.configure(fg='Red')
 
+			if not self.isdeath:
 				if hasmoved:
 					self.stepstaken += 1
 					if self.stepstaken % self.candyspawnrate == 0:
@@ -188,7 +199,9 @@ class tgame:
 							for otheren in self.enemylist:
 								if en != otheren:
 									if en.x == otheren.x and en.y == otheren.y:
-										print('[ ' + enemy.symbol +  ' ] Enemy collision at', en.x, en.y)
+										tempvar = '[ '+enemy.symbol+' ] Enemy collision at '+str(en.x)+' '+str(en.y)
+										print(tempvar)
+										printr(tempvar)
 										en.x = oldx
 										en.y = oldy
 						#print(dist(en.x, en.y, self.xpos, self.ypos))
@@ -217,32 +230,41 @@ class tgame:
 							self.enemylist.remove(enemies)
 							self.entlist.remove(bombs)
 							self.entlist.remove(enemies)
-							print('[ ' + bomb.symbol + ' ] Bang')
+							tempvar = '[ ' + bomb.symbol + ' ] Bang'
+							print(tempvar)
+							printr(tempvar)
 							mfresh()
 
+			self.data = [self.symbols['wall']*arenasize, self.symbols['wall']*arenasize]
+			for x in range(arenasize-2):
+				self.data[1:1] = [self.symbols['wall'] + self.symbols['floor']*(arenasize-2) + self.symbols['wall']]
+			for ycoord in range(len(self.data)):
+				yl = self.data[ycoord]
+				if ycoord == self.ypos and not self.isdeath:
+					#print(ycoord)
+					yl = yl[:self.xpos] + self.symbols['char'] + yl[self.xpos+1:]
+					#print(yl)
+				self.entlist.sort(key=lambda p: p.x)
+				for entities in self.entlist:
+					if entities.y == ycoord:
+						yl = yl[:entities.x] + entities.symbol + yl[entities.x+1:]
+				self.data[ycoord] = yl
 
-				for ycoord in range(len(self.data)):
-					yl = self.data[ycoord]
-					if ycoord == self.ypos:
-						#print(ycoord)
-						yl = yl[:self.xpos] + self.symbols['char'] + yl[self.xpos+1:]
-						#print(yl)
-					self.entlist.sort(key=lambda p: p.x)
-					for entities in self.entlist:
-						if entities.y == ycoord:
-							yl = yl[:entities.x] + entities.symbol + yl[entities.x+1:]
-					self.data[ycoord] = yl
 
+			self.datalabel.configure(text='\n'.join(self.data))
+			self.stepslabel.configure(text="%04d"%(self.stepstaken) + " steps")
+			self.collectlabel.configure(text="%03d"%(self.collections) + " candy")
+			self.bomblabel.configure(text="%02d"%(self.bombs) + " bombs")
+			self.poslabel.configure(text="%02d"%(self.xpos) + " " + "%02d"%(self.ypos))
+			if self.collections >= self.phantomcost:
+				self.phantlabel.configure(text='1 phantom')
+			else:
+				self.phantlabel.configure(text='0 phantom')
 
-				self.datalabel.configure(text='\n'.join(self.data))
-				self.stepslabel.configure(text=str(self.stepstaken) + " steps")
-				self.collectlabel.configure(text=str(self.collections) + " candy")
-				self.bomblabel.configure(text=str(self.bombs) + " bombs")
-				self.poslabel.configure(text=str(self.xpos) + " " + str(self.ypos))
-				if self.collections >= self.phantomcost:
-					self.phantlabel.configure(text='1 phantom')
-				else:
-					self.phantlabel.configure(text='0 phantom')
+		def printr(info):
+			self.consolelabeldata.append(str(info))
+			self.consolelabeldata = self.consolelabeldata[-4:]
+			self.consolelabel.configure(text='\n'.join(self.consolelabeldata))
 
 
 		def translatemouse(event, middlemouse=False):
@@ -303,7 +325,9 @@ class tgame:
 		def spawnphantom():
 			goodtogo = True
 			if self.collections < self.phantomcost:
-				print('[   ] Not enough Candy. ' + str(self.collections) + '/' + str(self.phantomcost) + '. -' + str(self.phantomcost-self.collections))
+				tempvar='[ ' + self.symbols['char'] + ' ] Not enough Candy. ' + str(self.collections) + '/' + str(self.phantomcost) + '. -' + str(self.phantomcost-self.collections)
+				print(tempvar)
+				printr(tempvar)
 				goodtogo = False
 			if self.phantomlist != []:
 				goodtogo = False
@@ -312,7 +336,9 @@ class tgame:
 				life = 15
 				self.collections = 0
 				life += round(self.collections / 3)
-				print('[ ' + self.symbols['char'] + ' ] New phantom with ' + str(life) + ' life')
+				tempvar = '[ ' + self.symbols['char'] + ' ] New phantom with ' + str(life) + ' life'
+				print(tempvar)
+				printr(tempvar)
 				newphantom = phantom(self.xpos, self.ypos, life)
 				self.phantomlist.append(newphantom)
 				self.entlist.append(newphantom)
@@ -333,7 +359,9 @@ class tgame:
 					if candies.x == newx and candies.y == newy:
 						goodtogo = False
 			if goodtogo:
-				print('[ ' + candy.symbol + ' ] New candy at', newx, newy)
+				tempvar = '[ ' + candy.symbol + ' ] New candy at ' + str(newx)+' '+str(newy)
+				print(tempvar)
+				printr(tempvar)
 				newcan = candy(newx, newy)
 				self.candylist.append(newcan)
 				self.entlist.append(newcan)
@@ -365,7 +393,9 @@ class tgame:
 			if goodtogo:
 				lifespan= dist(self.xpos, self.ypos, newx, newy)
 				lifespan *= 2
-				print('[ ' + goldcandy.symbol + ' ] New gold candy')
+				tempvar = '[ ' + goldcandy.symbol + ' ] New gold candy'
+				print(tempvar)
+				printr(tempvar)
 				newcan = goldcandy(newx, newy, lifespan)
 				self.goldcandylist.append(newcan)
 				self.entlist.append(newcan)
@@ -391,14 +421,20 @@ class tgame:
 					if ens.x == newx and ens.y == newy:
 						goodtogo = False
 			if goodtogo:
-				print('[ ' + enemy.symbol +  ' ] New enemy at', newx, newy)
+				tempvar = '[ ' + enemy.symbol +  ' ] New enemy at '+str(newx)+' '+str(newy)
+				print(tempvar)
+				printr(tempvar)
 				newen = enemy(newx, newy, 1)
 				self.enemylist.append(newen)
 				self.entlist.append(newen)
 				mfresh()
 
 		def restart():
-			print('Resetting game.')
+			tempvar = 'Resetting game.'
+			print(tempvar)
+			printr(tempvar)
+			self.consolelabeldata = []
+			self.consolelabel.configure(text='')
 			self.xpos = int((arenasize-1)/2)
 			self.ypos = int((arenasize-1)/2)
 			while self.entlist != []:
@@ -501,4 +537,4 @@ class goldcandy:
         else:
             self.symbol = candy.symbol
 
-t = tgame()
+t = dodgygame()
