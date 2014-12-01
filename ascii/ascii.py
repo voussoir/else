@@ -84,6 +84,10 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 	global asciivals
 	asciikeys = asciikeys[::CONTRAST]
 	asciivals = asciivals[::CONTRAST]
+	asciivals[-1] = 256
+	asciikeys[-1] = ' '
+	print(asciikeys)
+	print(asciivals)
 	width = rpi.size[0]
 	height = rpi.size[1]
 	charspanx = int(width / XVALUE)
