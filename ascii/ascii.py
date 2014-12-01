@@ -80,6 +80,10 @@ def boot():
 	
 def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 	rpi = Image.open(FILENAME)
+	global asciikeys
+	global asciivals
+	asciikeys = asciikeys[::CONTRAST]
+	asciivals = asciivals[::CONTRAST]
 	width = rpi.size[0]
 	height = rpi.size[1]
 	charspanx = int(width / XVALUE)
