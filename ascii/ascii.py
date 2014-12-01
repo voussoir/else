@@ -113,7 +113,7 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 				c += 1
 
 		output += "\n"
-	output += '\n%s\n%dx%d\n%d' % (FILENAME, XVALUE, YVALUE, CONTRAST)
+	output += '\n%s\n%dx%d (%dx%d)\n%d' % (FILENAME, charspanx, charspany, XVALUE, YVALUE, CONTRAST)
 	
 	outfile = FILENAME.split('.')[0] + '.txt'
 	outfile = open(outfile, 'w')
