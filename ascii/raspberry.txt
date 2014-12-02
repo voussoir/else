@@ -1,89 +1,38 @@
-                                         @                                            @                                         
-                               @@@@@@@@@@@@@@@@@                                @@@@@@@@@@@@@@@@@                               
-                         @@@@@@@@@@@G[G8@Ga8@@8@@@@@@                      @@@@@@8@@8aa@@Gaa@@@@@@@@@@@                         
-                     @@@@@@888@@Guj[Gjoojaooj8[uG@GG@@@@@              @@@@@8a@8ju8aooa[oouGaju[8@8888@@@@@                     
-                   @@@@@@@8uoooujooooooooooooooooj[o[8@@@@@          @@@@@@aouaoooooooooooooooojuooooa@@@@@@@                   
-                   @@@[uuuuoooooooooooooooooooooooooou8ja@@@        @@@Gu8joooooooooooooooooooooooooouuuuj8@@                   
-                    @@@joooooooooooooooooooooooooooooooooj@@@      @@@aoooooooooooooooooooooooooooooooooo8@@                    
-                   @@@@8ooooooooooooooooooooooooooooooooooj@@@    @@@aooooooooooooooooooooooooooooooooooa@@@@                   
-                   @@8jjoooooooooujuooooooooooooooooooooooo[@@@  @@@GoooooooooooooooooooooooujuooooooooojjG@@                   
-                    @@8uooooooooooou[a[uooooooooooooooooooooG@@  @@8oooooooooooooooooooooja[jooooooooooooG@@                    
-                    @@@@aooooooooooooojaG[uooooooooooooooooou@@@@@@[ooooooooooooooooou[GG[ooooooooooooo[8@@@                    
-                    @@8juoooooooooooooooo[88auooooooooooooooo8@@@@@uoooooooooooooou[G8auooooooooooooooouuG@@                    
-                     @@8joooooooooooooooooojG@8[uooooooooooooa@@@@@ooooooooooooojG@8[oooooooooooooooooou8@@                     
-                     @@@@Guooooooooooooooooooua8@GjooooooooooG@@@@@ooooooooooua8@Gjoooooooooooooooooooa@@@@                     
-                      @@Guooooooooooooooooooooooa8@8[oooooooj@@@@@@aooooooojG@@Guooooooooooooooooooooooa@@                      
-                       @@8[oooooooooooooooooooooooa@@8[ooooj8@@@@@@@[oooojG@@Guooooooooooooooooooooooj8@@                       
-                       @@@8GuoooooooooooooooooooooouG@@8[jG@@@@@@@@@@8[jG@@8joooooooooooooooooooooooaG@@@                       
-                        @@8auooooooooooooooooooooooooj8@@@@@@@@@@@@@@@@@@@[ooooooooooooooooooooooooo[8@@                        
-                         @@@@Gjooooooooooooooooooooooou@@@@@@@@@@@@@@@@@@[oooooooooooooooooooooooja8@@@                         
-                           @@8ajooooooooooooooooooooooa@@@@@@@@@@@@@@@@@@8oooooooooooooooooooooou[8@@                           
-                            @@@G[jooooooooooooooooooo[@@@@@@@@@@@@@@@@@@@@Gooooooooooooooooooou[a8@@                            
-                              @@@@GuooooooooooooooouG@@@@@@@@@@@@@@@@@@@@@@8jooooooooooooooooa8@@@                              
-                               @@@8Ga[[[uoooooooujG@@@@@@@@@@@@@@@@@@@@@@@@@@8[uooooooooj[[aG8@@@                               
-                                 @@@@@@Gjujj[aG8@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@8Ga[jjuua8@@@@@                                 
-                                   @@@@@@@@@@@@@@@@@@@@@@88GGaaaaaaGG8@@@@@@@@@@@@@@@@@@@@@@@                                   
-                                  @@@@@@88888888@@@@@@@8GaaaaaaaaaaaaaaG8@@@@@@@@888@@@@@@@@@@                                  
-                               @@@@@8GGaaaaaaaaa8@@@@Gaaaaaaaaaaaaaaaaaaaa8@@@8aaaaaaaaGG8@@@@@@@                               
-                              @@@8Gaaaaaaaaaaaa8@@@8GaaaaaaaaaaaaaaaaaaaaaaG8@8aaaaaaaaaaaaG8@@@@@                              
-                            @@@@Gaaaaaaaaaaaaa8@@@@aaaaaaaaaaaaaaaaaaaaaaaaaG@@8GaaaaaaaaaaaaG8@@@@@                            
-                           @@@8GaaaaaaaaaaaaG8@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaa8@@@Gaaaaaaaaaaaaa8@@@@@                           
-                          @@@8aaaaaaaaaaaaa8@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@8Gaaaaaaaaaaaa8@@@@@                          
-                          @@@GaaaaaaaaaaaG8@@@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@8aaaaaaaaaaaa8@@@@                          
-                         @@@8aaaaaaaaaaG8@@@@@@@@@@@@8GaaaaaaaaaaaaaaaaaaaG8@@@@@@@@@8Gaaaaaaaaaaa@@@@@                         
-                         @@@aaaaaaaaaa8@@@@@@@@@@@@@@@@88GGaaaaaaaaaaaGG8@@@@@@@@@@@@@@8Gaaaaaaaaa8@@@@                         
-                        @@@8aaaaaaaaG@@@@@@@@@@@@@@@@@@@@@@@88888888@@@@@@@8888888@@@@@@@8aaaaaaaaG@@@@@                        
-                        @@@8aaaaaaG@@@@@@@@@8GGaaaaaGG8@@@@@@@@@@@@@@@@@8GaaaaaaaaaGG8@@@@@8aaaaaaa@@@@@                        
-                        @@@8aaaG8@@@@@@@@8Gaaaaaaaaaaaaa8@@@@@@@@@@@@@8aaaaaaaaaaaaaaaG8@@@@@8Gaaaa8@@@@                        
-                        @@@8GG8@@@@@@@@8GaaaaaaaaaaaaaaaaG8@@@@@@@@@@GaaaaaaaaaaaaaaaaaaG8@@@@@8GGa@@@@@                        
-                       @@@@@@@@@@@@@@@Gaaaaaaaaaaaaaaaaaaaa8@@@@@@@@Gaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@@@@@@                       
-                      @@@@@@@@@@@@@@8Gaaaaaaaaaaaaaaaaaaaaaa8@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaG@@@@@@@@@@@@@@                      
-                    @@@@@888@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaG@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@GG88@@@@@                    
-                   @@@@8aaaa8@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaa@@@@@@aaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@GaaaaG@@@@@                   
-                  @@@8GaaaaaG@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaG@@@@aaaaaaa8@@@@                  
-                 @@@8aaaaaaaa@@@@@aaaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaa8@@8aaaaaaaa8@@@@                 
-                @@@8aaaaaaaaa@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@aaaaaaaaaaaaaaaaaaaaaaaaaaa8@@8aaaaaaaaa8@@@@                
-                @@@aaaaaaaaaa@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaa@@@@@@GaaaaaaaaaaaaaaaaaaaaaaaaaaG@@8aaaaaaaaaG@@@@                
-               @@@8aaaaaaaaaa@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaG@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaG@@8aaaaaaaaaa8@@@@               
-               @@@Gaaaaaaaaaa@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaa8@@8aaaaaaaaaaG@@@@               
-              @@@@aaaaaaaaaaG@@@@8aaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaa@@@@aaaaaaaaaaG@@@@@              
-              @@@@aaaaaaaaaaG@@@@@Gaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@@8Gaaaaaaaaaaaaaaaaaaaaaa8@@@@GaaaaaaaaaG@@@@@              
-              @@@@aaaaaaaaaa8@@@@@8aaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@@@@@GaaaaaaaaaaaaaaaaaaaaG@@@@@8aaaaaaaaaG@@@@@              
-               @@@Gaaaaaaaaa@@@@@@@8aaaaaaaaaaaaaaaaaaaG8@@@@@@@@@@@@@@@8aaaaaaaaaaaaaaaaaaG@@@@@@8aaaaaaaaaG@@@@               
-               @@@8aaaaaaaaG@@@@@@@@8Gaaaaaaaaaaaaaaaa8@@@@@@@8888@@@@@@@@8GaaaaaaaaaaaaaG8@@@@@@@@Gaaaaaaaa8@@@@               
-               @@@@aaaaaaaa8@@@@@@@@@@8GaaaaaaaaaaaG8@@@@88GaaaaaaaaGG8@@@@@8GGaaaaaaaGG8@@@@@@@@@@8aaaaaaaG@@@@@               
-                @@@8aaaaaaG@@@@@@@@@@@@@@88GGGGG88@@@@@8GaaaaaaaaaaaaaaaG8@@@@@@@8888@@@@@@@@@@@@@@@GaaaaaG@@@@@                
-                 @@@8aaaaG@@@@@@@@@@@@@@@@@@@@@@@@@@@8GaaaaaaaaaaaaaaaaaaaG@@@@@@@@@@@@@@@@@@@@@@@@@8aaaaG8@@@@                 
-                  @@@8aaG8@@@@@@@@@@@@@@@@@@@@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@@@@@@@@8GGGGG8@8GGG@@@@@                  
-                   @@@@@@@@@888888@@@@@@@@@@@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@@@@@8Gaaaaaaaa8@@@@@@@@                   
-                    @@@@@@@GaaaaaaaG8@@@@@@@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaG@@@@@@@@@@@Gaaaaaaaaaaa8@@@@@@                    
-                    @@@@@@GaaaaaaaaaaG8@@@@@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaaaa8@@@@@@@@8aaaaaaaaaaaaaG@@@@@@                    
-                    @@@@@8aaaaaaaaaaaaaG8@@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaaaG@@@@@@@Gaaaaaaaaaaaaaaa@@@@@@                    
-                     @@@@8aaaaaaaaaaaaaaaG@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaaaa@@@@@8aaaaaaaaaaaaaaaaa@@@@@                     
-                     @@@@8aaaaaaaaaaaaaaaaG8@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaaaa@@@@8aaaaaaaaaaaaaaaaaa8@@@@                     
-                      @@@8aaaaaaaaaaaaaaaaaa8@@@@@aaaaaaaaaaaaaaaaaaaaaaaaaaaaG@@@8aaaaaaaaaaaaaaaaaaa8@@@                      
-                      @@@@aaaaaaaaaaaaaaaaaaG@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaaaa8@@@aaaaaaaaaaaaaaaaaaaa@@@@                      
-                       @@@GaaaaaaaaaaaaaaaaaaG@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaG@@@GaaaaaaaaaaaaaaaaaaaG@@@                       
-                       @@@8aaaaaaaaaaaaaaaaaaa8@@@@8aaaaaaaaaaaaaaaaaaaaaaaaG@@@8aaaaaaaaaaaaaaaaaaaa8@@@                       
-                        @@@GaaaaaaaaaaaaaaaaaaG@@@@@8aaaaaaaaaaaaaaaaaaaaaaG@@@@GaaaaaaaaaaaaaaaaaaaG@@@                        
-                        @@@@Gaaaaaaaaaaaaaaaaaa@@@@@@@Gaaaaaaaaaaaaaaaaaaa8@@@@@GaaaaaaaaaaaaaaaaaaG@@@@                        
-                         @@@@Gaaaaaaaaaaaaaaaaa8@@@@@@@88GaaaaaaaaaaaaaG8@@@@@@@aaaaaaaaaaaaaaaaaaG@@@@                         
-                          @@@@8aaaaaaaaaaaaaaaa8@@@@@@@@@@88GGGaaGGGG8@@@@@@@@@8aaaaaaaaaaaaaaaaa8@@@@                          
-                           @@@@8Gaaaaaaaaaaaaaa@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@aaaaaaaaaaaaaaaG8@@@@                           
-                             @@@@8Gaaaaaaaaaaa8@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@GaaaaaaaaaaaaG8@@@@                             
-                               @@@@@8GGaaaaaG8@@@@@@@@@@@@@88888888888@@@@@@@@@@@8GaaaaaaaG88@@@@                               
-                                 @@@@@@@@@@@@@@@@@@@@@8GGaaaaaaaaaaaaaaaGG8@@@@@@@@@8888@@@@@@@                                 
-                                    @@@@@@@@@@@@@@@8GaaaaaaaaaaaaaaaaaaaaaaaG8@@@@@@@@@@@@@@                                    
-                                      @@@@@@@@@@@@Gaaaaaaaaaaaaaaaaaaaaaaaaaaa@@@@@@@@@@@@                                      
-                                        @@@@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaaaG@@@@@@@@@@                                        
-                                           @@@@@@@8aaaaaaaaaaaaaaaaaaaaaaaaaG8@@@@@@@                                           
-                                              @@@@@8GaaaaaaaaaaaaaaaaaaaaaaG@@@@@@                                              
-                                                 @@@@8GaaaaaaaaaaaaaaaaaaG8@@@@                                                 
-                                                   @@@@8GaaaaaaaaaaaaaG8@@@@@                                                   
-                                                     @@@@@88GGGGGGG88@@@@@@                                                     
-                                                       @@@@@@@@@@@@@@@@@@                                                       
-                                                           @@@@@@@@@@                                                           
+                                  
+       E6Kle[m      pMj]UOh       
+      1wFFFFFFtp   1FFFFFFCVB     
+      1FwtVFFFFV  SFFFFflfF3      
+      [FFF2MuFFFpQCFFiXUCFF2      
+      NCFFFw55wFpBCCA63FFFFW      
+       jFFFFF]d5@@HEMCFFFFu       
+        tFFFFF9@@@@bFFFFFiN       
+         eCFFt%@@@@gSFFFuD        
+          0Wp@@g$$&@@Dap          
+         QDdD@D4444q@qq8@         
+        8444B$4444440044mQ        
+       &44E%@&E44444$@D44b@       
+       04mQ@@@gRNdDB&g@844%       
+       qNg@DmENg@@&G44GBBb8       
+       @@@G4444G@@p4444EQ@@       
+      0$@0444444Bg444444p@q8      
+     04d@m444444#&4444444gm4$     
+     E4d@4444444&@m444444Qm4b@    
+    Q44q@m44444p@@044444E@b44@    
+    &44R@R4444m&@@@N4444R@q4m@    
+     b4Q@@8GbD&0Gbq&%qq#@@$4q@    
+     %q@@@@@@@G4444EB@@@gR%qg     
+      @dmDg@@R444444p@@%E4E@      
+      &444bg@d4444444@%4444Q      
+      g4444p@q444444m@m4444B      
+       b4444%B4444440$4444E@      
+       $44440@$E444D@q44440       
+        04440@@@%#g@@N444q        
+         Q00g@g$0DRB@&qq%         
+           @@R444444N@@           
+             $444444$@            
+              %p44G%              
+                @@                
 
 raspberry.png
-128x85 (8x12)
-8
+34x34 (30x30)
+1

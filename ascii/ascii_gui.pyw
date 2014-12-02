@@ -57,6 +57,17 @@ class Ascii:
 			label.configure(text=helptype)
 		return showhelp
 
+	def clear(self):
+		self.enter_file.configure(bg="#fff")
+		self.enter_file.configure(fg="#000")
+		self.enter_file.delete(0, 'end')
+		self.enter_resolution_x.delete(0, 'end')
+		self.enter_resolution_x.insert(0, '8')
+		self.enter_resolution_y.delete(0, 'end')
+		self.enter_resolution_y.insert(0, '12')
+		self.enter_contrast.delete(0, 'end')
+		self.enter_contrast.insert(0, '8')
+
 	def __init__(self):
 		self.t = tkinter.Tk()
 		self.t.wm_title("ASCII")
@@ -95,6 +106,8 @@ class Ascii:
 		self.enter_contrast.insert(0, 8)
 		self.button_start = tkinter.Button(self.centerframe, text="Go", command= self.startthread)
 		self.button_start.configure(bg="#76E22E", activebackground="#46E22E", relief="flat", width=15)
+		self.button_clear = tkinter.Button(self.centerframe, text="clear", command= self.clear)
+		self.button_clear.configure(bg="#e23939", activebackground="#b82e2e", relief="flat", width=4)
 
 		self.label_file.grid(row=0, column=0, sticky="e")
 		self.enter_file.grid(row=0, column=1, sticky="w", columnspan=88)
@@ -104,6 +117,7 @@ class Ascii:
 		self.enter_resolution_y.grid(row=1, column=2, sticky="w")
 		self.label_contrast.grid(row=2, column=0, sticky="e")
 		self.enter_contrast.grid(row=2, column=1, sticky="w")
+		self.button_clear.grid(row=2, column=87)
 		self.label_ticker.grid(row=3, column=0, columnspan=88)
 		self.button_start.grid(row=4, column=0, columnspan=88)
 		self.label_help.grid(row=5, column=0, columnspan=88)
