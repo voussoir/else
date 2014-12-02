@@ -1,66 +1,50 @@
                                                          
-                            @                            
                             @@                           
-                           @pp@                          
-                          @puuR@                         
-                         @Rwz?wR@                        
-                        @Rz\\\\u@                        
-                       @Rw\\\?zzW@                       
-                      @@uzzwwuuuuW@                      
-                      @Xuuuuwwz???p@                     
-                     @Wuwzz?\\\\\\?R@                    
-                    @W?\\\\\\\??zwwjR@                   
-                   @W?\\\\?zzwuuuuuuX@@                  
-                  @p???zwwuuuuuuwwz??j@                  
-                 @Ruwuuuuuuuwzz?\\\\\\X@                 
-                @Rjuuuuwwz??\\\\\\\?zzwR@                
-               @@juwzz?\\\\\\\??zwwuuuuuR@               
-               @u?\\\\\\\??zwwuuuuuuuwzzwR@              
-              @j\\\\\?zzwuuuuuuuwwz??\\\\w@@             
-             @X\??zwwuuuuuuwwzz?\\\\\\\?zzX@             
-            @pwwuuuuuuuwzz?\\\\\\\??zwwuuuup@            
-   @@pWp@@ @@WXjuuwwz??\\\\\\\?zzwuuuuujjXXW@@  @RpWp@@  
-  @j    u@@RR@@@@@RppWWWXXXXWWppppRRR@@@@@@@RWR@Rz   \X@ 
- @j   \p@pz   ?zwjXWWppRRRRRRRRRppWXXjuwz?\    uR@j    X@
- @?  zR@j                                       \W@p   z@
- @w ?R@z         \ujjuz            zjjjw\         X@p  u@
- @RzR@w         ?jjjjjju          ujjjjjj\         X@WzR 
-   @@W          wjjjjjjj         \jjjjjjjw          R@@  
-    @z          ?jjjjjju          ujjjjjj?          X@   
-   @@\           zjjjjw            ujjju?           u@   
-    @?              \                \              j@   
-    @j                                              p@   
-    @R\                                            w@    
-     @p                                           ?R     
-      @p\          j@X?            ?X@u          wR      
-        Ru          X@@RXuwwzzwwuXR@Rj         \W@       
-         @Ru          wXpR@@@@@@RWjw         \jR         
-           @RXz                            wW@           
-              @RWu?                   \zjp@@             
-                @@@@RWjuwzz????zzwuXWR@@@                
-                @@?wjWpR@@@@@@@@@@RpXuzu@@               
-              @p@p        \\\\\\       \@@W@             
-            @R?u@X                      @@\wR            
-           @R\ j@j                      R@? w@           
-           @u  j@j                      p@z  X@          
-          @@   X@j                      p@z  z@          
-          @p   j@j                      R@z   @@         
-          @p   u@X                      R@?   @@         
-          @@   w@W                      @@   ?@          
-           @w  ?@R                     ?@R   X@          
-           @R   @@\                    u@W  ?@           
-            @p\ W@w                    W@u ?R@           
-             @Ruj@W                    @@zj@             
-               @@@@\                  u@@@@              
-                  @j                  R@                 
-                   @\                w@                  
-                   @W                R@                  
-                @@@@@u              W@@@@                
-             @RXwzzwR@w            X@pzzzuW@             
-            @W      ?R@u          W@p      ?R@           
-           @@\       ?p@W?      wR@W        w@           
-            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           
+                           @GR@                          
+                          @auuG@                         
+                         @j||;|a@                        
+                        Ru;;;||za@                       
+                      @Ruzoouuuoo[@                      
+                     @Ruuoozz||;;;u@                     
+                    @az||;;;;;||zzoj@                    
+                   @[|;;||zzoouuuuuojR@                  
+                  @jzzoouuuuuoozz||;;zR@                 
+                 R[uuuuoozz||;;;;;;||zuR@                
+               @Rjozz||;;;;;;||zoouuuuuuG@               
+              @Gz;;;;;||zzoouuuuuuoozz|||a@              
+             @a|||zzoouuuuuuoozz||;;;;;||za@             
+            @aoouuuuuoozz||;;;;;;||zzoouuuua@            
+   Rjozz[@@@@RGGaa[juooozzzzooujj[[[[aaaGGRR@@  RjzzojR  
+ @[    jRRu;;zouj[aaGGRRRRRRRRRRRGGaa[jjuoz|; |[RRu    a@
+ @|  uRRo          ;;                ;;          j@G|  z@
+ @[ [@a          ojjjju|          |ujjjjo         |R@z a@
+   R@G          ojjjjjjj         ;jjjjjjjz         ;RRR  
+    @z          |jjjjjju          ujjjjjj;          j@   
+    @;            |zoz;            ;zoz|            u@   
+    @u                                              a@   
+     R|                                            j@    
+      Ru           |u|              |u|           [@     
+        Go         |a@R[uoz||||zou[RR[|         uR       
+          Rj|         zuj[aaGGaa[ju|         oa@         
+             Rauz                       ;zjG@            
+                @@Ra[juoz||;;;;||zouj[GR@                
+                @R;zouj[aGGGRRGGGa[juo|o@@               
+             @[j@a                      @@oa@            
+            Rz j@j                      R@| u@           
+           @o  j@j                      G@z  [@          
+          @R   j@j                      G@z  ;@          
+          @G   u@[                      R@|   @@         
+           @   o@G                      @@   z@          
+           @[  ;@@                     z@G   G@          
+            @a  G@o                    [@u ;G@           
+              Rj[@G                   ;@@u[@             
+                 @@o                  [@@                
+                   R                 z@                  
+                   @G               |R@                  
+               RGaaG@G             |RRaaaG@              
+            @Gz     oRRz          j@G;     oR            
+           @@z|||||||oR@Go||||||jR@az|||||||u@           
 
 subredditbirthday3k.png
-57x62 (32x48)
+57x46 (32x64)
 8

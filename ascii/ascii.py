@@ -75,10 +75,11 @@ def boot():
 		XVALUE = 8
 		YVALUE = 12
 		CONTRAST = 8
-		#Optimal resolutions include:
-		# 9 x 15
-		# 3 x 5 (huge!)
-		# 8 x 12
+		# Optimal resolutions ratios:
+		# 1 :: 2
+		# 8 :: 17
+		# 3 :: 5
+		# Different images look better in certain resolutions
 	ascii(FILENAME, XVALUE, YVALUE, CONTRAST, ticker)
 	
 def ticker(status):
