@@ -3,12 +3,15 @@ from PIL import Image
 import json
 import time
 import sys
+import urllib.request
+import binascii
+import io
 
 asciifile = open('asciitable.json')
 asciitable = json.loads(asciifile.read())
 asciifile.close()
 for key in asciitable:
-	asciitable[key] = int(asciitable[key]) + 1
+	asciitable[key] = float(asciitable[key]) + 1
 asciikeys = list(asciitable.keys())
 asciivals = list(asciitable.values())
 asciikeys.sort(key=asciitable.get)
@@ -50,7 +53,7 @@ def boot():
 	global asciikeys
 	global asciivals
 	try:
-		FILENAME = input('File: ')
+		FILENAME = input('File or URL: ')
 		if '.' not in FILENAME:
 			FILENAME += '.png'
 		resolution = input('x y (leave blank for standard): ')
@@ -76,16 +79,29 @@ def boot():
 		# 9 x 15
 		# 3 x 5 (huge!)
 		# 8 x 12
-	ascii(FILENAME, XVALUE, YVALUE, CONTRAST)
+	ascii(FILENAME, XVALUE, YVALUE, CONTRAST, ticker)
 	
-def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
-	rpi = Image.open(FILENAME)
+def ticker(status):
+	print('\r%s' % status, end="")
+
+def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION):
+	if 'http' in FILENAME and '/' in FILENAME:
+		rpi = urllib.request.urlopen(FILENAME).read()
+		FILENAME = FILENAME.split('/')[-1]
+		#rpi = binascii.unhexlify(rpi)
+		rfile = open(FILENAME, 'wb')
+		rfile.write(rpi)
+		rfile.close()
+		rpi = io.BytesIO(rpi)
+		rpi = Image.open(rpi)
+	else:
+		rpi = Image.open(FILENAME)
 	global asciikeys
 	global asciivals
-	asciikeys = asciikeys[::CONTRAST]
-	asciivals = asciivals[::CONTRAST]
-	asciivals[-1] = 256
-	asciikeys[-1] = ' '
+	asciikeys_x = asciikeys[::CONTRAST]
+	asciivals_x = asciivals[::CONTRAST]
+	asciivals_x[-1] = 256
+	asciikeys_x[-1] = ' '
 	width = rpi.size[0]
 	height = rpi.size[1]
 	charspanx = int(width / XVALUE)
@@ -94,7 +110,8 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 	output = ""
 	print("Working...")
 	for yline in range(charspany):
-		print("\r%0.2f" % (yline/charspany), end='')
+		status = "%0.2f" % (yline / charspany)
+		TICKERFUNCTION(status)
 		sys.stdout.flush()
 		for xline in range(charspanx):
 			xcoord = xline*XVALUE
@@ -105,12 +122,12 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 			av = average(region)
 			i = av[3]
 			c = 0
-			for value in asciivals:
+			for value in asciivals_x:
 				if i == 255:
 					output += ' '
 					break
 				if i <= value:
-					output += asciikeys[c]
+					output += asciikeys_x[c]
 					break
 				c += 1
 
@@ -121,7 +138,8 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST):
 	outfile = open(outfile, 'w')
 	print(output, file=outfile)
 	outfile.close()
-	print("\r1.00")
+	TICKERFUNCTION("1.00")
+	print()
 
 if __name__ == "__main__":
 	boot()

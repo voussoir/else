@@ -18,6 +18,32 @@ For best results, put the pictures in the same folder as the script. Then double
 
 
 
-To-do:
+New! Application with GUI
 
-Make tkinter GUI.
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii00.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii01.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii02.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii03.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii04.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii05.png?raw=true" alt="ASCII"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/ascii06.png?raw=true" alt="ASCII"/>
+</p>
