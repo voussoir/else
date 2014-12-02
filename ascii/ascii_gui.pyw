@@ -3,7 +3,7 @@ import tkinter
 import ascii
 import threading
 
-help_file = """The file to ASCII.
+help_file = """The file or URL to ASCII.
 If you only put a name, it must be in the same
 folder as this program. Otherwise, include a 
 file path.
