@@ -112,7 +112,10 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION):
 	for yline in range(charspany):
 		status = "%0.2f" % (yline / charspany)
 		TICKERFUNCTION(status)
-		sys.stdout.flush()
+		try:
+			sys.stdout.flush()
+		except:
+			pass
 		for xline in range(charspanx):
 			xcoord = xline*XVALUE
 			ycoord = yline*YVALUE
