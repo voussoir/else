@@ -18,12 +18,11 @@ A class to imitate the [Stack](http://en.wikipedia.org/wiki/Stack_(abstract_data
     
     	def populate(self, itemlist, destructive=False):
     		Push as many items as possible from `itemlist` onto the Stack
-    		if `destructive`==True, the current data will be overwritten
     		and discard the rest.
+    		if `destructive` is True, the current data will be overwritten
     
     	def push(self, item):
-    		Push an item onto the end of the Stack
-    
+    		Push an item onto the top of the Stack
     
     	def top(self):
     		Return the item on the top of the stack without popping it
