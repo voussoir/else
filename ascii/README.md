@@ -1,7 +1,10 @@
 ASCII
 =========
 
+New! cx_frozen executable. Click "View Raw" on [executable.zip](https://github.com/voussoir/else/blob/master/ascii/executable.zip) to download a zipped up exe of this program. This means you don't need to download Python or PIL.
 Only tested on PNG and JPG
+
+____
 
 I'm not the first person to come up with this, but I did write it from scratch. Requires the Python Image Library (PIL), which has been adapted to python 3 under the name "Pillow"
 
