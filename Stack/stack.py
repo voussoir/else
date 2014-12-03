@@ -7,12 +7,14 @@ class Stack:
 	"""
 	Class to replicate a Stack data structure.
 	Attributes: maxlen, name
-	Methods: pop, populate, push, top, truncate
+	Methods: copy, pop, populate, push, top, truncate
 	"""
 	def __init__(self, maxlen=None, name=""):
+		self.initialized = False
 		self.maxlen = maxlen
 		self.name = str(name)
 		self.data = []
+		self.initialized = True
 
 	def __get__(self):
 		return self.data
@@ -24,9 +26,13 @@ class Stack:
 		return self.data[index]
 
 	def __setattr__(self, key, value):
-		if key == "name":
+		if key == "initialized":
+			pass
+		elif not self.initialized:
+			pass
+		elif key == "name":
 			value = str(value)
-		if key == "maxlen" and value is not None:
+		elif key == "maxlen" and value is not None:
 			if value < 0:
 				raise StackError()
 			if len(self) > value:
@@ -35,7 +41,7 @@ class Stack:
 				e = ("Cannot set `maxlen` below current `len` or %s items "
 				"would be lost. Try Stack.pop(%s) or Stack.truncate(%d)")
 				raise StackError(e % (sizediff, sizediff, value))
-		if key == "data" and self.maxlen is not None:
+		elif key == "data" and self.maxlen is not None:
 			if len(value) > self.maxlen:
 				raise StackError("List is longer than `maxlen` (%d/%d)" %
 					(len(value), self.maxlen))
@@ -50,7 +56,7 @@ class Stack:
 			display += str(self.maxlen - len(self))
 		return display
 
-	def deepcopy(self):
+	def copy(self):
 		"""
 		Return a deep copy of this Stack as a new object
 		"""

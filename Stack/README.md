@@ -7,9 +7,9 @@ A class to imitate the [Stack](http://en.wikipedia.org/wiki/Stack_(abstract_data
     class Stack:
     	Class to replicate a Stack data structure.
     	Attributes: maxlen, name
-    	Methods: pop, populate, push, top, truncate
+    	Methods: copy, pop, populate, push, top, truncate
     
-    	def deepcopy(self):
+    	def copy(self):
     		Return a deep copy of this Stack as a new object
     
     	def pop(self, count=1):
