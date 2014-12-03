@@ -7,7 +7,10 @@ import urllib.request
 import binascii
 import io
 
-asciifile = open('asciitable.json')
+try:
+	asciifile = open('asciitable.json')
+except FileNotFoundError:
+	asciifile = open('bin/asciitable.json')
 asciitable = json.loads(asciifile.read())
 asciifile.close()
 for key in asciitable:
