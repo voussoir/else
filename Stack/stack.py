@@ -34,7 +34,7 @@ class Stack:
 			value = str(value)
 		elif key == "maxlen" and value is not None:
 			if value < 0:
-				raise StackError()
+				raise StackError("Cannot set `maxlen` below 0")
 			if len(self) > value:
 				sizediff = len(self) - value
 				sizediff = str(sizediff)
