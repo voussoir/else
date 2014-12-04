@@ -7,20 +7,19 @@ import urllib.request
 import binascii
 import io
 
-try:
-	asciifile = open('asciitable.json')
-except FileNotFoundError:
-	asciifile = open('bin/asciitable.json')
-asciitable = json.loads(asciifile.read())
-asciifile.close()
-for key in asciitable:
-	asciitable[key] = float(asciitable[key]) + 1
-asciikeys = list(asciitable.keys())
-asciivals = list(asciitable.values())
-asciikeys.sort(key=asciitable.get)
-each = 256 / len(asciivals)
-asciivals = [((x+1) * each) for x in range(len(asciivals))]
-print("Loaded ASCII table.")
+def readtable(filename):
+	try:
+		asciifile = open('%s.json' % filename)
+	except FileNotFoundError:
+		asciifile = open('bin/%s.json' % filename)
+	asciitable = json.loads(asciifile.read())
+	asciifile.close()
+	for key in asciitable:
+		asciitable[key] = float(asciitable[key]) + 1
+	return asciitable
+
+asciitable = readtable('asciitable')
+asciitable_min = readtable('asciitable_min')
 	
 def average(inx):
 	r, g, b = 0, 0, 0
@@ -65,7 +64,7 @@ def boot():
 			YVALUE = int(resolution.split()[1])
 		else:
 			XVALUE = 8
-			YVALUE = 12
+			YVALUE = 17
 		CONTRAST = input('Smooth 1-~ (blank for standard): ')
 		try:
 			CONTRAST = int(CONTRAST)
@@ -73,23 +72,39 @@ def boot():
 				CONTRAST = 1
 		except ValueError:
 			CONTRAST = 8
+		table = input('Table, Full or Min (blank default): ')
+		if table.lower() == 'min':
+			table = asciitable_min
+		else:
+			table = asciitable
 	except EOFError:
-		FILENAME = "Raspberry.png"
+		FILENAME = "examples/Raspberry.png"
 		XVALUE = 8
-		YVALUE = 12
+		YVALUE = 17
 		CONTRAST = 8
+		table = asciitable
 		# Optimal resolutions ratios:
 		# 1 :: 2
 		# 8 :: 17
 		# 3 :: 5
 		# Different images look better in certain resolutions
-	ascii(FILENAME, XVALUE, YVALUE, CONTRAST, ticker)
+	ascii(FILENAME, XVALUE, YVALUE, CONTRAST, ticker, table)
 	
 def ticker(status):
 	print('\r%s' % status, end="")
 
-def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION):
+def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION, table):
+	asciikeys = list(table.keys())
+	asciivals = list(table.values())
+	asciikeys.sort(key=table.get)
+	each = 256 / len(asciivals)
+	asciivals = [((x+1) * each) for x in range(len(asciivals))]
+	asciikeys_x = asciikeys[::CONTRAST]
+	asciivals_x = asciivals[::CONTRAST]
+	asciivals_x[-1] = 256
+	asciikeys_x[-1] = ' '
 	if 'http' in FILENAME and '/' in FILENAME:
+		TICKERFUNCTION("Downloading")
 		rpi = urllib.request.urlopen(FILENAME).read()
 		FILENAME = FILENAME.split('/')[-1]
 		#rpi = binascii.unhexlify(rpi)
@@ -100,12 +115,6 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION):
 		rpi = Image.open(rpi)
 	else:
 		rpi = Image.open(FILENAME)
-	global asciikeys
-	global asciivals
-	asciikeys_x = asciikeys[::CONTRAST]
-	asciivals_x = asciivals[::CONTRAST]
-	asciivals_x[-1] = 256
-	asciikeys_x[-1] = ' '
 	width = rpi.size[0]
 	height = rpi.size[1]
 	charspanx = int(width / XVALUE)
@@ -139,7 +148,8 @@ def ascii(FILENAME, XVALUE, YVALUE, CONTRAST, TICKERFUNCTION):
 				c += 1
 
 		output += "\n"
-	output += '\n%s\n%dx%d (%dx%d)\n%d' % (FILENAME, charspanx, charspany, XVALUE, YVALUE, CONTRAST)
+	tabletype = "Full" if table == asciitable else "Min"
+	output += '\n%s\n%dx%d (%dx%d)\n%d\n%s' % (FILENAME, charspanx, charspany, XVALUE, YVALUE, CONTRAST, tabletype)
 	
 	outfile = FILENAME.split('.')[0] + '.txt'
 	outfile = open(outfile, 'w')

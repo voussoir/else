@@ -1,7 +1,7 @@
 import sys
 from cx_Freeze import setup, Executable
 
-options = dict(include_files=["asciitable.json"], create_shared_zip='True', build_exe="executable/bin", excludes=["tcl"])
+options = dict(include_files=["asciitable.json", "asciitable_min.json"], create_shared_zip='True', build_exe="bin", excludes=["tcl"])
 base = None
 if sys.platform == "win32":
     base = "Win32GUI"
