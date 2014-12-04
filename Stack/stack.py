@@ -73,7 +73,7 @@ class Stack:
 			if len(self) == 0:
 				raise StackError("Cannot pop from empty Stack")
 			lastitem = self.data[-1]
-			self.data = self.data[:-1]
+			del self.data[-1]
 		return lastitem
 
 	def populate(self, itemlist, destructive=False):
