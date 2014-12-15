@@ -8,9 +8,10 @@ def boot():
 	objectives = input("Pixel Objective\n> ")
 	objectives = objectives.replace(' ', '')
 	objectives = [int(x) for x in objectives.split(',')]
-	pixelify(path, objectives)
+	outpath = input("Path to output (Blank for standard)\n> ")
+	pixelify(path, objectives, outpath=outpath)
 
-def pixelify(path, objectives=[32], subfolder="pixel"):
+def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 	if '.' in path:
 		name = path.split('/')[-1]
 		path = '/'.join(path.split('/')[:-1])
@@ -19,6 +20,17 @@ def pixelify(path, objectives=[32], subfolder="pixel"):
 		images = os.listdir(path)
 		if path[-1] in ['/', '\\']:
 			path = path[:-1]
+	
+	if outpath == "":
+		outpath = path + '/' + subfolder + '/'
+	elif ':' not in outpath:
+		outpath = path + '/' + outpath + '/'
+	if outpath[-1] not in ['/', '\\']:
+		outpath += '/'
+	path += '/'
+
+	print('from:', path)
+	print('  to:',outpath)
 
 	done = False
 	while not done:
@@ -32,13 +44,12 @@ def pixelify(path, objectives=[32], subfolder="pixel"):
 					print('Unlisted "%s": not .jpg or .png' % name)
 				break
 
-	newdir = path +'/' + subfolder + '/'
-	if not os.path.exists(newdir):
-		print('Creating directory: ' + newdir)
-		os.makedirs(newdir)
+	if not os.path.exists(outpath):
+		print('Creating directory: ' + outpath)
+		os.makedirs(outpath)
 
 	for name in images:
-		filepath = path + '/' + name
+		filepath = path + name
 		image = Image.open(filepath)
 
 		for objective in objectives:
@@ -52,9 +63,10 @@ def pixelify(path, objectives=[32], subfolder="pixel"):
 			nimage = nimage.resize((image_width, image_height), 0)
 	
 			parts = name.split('.')
-			newpath = newdir + parts[0] + '_' + str(objective) + '.' + parts[1]
+			newpath = outpath + parts[0] + '_' + str(objective) + '.' + parts[1]
 			nimage.save(newpath)
 
-
-
-boot()
+if __name__ == "__main__":
+	while True:
+		boot()
+		print('\n')

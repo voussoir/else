@@ -1,6 +1,10 @@
 Pixelify
 ========
 
+Requires PIL, which has been adapted to Python3 under the name pillow
+
+    pip install pillow
+
 Takes an image, or a folder full of images, and produces pixelated versions of each image according to an "objective". That is, how the image would look if it was forced to fit into an *objective x objective* frame. But, the actual output file will be the same dimensions as the original, simply pixelated.
 
 Examples:
