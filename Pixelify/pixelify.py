@@ -13,6 +13,7 @@ def boot():
 
 def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 	if '.' in path:
+		path = path.replace('\\', '/')
 		name = path.split('/')[-1]
 		path = '/'.join(path.split('/')[:-1])
 		images = [name]
@@ -20,6 +21,8 @@ def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 		images = os.listdir(path)
 		if path[-1] in ['/', '\\']:
 			path = path[:-1]
+
+	print(path)
 	
 	if outpath == "":
 		outpath = path + '/' + subfolder + '/'
