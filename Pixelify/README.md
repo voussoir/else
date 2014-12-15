@@ -7,6 +7,11 @@ Requires PIL, which has been adapted to Python3 under the name pillow
 
 Takes an image, or a folder full of images, and produces pixelated versions of each image according to an "objective". That is, how the image would look if it was forced to fit into an *objective x objective* frame. But, the actual output file will be the same dimensions as the original, simply pixelated.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/voussoir/else/master/Pixelify/examples/NeilDeGrasseTyson.png?raw=true" alt="NDGT"/>
+  <img src="https://raw.githubusercontent.com/voussoir/else/master/Pixelify/examples/pixel/NeilDeGrasseTyson_32.png?raw=true" alt="NDGT"/>
+</p>
+
 Examples:
 
     You are in a folder called C:\pics where there are 2 images: 1.png, 2.png
