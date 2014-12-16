@@ -58,6 +58,7 @@ class CanvasGame:
 			self.canvas.coords(self.player, x-self.player_radius, y-self.player_radius,
 							   x+self.player_radius, y+self.player_radius)
 
+			self.label_coordinates.configure(text="%d, %d" % (self.player_x, self.player_y))
 			time.sleep(0.017)
 
 	def numbercap(self, i, cap):
@@ -106,6 +107,8 @@ class CanvasGame:
 		self.velocity_speedup = 0.6
 
 		self.entities = []
+		self.label_coordinates = tkinter.Label(self.canvas, text="0, 0")
+		self.label_coordinates.place(x=self.gamewidthcenter, y=self.gameheight-10, anchor="c")
 
 		self.canvas.bind("<KeyPress>", self.pushkey)
 		self.canvas.bind("<KeyRelease>", self.releasekey)

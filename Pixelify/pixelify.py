@@ -1,5 +1,6 @@
 from PIL import Image
 import os
+import urllib.request
 
 def boot():
 	path = input("Path to image or directory\n> ")
@@ -67,7 +68,8 @@ def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 	
 			parts = name.split('.')
 			newpath = outpath + parts[0] + '_' + str(objective) + '.' + parts[1]
-			nimage.save(newpath)
+			nimage.save(newpath, quality=100)
+
 
 if __name__ == "__main__":
 	while True:
