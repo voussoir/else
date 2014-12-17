@@ -1,5 +1,6 @@
 from PIL import Image
 import os
+import sys
 import urllib.request
 
 def boot():
@@ -72,6 +73,18 @@ def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 
 
 if __name__ == "__main__":
-	while True:
-		boot()
-		print('\n')
+	if len(sys.argv) > 1:
+		print(sys.argv)
+		path = sys.argv[1]
+		objectives = [32]
+		outpath = ""
+		try:
+			objectives = [int(x) for x in sys.argv[2].split(',')]
+			outpath = sys.argv[3]
+		except IndexError:
+			pass
+		pixelify(path, objectives, outpath=outpath)
+	else:
+		while True:
+			boot()
+			print('\n')
