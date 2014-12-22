@@ -11,9 +11,9 @@ def boot():
 	objectives = objectives.replace(' ', '')
 	objectives = [int(x) for x in objectives.split(',')]
 	outpath = input("Path to output (Blank for standard)\n> ")
-	pixelify(path, objectives, outpath=outpath)
+	start(path, objectives, outpath=outpath)
 
-def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
+def start(path, objectives=[32], subfolder="pixel", outpath=""):
 	if '.' in path:
 		path = path.replace('\\', '/')
 		name = path.split('/')[-1]
@@ -58,19 +58,22 @@ def pixelify(path, objectives=[32], subfolder="pixel", outpath=""):
 		image = Image.open(filepath)
 
 		for objective in objectives:
-			print("Working: " + name, objective)
-			image_width = image.size[0]
-			image_height = image.size[1]
-			ratio = objective / max([image_width, image_height])
-			new_width = image_width * ratio
-			new_height = image_height * ratio
-			nimage = image.resize((round(new_width), round(new_height)), 1)
-			nimage = nimage.resize((image_width, image_height), 0)
-	
+			nimage = pixelify(image, name, objective)	
 			parts = name.split('.')
 			newpath = outpath + parts[0] + '_' + str(objective) + '.' + parts[1]
 			nimage.save(newpath, quality=100)
 
+def pixelify(image, name, objective):
+	print("Working: " + name, objective)
+	image = image.copy()
+	image_width = image.size[0]
+	image_height = image.size[1]
+	ratio = objective / max([image_width, image_height])
+	new_width = image_width * ratio
+	new_height = image_height * ratio
+	image = image.resize((round(new_width), round(new_height)), 1)
+	image = image.resize((image_width, image_height), 0)
+	return image
 
 if __name__ == "__main__":
 	if len(sys.argv) > 1:
@@ -83,7 +86,7 @@ if __name__ == "__main__":
 			outpath = sys.argv[3]
 		except IndexError:
 			pass
-		pixelify(path, objectives, outpath=outpath)
+		start(path, objectives, outpath=outpath)
 	else:
 		while True:
 			boot()
