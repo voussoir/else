@@ -6,6 +6,7 @@
 // @author       GoldenSights
 // @match        *://*.reddit.com/*
 // @grant        none
+// @updateURL    http://raw.githubusercontent.com/voussoir/else/master/RedditHidebar/hidebar.js
 // ==/UserScript==
 
 function togglesidebar()
