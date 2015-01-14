@@ -15,10 +15,11 @@ class RCONRelay:
 		"obj_sentrygun3": "Sentry lvl 3",
 		"shotgun_pyro": "Shotgun",
 		"shotgun_soldier": "Shotgun",
-		"shotgun_primary": "Shotgun"
+		"shotgun_primary": "Shotgun",
+		"club": "Kukri"
 		}
 
-		self.ip = ""
+		self.ip = "0.0.0.0"
 		self.port = 32768
 
 	def start(self):
