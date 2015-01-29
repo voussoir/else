@@ -1,4 +1,6 @@
 import tkinter
+import random
+import sudoku_generator
 
 class Sudoku:
 	def __init__(self):
@@ -6,10 +8,12 @@ class Sudoku:
 		self.t.title("Sudoku")
 		self.t.resizable(0,0)
 
-		self.color_enterbox = "#cfc"
-		self.color_entertext = "#111"
+		self.color_enterbox = "#555"
+		self.color_entertext = "#fff"
 		self.color_background = "#222"
 		self.color_helptext = "#ccc"
+		self.color_incorrecttext = "#f00"
+		self.color_giventext = "#7f7"
 		self.checkerboard_step = 2
 		self.color_checkerboard = self.checkerboard(self.color_enterbox)
 
@@ -32,8 +36,8 @@ class Sudoku:
 		self.t.configure(width=self.window_square, height=self.window_square+self.misc_height)
 		self.t.configure(bg=self.color_background)
 		self.entities_entry = []
+		self.entities_stringvar = []
 
-		self.permanents = []
 		self.create_boxes()
 
 		self.t.bind("<KeyPress>", self.keypress)
@@ -41,12 +45,28 @@ class Sudoku:
 		"w":[0, -1],
 		"s":[0, 1],
 		"a":[-1, 0],
-		"d":[1, 0]
-		}
+		"d":[1, 0]}
+
 		self.key_clearcurrent = ["e"]
+		self.key_grade = ["\r"]
+
+		print('Creating puzzle')
+		self.entries_solution = sudoku_generator.cgimain()[0]
+		for pos in range(len(self.entries_solution)):
+			self.entries_solution[pos] += 1
+		self.entries_given = self.entries_solution[:]
+		for pos in range(len(self.entries_given)):
+			if random.randint(0, 100) <= 50:
+				self.entries_given[pos] = None
+		#self.entries_given = self.entries_solution[1]
+		#self.entries_solution = self.entries_solution[0]
+		self.entries_current = []
+
+		self.apply_given()
 
 		self.cursor_position = [0,0]
 		self.select_entry_by_pos(self.cursor_position)
+		self.game_win = False
 		self.t.mainloop()
 
 	def keypress(self, event):
@@ -60,6 +80,8 @@ class Sudoku:
 			y = self.cursor_position[1]
 			index = (9 * y) + x
 			self.entities_entry[index].delete(0, "end")
+		elif event.char in self.key_grade:
+			self.grade()
 
 	def create_helptext(self, helptext):
 		helplabel = tkinter.Label(self.t, text=helptext)
@@ -95,12 +117,15 @@ class Sudoku:
 				enter.stringvar = stringvar
 				enter.stringvar.trace("w", lambda name,index,mode, stringvar=stringvar: self.checkinput(stringvar))
 				
+				enter.is_permanent = False
+				enter.stringvar.is_permanent = False
 				bg = self.color_enterbox
 				relief = self.relief_enterbox
 				if self.docheckerboard:
 					docheckerboard = (str(x+y)[-1] in "13579")
 					if docheckerboard:
 						bg = self.color_checkerboard
+
 				enter.configure(justify="c",
 								textvariable=enter.stringvar,
 								font=self.font_enterbox, 
@@ -111,6 +136,7 @@ class Sudoku:
 				enter.coordinates = [x, y]
 				
 				self.entities_entry.append(enter)
+				self.entities_stringvar.append(enter.stringvar)
 				enter.place(x=xpos, y=ypos, width=self.entry_square, height=self.entry_square)
 
 	def checkerboard(self, hexivalue):
@@ -141,6 +167,10 @@ class Sudoku:
 
 	def checkinput(self, *bullish):
 		stringvar = bullish[0]
+		if stringvar.is_permanent:
+			index = self.entities_stringvar.index(stringvar)
+			stringvar.set(self.entries_solution[index])
+			self.entities_entry[index].configure(fg=self.color_giventext)
 		stringvalue = stringvar.get()
 		try:
 			test_for_integer= int(stringvalue)
@@ -189,7 +219,58 @@ class Sudoku:
 
 		self.cursor_position = [xposition, yposition]
 		self.select_entry_by_pos(self.cursor_position)
-		print(self.cursor_position)
+		#print(self.cursor_position)
+
+	def generate_puzzle(self):
+		return [random.randint(1, 8) for x in range(81)]
+
+	def reset_colors(self):
+		for enterbox in self.entities_entry:
+			if not enterbox.is_permanent:
+				enterbox.configure(fg=self.color_entertext)
+
+	def apply_given(self):
+		for givenpos in range(len(self.entries_given)):
+			given = self.entries_given[givenpos]
+			if given:
+				self.entities_entry[givenpos].is_permanent = True
+				self.entities_stringvar[givenpos].is_permanent = True
+				self.checkinput(self.entities_stringvar[givenpos])
+				self.entities_entry[givenpos].configure(fg=self.color_giventext)
+
+	def grade(self):
+		self.entries_current = []
+		self.reset_colors()
+
+		self.game_win = True
+		self.has_errors = False
+
+		for enterbox_index in range(len(self.entities_entry)):
+			enterbox = self.entities_entry[enterbox_index]
+			cell = enterbox.get()
+			try:
+				cell = int(cell)
+				if cell != self.entries_solution[enterbox_index]:
+					self.game_win = False
+					self.has_errors = True
+					enterbox.configure(fg=self.color_incorrecttext)
+			except:
+				self.game_win = False
+				pass
+			if cell == '':
+				cell = 0
+			self.entries_current.append(cell)
+
+		if self.game_win:
+			print("WOOOOO")
+
+		elif not self.has_errors:
+			print('Doing well')
+		else:
+			print('Some mistakes')
+
+		print(self.entries_solution)
+		print(self.entries_current)
 
 
 soduku = Sudoku()
