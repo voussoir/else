@@ -71,8 +71,8 @@ class Editor:
 		if min([width, height]) < 20:
 			width = self.w
 			height = self.h
-		#self.frame_fileloader.pack(expand=True, fill='both', anchor='center')
-		self.frame_fileloader.place(x=width/2, y=(height/2)-10, anchor='center')
+		self.frame_fileloader.pack(expand=True, anchor='center')
+		#self.frame_fileloader.place(x=width/2, y=(height/2)-10, anchor='center')
 
 	def gui_build_editor(self, filetext, *b):
 		self.annihilate()
