@@ -8,7 +8,7 @@ class dodgygame:
 	def __init__(self):
 		tkvar = Tk()
 		tkvar.resizable(0,0)
-		tkvar.wm_title("Dodgy")
+		tkvar.wm_title('Dodgy')
 		tkvar.iconbitmap('Excl.ico')
 
 		arenasize = 40
