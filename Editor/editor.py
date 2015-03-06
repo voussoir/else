@@ -226,11 +226,6 @@ class Editor:
 			self.savefile('list', fetch, permissions=True)
 			self.has_filenames_changed = False
 
-	def strip_to_filename(self, s):
-		for bad in self.WINDOWS_BADCHARS:
-			s = s.replace(bad, '')
-		return s
-
 	def sha(self, data):
 		sha = hashlib.sha256()
 		data = data.encode('utf-8')
