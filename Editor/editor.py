@@ -17,6 +17,8 @@ class Editor:
 		self.font_large = ("Consolas", 16)
 		self.font_med = ("Consolas", 12)
 		self.font_small = ("Consolas", 10)
+		self.font_username = "Consolas"
+		self.font_usersize = 12
 
 		self.kilobyte = 1024
 		self.megabyte = 1048576
@@ -98,17 +100,43 @@ class Editor:
 		self.entities.append(self.label_filesize)
 		#
 		self.scrollbar_editor = tkinter.Scrollbar(self.t)
+		self.scrollbar_horz = tkinter.Scrollbar(self.t, orient='horizontal')
 		self.scrollbar_editor.pack(side='right', fill='y')
-		self.text_editor = tkinter.Text(self.t, wrap='word', font=self.font_med, yscrollcommand=self.scrollbar_editor.set)
+		self.scrollbar_horz.pack(side='bottom', fill='x')
+		self.text_editor = tkinter.Text(self.t, wrap='word', font=self.font_med)
+		self.text_editor.configure(yscrollcommand=self.scrollbar_editor.set)
+		self.text_editor.configure(xscrollcommand=self.scrollbar_horz.set)
 		self.scrollbar_editor.configure(command=self.text_editor.yview)
+		self.scrollbar_horz.configure(command=self.text_editor.xview)
 		self.text_editor.insert('end', filetext)
 		self.text_editor.pack(expand=True, fill='both')
 		self.text_editor.focus_set()
 		self.text_editor.bind('<Control-s>', self.savefile_smart)
 		self.text_editor.bind('<Control-w>', self.gui_build_fileloader)
+		self.text_editor.bind('<Control-[>', lambda s: self.editor_resize_font(-1))
+		self.text_editor.bind('<Control-]>', lambda s: self.editor_resize_font(1))
+		self.text_editor.bind('<Control-/>', self.editor_toggle_wrap)
 		self.entities.append(self.text_editor)
 		self.entities.append(self.scrollbar_editor)
+		self.entities.append(self.scrollbar_horz)
 		###
+
+	def editor_resize_font(self, direction, *b):
+		self.font_usersize += direction
+		if self.font_usersize < 1:
+			self.font_usersize = 1
+		font = [self.font_username, self.font_usersize]
+		self.text_editor.configure(font=font)
+		self.label_filesize.configure(text=str(self.font_usersize))
+
+	def editor_toggle_wrap(self, *b):
+		mode = self.text_editor.cget('wrap')
+		if mode == 'word':
+			self.text_editor.configure(wrap='none')
+			self.label_filesize.configure(text='word wrap disabled')
+		if mode == 'none':
+			self.text_editor.configure(wrap='word')
+			self.label_filesize.configure(text='word wrap enabled')
 
 	def savefile_smart(self, *b):
 		try:

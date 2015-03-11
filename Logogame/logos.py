@@ -40,8 +40,10 @@ class LogoGame:
 		self.cur = self.sql.cursor()
 		self.stats_main = self.stats_load('stats')
 		self.playerstats_load(self.stats_main.playername)
+		self.logos_load()
 
 		self.tkinter_elements = []
+		self.logo_elements = []
 		self.active_tags = set()
 
 		self.w = 1062
@@ -62,19 +64,20 @@ class LogoGame:
 
 		self.t.mainloop()
 
-	def update_wh(self, *b):
-		oldw = self.w
-		oldh = self.h
-		self.w = self.t.winfo_width()
-		self.h = self.t.winfo_height()
-		if oldw != self.w or oldh != self.h:
-			pass
-			#self.uirefresher()
+	def logos_load(self):
+		self.cur.execute('SELECT * FROM logos')
+		self.all_logos = self.cur.fetchall()
 
 	def destroy_all_elements(self):
 		while len(self.tkinter_elements) > 0:
 			self.tkinter_elements[0].destroy()
 			del self.tkinter_elements[0]
+		self.destroy_all_logos()
+
+	def destroy_all_logos(self):
+		while len(self.logo_elements) > 0:
+			self.logo_elements[0].destroy()
+			del self.logo_elements[0]
 
 	def gui_build_main(self, *b):
 		self.destroy_all_elements()
@@ -147,21 +150,31 @@ class LogoGame:
 		self.button_back.grid(row=0, column=0)
 		self.tkinter_elements.append(self.button_back)
 		#
+		#self.frame_gamearea = tkinter.Frame(self.t, bg='#f00')
+		#self.frame_gamearea.pack(expand=True, fill='both', anchor='w')
+		#
 		self.frame_gametaglist = tkinter.Frame(self.t)
 		self.frame_gametaglist.pack(expand=True, fill='y', anchor='e')
 		self.tkinter_elements.append(self.frame_gametaglist)
 		#
+		button_applytag = tkinter.Button(self.frame_gametaglist, text='Apply', command=self.gui_rebuild_game)
+		button_applytag.grid(row=0, column=0, sticky='w')
 		alltags = self.get_all_tags()
 		for tag in alltags:
 			intvar = tkinter.IntVar()
 			intvar.title=tag
 			checkbox = tkinter.Checkbutton(self.frame_gametaglist, text=tag, variable=intvar)
 			checkbox.intvar = intvar
-			checkbox.grid(row=alltags.index(tag), column=0, sticky='w')
+			checkbox.grid(row=alltags.index(tag)+1, column=0, sticky='w')
 			intvar.set(1)
 			self.tkinter_elements.append(checkbox)
 			self.active_tags.add(tag)
+
 		###
+
+	def gui_rebuild_game(self, *b):
+		self.destroy_all_logos()
+
 
 	def gui_build_logo(self, *b):
 		self.destroy_all_elements()
