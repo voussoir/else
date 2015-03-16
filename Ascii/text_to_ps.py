@@ -1,5 +1,4 @@
 import os
-from PIL import Image
 import subprocess
 import tkinter
 
