@@ -4,7 +4,7 @@ import subprocess
 import tkinter
 
 filename_noext = input(']>> ')
-filename_text = filename_text.replace('.txt', '')
+filename_text = filename_noext.replace('.txt', '')
 filename_text = filename_noext + '.txt'
 filename_ghost = filename_noext + '_render.ps'
 
@@ -27,4 +27,4 @@ print('Writing Postscript')
 c.postscript(file=filename_ghost, width=lines_width, height=lines_height)
 t.destroy()
 print('Writing PNG')
-subprocess.Popen('PNGCREATOR.bat', shell=True, cwd='D:/!/o/asscii')
+subprocess.Popen('PNGCREATOR.bat', shell=True, cwd=os.getcwd())

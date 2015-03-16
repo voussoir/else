@@ -38,7 +38,7 @@ class Editor:
 		self.geometrystring = '%dx%d+%d+%d' % (self.windowwidth, self.windowheight, self.windowx, self.windowy)
 		self.t.geometry(self.geometrystring)
 
-		self.reserved_filenames = ['random', 'list']
+		self.reserved_filenames = ['random', 'list', 'help']
 		self.has_filenames_changed = True
 		self.entities = []
 		self.filename = None

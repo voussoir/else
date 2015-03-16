@@ -63,11 +63,11 @@ class LogoGame:
 		self.geometrystring = '%dx%d+%d+%d' % (self.windowwidth, self.windowheight, self.windowx, self.windowy)
 		self.t.geometry(self.geometrystring)
 
-		self.uirefresher = self.gui_build_main
-		self.gui_build_main()
 
 		#self.t.bind('<Configure>', self.update_wh)
 
+	def start(self):
+		self.gui_build_main()
 		self.t.mainloop()
 
 	def logos_load(self):
@@ -259,6 +259,8 @@ class LogoGame:
 		###
 
 	def playername_set(self, newname):
+		if newname == '':
+			return
 		if newname != self.stats_main.playername:
 			self.cur.execute('UPDATE stats SET value=? WHERE key="playername"', [newname])
 			self.sql.commit()
@@ -270,6 +272,7 @@ class LogoGame:
 		for logo in self.all_logos:
 			logo.solved = self.playerstats_hassolved(logo.id)
 		print('Name: ' + self.stats_main.playername)
+		self.clean_empty_dbs()
 
 	def sha8(self, text):
 		sha = hashlib.sha256()
@@ -356,4 +359,23 @@ class LogoGame:
 		alltags.sort()
 		return alltags
 
-logogame = LogoGame()
+	def clean_empty_dbs(self):
+		ls = os.listdir('playerdata')
+		todelete = []
+		for name in ls:
+			name = 'playerdata/'+name
+			s = sqlite3.connect(name)
+			c = s.cursor()
+			c.execute('SELECT * FROM stats')
+			if not c.fetchone():
+				del c
+				del s
+				try:
+					os.remove(name)
+				except PermissionError:
+					pass
+
+
+if __name__ == '__main__':
+	logogame = LogoGame()
+	logogame.start()
