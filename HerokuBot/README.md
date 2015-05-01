@@ -9,6 +9,7 @@ Inside git.zip is the .git repo that I created for this. I had to zip it so that
 2. Install [Heroku toolbelt](https://toolbelt.heroku.com/)
 3. Install [Git](http://git-scm.com/)
 4. Create a folder to keep your repo
+5. cd into this folder
 5. Write your bot
 6. Create requirements.txt, and require a version of praw
 7. Create runtime.txt, and require a version of Python
