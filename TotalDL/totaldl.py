@@ -85,7 +85,7 @@ def handle_imgur_html(url):
 			links.append(image)
 	return links
 
-def handle_imgur(url, albumid=''):
+def handle_imgur(url, albumid='', customname=None):
 	name = url.split('/')[-1]
 	if 'imgur.com' in name:
 		# This link doesn't appear to have an image id
@@ -94,13 +94,18 @@ def handle_imgur(url, albumid=''):
 	basename = name.split('.')[0]
 	if '.' in name:
 		# This is a direct image link
-		if IMGUR_ALBUMFOLDERS and albumid and albumid != basename:
-			if not os.path.exists(albumid):
-				os.makedirs(albumid)
-			localpath = '%s\\%s' % (albumid, name)
+		if customname:
+			# replace the imgur ID with the customname, keep ext.
+			name = '%s.%s' % (customname, name.split('.')[-1])
+		if albumid and albumid != basename:
 
-		elif albumid and albumid != basename:
-			localpath = '%s_%s' % (albumid, name)
+			if IMGUR_ALBUMFOLDERS:
+				if not os.path.exists(albumid):
+					os.makedirs(albumid)
+				localpath = '%s\\%s' % (albumid, name)
+	
+			else:
+				localpath = '%s_%s' % (albumid, name)
 
 		else:
 			localpath = name
@@ -110,28 +115,42 @@ def handle_imgur(url, albumid=''):
 	else:
 		# Not a direct image link, let's read the html.
 		images = handle_imgur_html(url)
+		if customname:
+			name = customname
 		print('\tFound %d images' % len(images))
-		for image in images:
-			handle_imgur(image, albumid=name)
+		if len(images) > 1:
+			for imagei in range(len(images)):
+				image = images[imagei]
+				handle_imgur(image, albumid=name, customname=str(imagei))
+		else:
+			handle_imgur(images[0], customname=name)
 
 
-def handle_gfycat(url):
+def handle_gfycat(url, customname=None):
 	name = url.split('/')[-1]
 	name = name.split('.')[0]
+	if customname:
+		filename = customname
+	else:
+		filename = name
+
 	if GFYCAT_MP4:
 		name += '.mp4'
+		filename += '.mp4'
 	else:
 		name += '.webm'
+		filename += '.webm'
+
 	for subdomain in GFYCAT_SUBDOMAINS:
 		url = 'http://%s.gfycat.com/%s' % (subdomain, name)
 		try:
-			download_file(url, name)
+			download_file(url, filename)
 			break
 		except StatusExc:
 			pass
 
 
-def handle_vimeo(url):
+def handle_vimeo(url, customname=None):
 	name = url.split('/')[-1]
 	name = name.split('?')[0]
 	try:
@@ -155,13 +174,19 @@ def handle_vimeo(url):
 		if priority in chunk:
 			fileurl = chunk[priority]['url']
 			break
-	filename = name + '.mp4'
+	if customname:
+		filename = customname + '.mp4'
+	else:
+		filename = name + '.mp4'
 	download_file(fileurl, filename)
 
 
-def handle_liveleak(url):
-	filename = url.split('=')[1]
-	filename += '.mp4'
+def handle_liveleak(url, customname=None):
+	if customname:
+		name = customname
+	else:
+		name = url.split('=')[1]
+	name += '.mp4'
 	pagedata = request_get(url)
 	pagedata = pagedata.text
 	pagedata = pagedata.split('file: "')[1]
@@ -171,16 +196,24 @@ def handle_liveleak(url):
 		if 'h264_' in pagedata[spoti]:
 			pagedata[spoti] = 'h264_720p'
 	pagedata = '.'.join(pagedata)
-	download_file(pagedata, filename)
+	download_file(pagedata, name)
 
 
-def handle_youtube(url):
-	os.system('youtube-dl %s --force-ipv4' % url)
+def handle_youtube(url, customname=None):
+	# The customname doesn't do anything on this function
+	# but handle_master works better if everything uses
+	# the same format.
+	url = url.replace('&amp;', '&')
+	url = url.replace('feature=player_embedded&', '')
+	url = url.replace('&feature=player_embedded', '')
+	os.system('youtube-dl "%s" --force-ipv4' % url)
 
 
-def handle_generic(url):
+def handle_generic(url, customname=None):
 	try:
 		name = url.split('/')[-1]
+		if customname:
+			name = '%s.%s' % (customname, name.split('.')[-1])
 		download_file(url, name)
 	except:
 		pass
@@ -196,14 +229,14 @@ HANDLERS = {
 	'youtu.be': handle_youtube
 	}
 
-def handle_master(url):
+def handle_master(url, customname=None):
 	print('Handling %s' % url)
 	for handlerkey in HANDLERS:
 		if handlerkey.lower() in url.lower():
-			HANDLERS[handlerkey](url)
+			HANDLERS[handlerkey](url, customname=customname)
 			return
 	if DO_GENERIC:
-		handle_generic(url)
+		handle_generic(url, customname=customname)
 
 def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, generic=True):
 	print('Testing')
@@ -211,11 +244,14 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 		# Imgur gallery album
 		handle_master('http://imgur.com/gallery/s4WLG')
 
-		# Imgur album
-		handle_master('http://imgur.com/a/s4WLG')
+		# Imgur standard album with customname
+		handle_master('http://imgur.com/a/s4WLG', customname='album')
 
-		# Imgur indirect single
+		# Imgur indirect 
 		handle_master('http://imgur.com/gvJUct0')
+
+		# Imgur indirect single with customname
+		handle_master('http://imgur.com/gvJUct0', customname='indirect')
 
 		# Imgur direct single
 		handle_master('http://i.imgur.com/gvJUct0.jpg')
@@ -227,13 +263,22 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 		# Gfycat general link
 		handle_master('http://www.gfycat.com/RawWetFlatcoatretriever')
 
+		# Gfycat general link with customname
+		handle_master('http://www.gfycat.com/RawWetFlatcoatretriever', customname='gfycatgeneral')
+
 	if vimeo:
 		# Vimeo standard link
 		handle_master('https://vimeo.com/109405701')
 
+		# Vimeo player link with customname
+		handle_master('https://player.vimeo.com/video/109405701', customname='vimeoplayer')
+
 	if liveleak:
 		# LiveLeak standard link
 		handle_master('http://www.liveleak.com/view?i=9d1_1429192014')
+
+		# LiveLeak standard link with customname
+		handle_master('http://www.liveleak.com/view?i=9d1_1429192014', customname='liveleak')
 
 	if youtube:
 		# Youtube standard link
@@ -242,12 +287,24 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 		# Youtube short link
 		handle_master('https://youtu.be/GjOBTstnW20')
 
+		# Youtube player embed link
+		handle_master('https://www.youtube.com/watch?feature=player_embedded&amp;v=bEgeh5hA5ko')
+
 	if generic:
 		# Some link that might work
 		handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt')
+
+		# Some link that might work with customname
+		handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt', customname='sss')
 
 		# Some link that might work
 		handle_master('https://github.com/voussoir/reddit/tree/master/SubredditBirthdays/show')
 
 if __name__ == '__main__':
-	test()
+	test(
+		imgur=False,
+		gfycat=False,
+		vimeo=False,
+		liveleak=False,
+		youtube=True,
+		generic=False)

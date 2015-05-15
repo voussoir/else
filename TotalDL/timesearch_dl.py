@@ -9,5 +9,10 @@ while True:
 	item = cur.fetchone()
 	if item is None:
 		break
+	title = item[6]
+	for character in '\\/?:*"><|.':
+		title = title.replace(character, '')
+	if len(title) > 35:
+		title = title[:34] + '-'
 	url = item[7]
-	totaldl.handle_master(url)
+	totaldl.handle_master(url, customname=title)
