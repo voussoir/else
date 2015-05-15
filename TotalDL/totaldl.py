@@ -249,4 +249,5 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 		# Some link that might work
 		handle_master('https://github.com/voussoir/reddit/tree/master/SubredditBirthdays/show')
 
-test()
+if __name__ == '__main__':
+	test()
