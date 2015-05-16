@@ -39,6 +39,8 @@ VIMEO_PRIORITY = ['hd', 'sd', 'mobile']
 
 LIVELEAK_YOUTUBEIFRAME = 'youtube.com/embed'
 
+LIVELEAK_RESOLUTIONS = ['h264_base', 'h264_720p', 'h264_270p']
+
 DO_GENERIC = True
 # If true, attempt to download whatever URL goes in
 # Else, only download from the explicitly supported sites
@@ -49,6 +51,8 @@ last_request = 0
 
 if DOWNLOAD_DIRECTORY[-1] not in ['/', '\\']:
 	DOWNLOAD_DIRECTORY += '\\'
+if not os.path.exists(DOWNLOAD_DIRECTORY):
+	os.makedirs(DOWNLOAD_DIRECTORY)
 
 class StatusExc(Exception):
 	pass
@@ -211,12 +215,21 @@ def handle_liveleak(url, customname=None):
 	else:
 		pagedata = pagedata.split('file: "')[1]
 		pagedata = pagedata.split('",')[0]
+		original = pagedata
 		pagedata = pagedata.split('.')
 		for spoti in range(len(pagedata)):
 			if 'h264_' in pagedata[spoti]:
-				pagedata[spoti] = 'h264_720p'
+				pagedata[spoti] = 'LIVELEAKRESOLUTION'
 		pagedata = '.'.join(pagedata)
-		download_file(pagedata, name)
+		for res in LIVELEAK_RESOLUTIONS:
+			url = pagedata.replace('LIVELEAKRESOLUTION', res)
+			try:
+				download_file(url, name)
+				return
+			except StatusExc:
+				pass
+		download_file(original, name)
+
 
 
 def handle_youtube(url, customname=None):
@@ -226,7 +239,7 @@ def handle_youtube(url, customname=None):
 	url = url.replace('&amp;', '&')
 	url = url.replace('feature=player_embedded&', '')
 	url = url.replace('&feature=player_embedded', '')
-	os.system('youtube-dl "%s" --force-ipv4' % url)
+	os.system('youtube-dl "{0}" --force-ipv4 -o "/var/www/html/xxxx/xxx/%(title)s.%(ext)s"'.format(url))
 
 
 def handle_generic(url, customname=None):
@@ -327,9 +340,9 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 
 if __name__ == '__main__':
 	test(
-		imgur=True,
+		imgur=False,
 		gfycat=False,
 		vimeo=False,
-		liveleak=False,
+		liveleak=True,
 		youtube=False,
-		generic=True)
+		generic=False)
