@@ -5,7 +5,7 @@ import time
 
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.152 Safari/537.36'}
 
-DOWNLOAD_DIRECTORY = 'heyo'
+DOWNLOAD_DIRECTORY = ''
 # Save files to this folder
 # If blank, it uses the local folder
 
@@ -49,10 +49,11 @@ DO_GENERIC = True
 
 last_request = 0
 
-if DOWNLOAD_DIRECTORY[-1] not in ['/', '\\']:
-	DOWNLOAD_DIRECTORY += '\\'
-if not os.path.exists(DOWNLOAD_DIRECTORY):
-	os.makedirs(DOWNLOAD_DIRECTORY)
+if DOWNLOAD_DIRECTORY != '':
+	if DOWNLOAD_DIRECTORY[-1] not in ['/', '\\']:
+		DOWNLOAD_DIRECTORY += '\\'
+	if not os.path.exists(DOWNLOAD_DIRECTORY):
+		os.makedirs(DOWNLOAD_DIRECTORY)
 
 class StatusExc(Exception):
 	pass
@@ -239,7 +240,7 @@ def handle_youtube(url, customname=None):
 	url = url.replace('&amp;', '&')
 	url = url.replace('feature=player_embedded&', '')
 	url = url.replace('&feature=player_embedded', '')
-	os.system('youtube-dl "{0}" --force-ipv4 -o "/var/www/html/xxxx/xxx/%(title)s.%(ext)s"'.format(url))
+	os.system('youtube-dl "{0}" --force-ipv4 -o "/{1}/%(title)s.%(ext)s"'.format(url, DOWNLOAD_DIRECTORY))
 
 
 def handle_generic(url, customname=None):
@@ -343,6 +344,6 @@ if __name__ == '__main__':
 		imgur=False,
 		gfycat=False,
 		vimeo=False,
-		liveleak=True,
-		youtube=False,
+		liveleak=False,
+		youtube=True,
 		generic=False)
