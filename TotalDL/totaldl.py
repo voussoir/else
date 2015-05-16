@@ -33,6 +33,8 @@ VIMEO_DICT_END = ',"hls"'
 VIMEO_PRIORITY = ['hd', 'sd', 'mobile']
 # Download files in this priority
 
+LIVELEAK_YOUTUBEIFRAME = 'youtube.com/embed'
+
 DO_GENERIC = True
 # If true, attempt to download whatever URL goes in
 # Else, only download from the explicitly supported sites
@@ -189,14 +191,23 @@ def handle_liveleak(url, customname=None):
 	name += '.mp4'
 	pagedata = request_get(url)
 	pagedata = pagedata.text
-	pagedata = pagedata.split('file: "')[1]
-	pagedata = pagedata.split('",')[0]
-	pagedata = pagedata.split('.')
-	for spoti in range(len(pagedata)):
-		if 'h264_' in pagedata[spoti]:
-			pagedata[spoti] = 'h264_720p'
-	pagedata = '.'.join(pagedata)
-	download_file(pagedata, name)
+	if LIVELEAK_YOUTUBEIFRAME in pagedata:
+		pagedata = pagedata.split('\n')
+		pagedata = [line for line in pagedata if LIVELEAK_YOUTUBEIFRAME in line]
+		pagedata = pagedata[0]
+		pagedata = pagedata.split('src="')[1]
+		pagedata = pagedata.split('"')[0]
+		print('\tFound youtube embed')
+		handle_master(pagedata)
+	else:
+		pagedata = pagedata.split('file: "')[1]
+		pagedata = pagedata.split('",')[0]
+		pagedata = pagedata.split('.')
+		for spoti in range(len(pagedata)):
+			if 'h264_' in pagedata[spoti]:
+				pagedata[spoti] = 'h264_720p'
+		pagedata = '.'.join(pagedata)
+		download_file(pagedata, name)
 
 
 def handle_youtube(url, customname=None):
@@ -214,6 +225,8 @@ def handle_generic(url, customname=None):
 		name = url.split('/')[-1]
 		if customname:
 			name = '%s.%s' % (customname, name.split('.')[-1])
+		if '.' not in name:
+			name += '.html'
 		download_file(url, name)
 	except:
 		pass
@@ -277,6 +290,9 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 		# LiveLeak standard link
 		handle_master('http://www.liveleak.com/view?i=9d1_1429192014')
 
+		# Liveleak article with youtube embed
+		handle_master('http://www.liveleak.com/view?i=ab8_1367941301')
+
 		# LiveLeak standard link with customname
 		handle_master('http://www.liveleak.com/view?i=9d1_1429192014', customname='liveleak')
 
@@ -305,6 +321,6 @@ if __name__ == '__main__':
 		imgur=False,
 		gfycat=False,
 		vimeo=False,
-		liveleak=False,
-		youtube=True,
+		liveleak=True,
+		youtube=False,
 		generic=False)
