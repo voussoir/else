@@ -5,6 +5,10 @@ import time
 
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.152 Safari/537.36'}
 
+DOWNLOAD_DIRECTORY = 'heyo'
+# Save files to this folder
+# If blank, it uses the local folder
+
 IMGUR_ALBUM_INDV = '"og:image"content="htt'
 # The HTML string which tells us that an image link is
 # on this line.
@@ -43,10 +47,14 @@ DO_GENERIC = True
 
 last_request = 0
 
+if DOWNLOAD_DIRECTORY[-1] not in ['/', '\\']:
+	DOWNLOAD_DIRECTORY += '\\'
+
 class StatusExc(Exception):
 	pass
 
 def download_file(url, localname):
+	localname = DOWNLOAD_DIRECTORY + localname
 	if os.path.exists(localname):
 		print('\t%s already exists!!' % localname)
 		return
@@ -102,8 +110,9 @@ def handle_imgur(url, albumid='', customname=None):
 		if albumid and albumid != basename:
 
 			if IMGUR_ALBUMFOLDERS:
-				if not os.path.exists(albumid):
-					os.makedirs(albumid)
+
+				if not os.path.exists(DOWNLOAD_DIRECTORY + albumid):
+					os.makedirs(DOWNLOAD_DIRECTORY + albumid)
 				localpath = '%s\\%s' % (albumid, name)
 	
 			else:
@@ -318,9 +327,9 @@ def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, gener
 
 if __name__ == '__main__':
 	test(
-		imgur=False,
+		imgur=True,
 		gfycat=False,
 		vimeo=False,
-		liveleak=True,
+		liveleak=False,
 		youtube=False,
-		generic=False)
+		generic=True)
