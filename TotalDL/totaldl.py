@@ -60,6 +60,9 @@ class StatusExc(Exception):
 
 def download_file(url, localname):
 	localname = DOWNLOAD_DIRECTORY + localname
+	if 'twimg' in url:
+		localname = localname.replace(':large', '')
+		localname = localname.replace(':small', '')
 	if os.path.exists(localname):
 		print('\t%s already exists!!' % localname)
 		return
@@ -243,6 +246,25 @@ def handle_youtube(url, customname=None):
 	os.system('youtube-dl "{0}" --force-ipv4 -o "/{1}/%(title)s.%(ext)s"'.format(url, DOWNLOAD_DIRECTORY))
 
 
+def handle_twitter(url, customname=None):
+	pagedata = request_get(url)
+	pagedata = pagedata.text
+	try:
+		link = pagedata.split('data-url="')[1]
+		link = link.split('"')[0]
+		handle_master(link, customname=customname)
+		return
+	except IndexError:
+		try:
+			link = pagedata.split('data-expanded-url="')[1]
+			link = link.split('"')[0]
+			handle_master(link, customname=customname)
+			return
+		except IndexError:
+			pass
+	print('\tNo media detected')
+
+
 def handle_generic(url, customname=None):
 	try:
 		name = url.split('/')[-1]
@@ -262,7 +284,8 @@ HANDLERS = {
 	'vimeo.com': handle_vimeo,
 	'liveleak.com': handle_liveleak,
 	'youtube.com': handle_youtube,
-	'youtu.be': handle_youtube
+	'youtu.be': handle_youtube,
+	'twitter.com': handle_twitter
 	}
 
 def handle_master(url, customname=None):
@@ -327,6 +350,22 @@ def test_youtube():
 	# Youtube player embed link
 	handle_master('https://www.youtube.com/watch?feature=player_embedded&amp;v=bEgeh5hA5ko')
 
+def test_twitter():
+	# Tiwtter with twitter-image embed
+	handle_master('https://twitter.com/PetoLucem/status/599493836214272000')
+
+	# Twitter with twitter-image embed
+	handle_master('https://twitter.com/Jalopnik/status/598287843128188929')
+
+	# Twitter with twitter-image embed and customname
+	handle_master('https://twitter.com/Jalopnik/status/598287843128188929', customname='twits')
+
+	# Twitter with youtube embed
+	handle_master('https://twitter.com/cp_orange_x3/status/599705117420457984')
+
+	# Twitter plain text
+	handle_master('https://twitter.com/cp_orange_x3/status/599700702382817280')
+
 def test_generic():
 	# Some link that might work
 	handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt')
@@ -343,5 +382,6 @@ if __name__ == '__main__':
 	#test_vimeo()
 	#test_liveleak()
 	#test_youtube()
+	test_twitter()
 	#test_generic()
 	pass
