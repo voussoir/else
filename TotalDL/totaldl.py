@@ -274,76 +274,74 @@ def handle_master(url, customname=None):
 	if DO_GENERIC:
 		handle_generic(url, customname=customname)
 
-def test(imgur=True, gfycat=True, vimeo=True, liveleak=True, youtube=True, generic=True):
-	print('Testing')
-	if imgur:
-		# Imgur gallery album
-		handle_master('http://imgur.com/gallery/s4WLG')
+def test_imgur():
+	# Imgur gallery album
+	handle_master('http://imgur.com/gallery/s4WLG')
 
-		# Imgur standard album with customname
-		handle_master('http://imgur.com/a/s4WLG', customname='album')
+	# Imgur standard album with customname
+	handle_master('http://imgur.com/a/s4WLG', customname='album')
 
-		# Imgur indirect 
-		handle_master('http://imgur.com/gvJUct0')
+	# Imgur indirect 
+	handle_master('http://imgur.com/gvJUct0')
 
-		# Imgur indirect single with customname
-		handle_master('http://imgur.com/gvJUct0', customname='indirect')
+	# Imgur indirect single with customname
+	handle_master('http://imgur.com/gvJUct0', customname='indirect')
 
-		# Imgur direct single
-		handle_master('http://i.imgur.com/gvJUct0.jpg')
+	# Imgur direct single
+	handle_master('http://i.imgur.com/gvJUct0.jpg')
 
-	if gfycat:
-		# Gfycat direct .gif
-		handle_master('http://giant.gfycat.com/FatherlyBruisedIberianchiffchaff.gif')
+def test_gfycat():
+	# Gfycat direct .gif
+	handle_master('http://giant.gfycat.com/FatherlyBruisedIberianchiffchaff.gif')
 
-		# Gfycat general link
-		handle_master('http://www.gfycat.com/RawWetFlatcoatretriever')
+	# Gfycat general link
+	handle_master('http://www.gfycat.com/RawWetFlatcoatretriever')
 
-		# Gfycat general link with customname
-		handle_master('http://www.gfycat.com/RawWetFlatcoatretriever', customname='gfycatgeneral')
+	# Gfycat general link with customname
+	handle_master('http://www.gfycat.com/RawWetFlatcoatretriever', customname='gfycatgeneral')
 
-	if vimeo:
-		# Vimeo standard link
-		handle_master('https://vimeo.com/109405701')
+def test_vimeo():
+	# Vimeo standard link
+	handle_master('https://vimeo.com/109405701')
 
-		# Vimeo player link with customname
-		handle_master('https://player.vimeo.com/video/109405701', customname='vimeoplayer')
+	# Vimeo player link with customname
+	handle_master('https://player.vimeo.com/video/109405701', customname='vimeoplayer')
 
-	if liveleak:
-		# LiveLeak standard link
-		handle_master('http://www.liveleak.com/view?i=9d1_1429192014')
+def test_liveleak():
+	# LiveLeak standard link
+	handle_master('http://www.liveleak.com/view?i=9d1_1429192014')
 
-		# Liveleak article with youtube embed
-		handle_master('http://www.liveleak.com/view?i=ab8_1367941301')
+	# Liveleak article with youtube embed
+	handle_master('http://www.liveleak.com/view?i=ab8_1367941301')
 
-		# LiveLeak standard link with customname
-		handle_master('http://www.liveleak.com/view?i=9d1_1429192014', customname='liveleak')
+	# LiveLeak standard link with customname
+	handle_master('http://www.liveleak.com/view?i=9d1_1429192014', customname='liveleak')
 
-	if youtube:
-		# Youtube standard link
-		handle_master('https://www.youtube.com/watch?v=bEgeh5hA5ko')
+def test_youtube():
+	# Youtube standard link
+	handle_master('https://www.youtube.com/watch?v=bEgeh5hA5ko')
 
-		# Youtube short link
-		handle_master('https://youtu.be/GjOBTstnW20')
+	# Youtube short link
+	handle_master('https://youtu.be/GjOBTstnW20')
 
-		# Youtube player embed link
-		handle_master('https://www.youtube.com/watch?feature=player_embedded&amp;v=bEgeh5hA5ko')
+	# Youtube player embed link
+	handle_master('https://www.youtube.com/watch?feature=player_embedded&amp;v=bEgeh5hA5ko')
 
-	if generic:
-		# Some link that might work
-		handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt')
+def test_generic():
+	# Some link that might work
+	handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt')
 
-		# Some link that might work with customname
-		handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt', customname='sss')
+	# Some link that might work with customname
+	handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt', customname='sss')
 
-		# Some link that might work
-		handle_master('https://github.com/voussoir/reddit/tree/master/SubredditBirthdays/show')
+	# Some link that might work
+	handle_master('https://github.com/voussoir/reddit/tree/master/SubredditBirthdays/show')
 
 if __name__ == '__main__':
-	test(
-		imgur=False,
-		gfycat=False,
-		vimeo=False,
-		liveleak=False,
-		youtube=True,
-		generic=False)
+	#test_imgur()
+	#test_gfycat()
+	#test_vimeo()
+	#test_liveleak()
+	#test_youtube()
+	#test_generic()
+	pass
