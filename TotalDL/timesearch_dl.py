@@ -1,3 +1,4 @@
+import traceback
 import sqlite3
 import totaldl
 
@@ -22,6 +23,9 @@ while True:
 		title = title.replace(character, '')
 	if len(title) > 35:
 		title = title[:34] + '-'
-	totaldl.handle_master(url, customname=title)
+	try:
+		totaldl.handle_master(url, customname=title)
+	except:
+		traceback.print_exc()
 	cur2.execute('INSERT INTO totaldl_urls VALUES(?)', [url])
 	sql.commit()
