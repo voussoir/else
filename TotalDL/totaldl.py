@@ -243,7 +243,7 @@ def handle_youtube(url, customname=None):
 	url = url.replace('&amp;', '&')
 	url = url.replace('feature=player_embedded&', '')
 	url = url.replace('&feature=player_embedded', '')
-	os.system('youtube-dl "{0}" --force-ipv4 -o "/{1}/%(title)s.%(ext)s"'.format(url, DOWNLOAD_DIRECTORY))
+	os.system('youtube-dl "{0}" --no-playlist --force-ipv4 -o "/{1}/%(title)s.%(ext)s"'.format(url, DOWNLOAD_DIRECTORY))
 
 
 def handle_twitter(url, customname=None):
