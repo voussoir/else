@@ -5,10 +5,20 @@ Encode / Decode between strings and PNG images. Can be imported or used on the c
 
 One channel is used to store the character, and the other two are randomized, so the output looks different every time.
 
+When used from the commandline, encoding and decoding looks like this:
+
+	> textpixel.py encode text filename
+	> textpixel.py decode filename
+
+In the commandline, the parameter `text` can be the filename of a .txt file, and its contents will become the text. This is not the case for python usage.
+
 python example:
 
     encoded_string = textpixel.encode_string('Wow, look!')
     textpixel.write_pixels(encoded_string, 'wowlook.png')
+
+    decoded_string = textpixel.decode_image('wowlook.png')
+    print(decoded_string)
 
 
 commandline example:
