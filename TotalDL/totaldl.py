@@ -252,13 +252,15 @@ def handle_twitter(url, customname=None):
 	try:
 		link = pagedata.split('data-url="')[1]
 		link = link.split('"')[0]
-		handle_master(link, customname=customname)
+		if link != url:
+			handle_master(link, customname=customname)
 		return
 	except IndexError:
 		try:
 			link = pagedata.split('data-expanded-url="')[1]
 			link = link.split('"')[0]
-			handle_master(link, customname=customname)
+			if link != url:
+				handle_master(link, customname=customname)
 			return
 		except IndexError:
 			pass
@@ -365,6 +367,9 @@ def test_twitter():
 
 	# Twitter plain text
 	handle_master('https://twitter.com/cp_orange_x3/status/599700702382817280')
+
+	# Twitter plain text
+	handle_master('https://twitter.com/SyriacMFS/status/556513635913437184')
 
 def test_generic():
 	# Some link that might work
