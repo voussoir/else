@@ -7,6 +7,7 @@ cur = sql.cursor()
 cur2 = sql.cursor()
 
 cur.execute('CREATE TABLE IF NOT EXISTS totaldl_urls(url TEXT)')
+cur.execute('CREATE INDEX IF NOT EXISTS urlindex ON totaldl_urls(url)')
 sql.commit()
 cur.execute('SELECT * FROM posts WHERE self=0 AND url IS NOT NULL')
 while True:

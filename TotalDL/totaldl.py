@@ -2,6 +2,7 @@ import json
 import requests
 import os
 import time
+import sys
 
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.152 Safari/537.36'}
 
@@ -140,7 +141,9 @@ def handle_imgur(url, albumid='', customname=None):
 		if len(images) > 1:
 			for imagei in range(len(images)):
 				image = images[imagei]
-				handle_imgur(image, albumid=name, customname=str(imagei))
+				iname = image.split('/')[-1]
+				iname = iname.split('.')[0]
+				handle_imgur(image, albumid=name, customname='%d_%s' % (imagei, iname))
 		else:
 			handle_imgur(images[0], customname=name)
 
@@ -249,6 +252,27 @@ def handle_youtube(url, customname=None):
 def handle_twitter(url, customname=None):
 	pagedata = request_get(url)
 	pagedata = pagedata.text
+
+	idnumber = url.split('status/')[1].split('/')[0]
+	if customname:
+		name = customname
+	else:
+		name = idnumber
+		customname = idnumber
+	tweetpath = '%s.html' % (DOWNLOAD_DIRECTORY + name)
+	if not os.path.exists(tweetpath):
+		psplit = '<p class="TweetTextSize'
+		tweettext = pagedata.split(psplit)[1]
+		tweettext = tweettext.split('</p>')[0]
+		tweettext = psplit + tweettext + '</p>'
+		tweettext = '<html><body>%s</body></html>' % tweettext
+		tweettext = tweettext.replace('/hashtag/', 'http://twitter.com/hashtag/')
+		tweethtml = open(tweetpath, 'w')
+		tweethtml.write(tweettext)
+		tweethtml.close()
+		print('\tSaved tweet text')
+	else:
+		print('\tTweet text already exists')
 	try:
 		link = pagedata.split('data-url="')[1]
 		link = link.split('"')[0]
@@ -382,11 +406,14 @@ def test_generic():
 	handle_master('https://github.com/voussoir/reddit/tree/master/SubredditBirthdays/show')
 
 if __name__ == '__main__':
-	#test_imgur()
-	#test_gfycat()
-	#test_vimeo()
-	#test_liveleak()
-	#test_youtube()
-	test_twitter()
-	#test_generic()
-	pass
+	if len(sys.argv) > 1:
+		handle_master(sys.argv[1])
+	else:
+		#test_imgur()
+		#test_gfycat()
+		#test_vimeo()
+		#test_liveleak()
+		#test_youtube()
+		test_twitter()
+		#test_generic()
+		pass
