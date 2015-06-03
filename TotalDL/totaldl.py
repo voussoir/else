@@ -308,14 +308,20 @@ def handle_twitter(url, customname=None):
 
 def handle_generic(url, customname=None):
 	try:
-		name = url.split('/')[-1]
-		ext = name.split('.')[-1]
-		if ext == name:
-			ext = '.html'
 		if customname:
-			name = '%s.%s' % (customname, ext)
+			name = customname
 		else:
-			name += ext
+			name = url.split('/')[-1]
+
+		base = name.split('.')[0]
+		ext = name.split('.')[-1]
+		if ext in [base, '']:
+			ext = 'html'
+		print(base)
+		print(ext)
+
+		name = '%s.%s' % (base, ext)
+
 		return download_file(url, name)
 	except:
 		pass
