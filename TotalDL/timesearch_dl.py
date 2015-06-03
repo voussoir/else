@@ -30,6 +30,7 @@ while True:
 		title = title[:34] + '-'
 	try:
 		filepath = totaldl.handle_master(url, customname=title)
+		filepath = filepath.replace('\\', '/')
 		filepath = filepath.split('/')[-1]
 		if '.mp4' in filepath:
 			filepath = 'http://syriancivilwar.pw/Videos/' + filepath
