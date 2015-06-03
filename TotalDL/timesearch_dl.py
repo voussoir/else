@@ -30,6 +30,8 @@ while True:
 		title = title[:34] + '-'
 	try:
 		filepath = totaldl.handle_master(url, customname=title)
+		if filepath is None:
+			continue
 		filepath = filepath.replace('\\', '/')
 		filepath = filepath.split('/')[-1]
 		if '.mp4' in filepath:

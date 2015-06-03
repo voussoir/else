@@ -70,7 +70,7 @@ def download_file(url, localname):
 		localname = localname.replace(':small', '')
 	if os.path.exists(localname):
 		print('\t%s already exists!!' % localname)
-		return
+		return localname
 	print('\tDownloading %s' % localname)
 	downloading = request_get(url, stream=True)
 	localfile = open(localname, 'wb')
@@ -309,10 +309,13 @@ def handle_twitter(url, customname=None):
 def handle_generic(url, customname=None):
 	try:
 		name = url.split('/')[-1]
+		ext = name.split('.')[-1]
+		if ext == name:
+			ext = '.html'
 		if customname:
-			name = '%s.%s' % (customname, name.split('.')[-1])
-		if '.' not in name:
-			name += '.html'
+			name = '%s.%s' % (customname, ext)
+		else:
+			name += ext
 		return download_file(url, name)
 	except:
 		pass
