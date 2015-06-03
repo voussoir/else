@@ -35,7 +35,7 @@ while True:
 		if '.mp4' in filepath:
 			filepath = 'http://syriancivilwar.pw/Videos/' + filepath
 			submission = r.get_info(thing_id=item[1])
-			submission.add_comment('Mirror: %s' % filepath)
+			submission.add_comment('[Mirror](%s)' % filepath)
 		print(filepath)
 	except:
 		traceback.print_exc()
