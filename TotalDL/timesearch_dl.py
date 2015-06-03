@@ -1,6 +1,10 @@
 import traceback
 import sqlite3
 import totaldl
+import praw
+
+r = praw.Reddit('')
+r.login('', '')
 
 sql = sqlite3.connect('!!testdata.db')
 cur = sql.cursor()
@@ -25,7 +29,13 @@ while True:
 	if len(title) > 35:
 		title = title[:34] + '-'
 	try:
-		totaldl.handle_master(url, customname=title)
+		filepath = totaldl.handle_master(url, customname=title)
+		filepath = filepath.split('/')[-1]
+		if '.mp4' in filepath:
+			filepath = 'http://syriancivilwar.pw/Videos/' + filepath
+			submission = r.get_info(thing_id=item[1])
+			submission.add_comment('Mirror: %s' % filepath)
+		print(filepath)
 	except:
 		traceback.print_exc()
 	cur2.execute('INSERT INTO totaldl_urls VALUES(?)', [url])

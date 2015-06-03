@@ -10,7 +10,8 @@ DOWNLOAD_DIRECTORY = ''
 # Save files to this folder
 # If blank, it uses the local folder
 
-IMGUR_ALBUM_INDV = '"og:image"content="htt'
+IMGUR_ALBUM_INDV = 'Viewfullresolution<'
+IMGUR_ALBUM_INDV2 = 'linkrel="image_src"'
 # The HTML string which tells us that an image link is
 # on this line.
 
@@ -41,6 +42,9 @@ VIMEO_PRIORITY = ['hd', 'sd', 'mobile']
 LIVELEAK_YOUTUBEIFRAME = 'youtube.com/embed'
 
 LIVELEAK_RESOLUTIONS = ['h264_base', 'h264_720p', 'h264_270p']
+
+YOUTUBE_DL_FORMAT = 'youtube-dl "{url}" --no-playlist --force-ipv4 -o "/{dir}/{name}.%(ext)s"'
+# The format for the youtube-dl shell command
 
 DO_GENERIC = True
 # If true, attempt to download whatever URL goes in
@@ -73,7 +77,7 @@ def download_file(url, localname):
 	for chunk in downloading.iter_content(chunk_size=1024):
 		if chunk:
 			localfile.write(chunk)
-	return True
+	return localname
 
 def request_get(url, stream=False):
 	global last_request
@@ -93,11 +97,18 @@ def request_get(url, stream=False):
 def handle_imgur_html(url):
 	pagedata = request_get(url)
 	pagedata = pagedata.text.replace(' ', '')
+	pagedata = pagedata.replace('src="', 'href="')
+	pagedata = pagedata.replace(IMGUR_ALBUM_INDV2, IMGUR_ALBUM_INDV)
 	pagedata = pagedata.split('\n')
 	pagedata = [line.strip() for line in pagedata]
 	pagedata = [line for line in pagedata if IMGUR_ALBUM_INDV in line]
-	pagedata = [line.split('"')[-2] for line in pagedata]
+	pagedata = [line.split('href=')[1] for line in pagedata]
+	pagedata = [line.replace('"//', '"http://') for line in pagedata]
+	pagedata = [line.split('"')[1] for line in pagedata]
 	links = []
+	first = pagedata[0].split('.')[0]
+	if [x.split('.')[0] for x in pagedata].count(first) > 1:
+		pagedata = pagedata[1:]
 	for image in pagedata:
 		image = image.split('?')[0]
 		if image not in links:
@@ -110,6 +121,7 @@ def handle_imgur(url, albumid='', customname=None):
 		# This link doesn't appear to have an image id
 		return
 
+	url = url.replace('/gallery/', '/a/')
 	basename = name.split('.')[0]
 	if '.' in name:
 		# This is a direct image link
@@ -130,7 +142,7 @@ def handle_imgur(url, albumid='', customname=None):
 		else:
 			localpath = name
 
-		download_file(url, localpath)
+		return download_file(url, localpath)
 
 	else:
 		# Not a direct image link, let's read the html.
@@ -138,14 +150,19 @@ def handle_imgur(url, albumid='', customname=None):
 		if customname:
 			name = customname
 		print('\tFound %d images' % len(images))
+
+		localfiles = []
 		if len(images) > 1:
 			for imagei in range(len(images)):
 				image = images[imagei]
 				iname = image.split('/')[-1]
 				iname = iname.split('.')[0]
-				handle_imgur(image, albumid=name, customname='%d_%s' % (imagei, iname))
+				x = handle_imgur(image, albumid=name, customname='%d_%s' % (imagei, iname))
+				localfiles.append(x)
 		else:
-			handle_imgur(images[0], customname=name)
+			x = handle_imgur(images[0], customname=name)
+			localfiles.append(x)
+		return localfiles
 
 
 def handle_gfycat(url, customname=None):
@@ -166,8 +183,7 @@ def handle_gfycat(url, customname=None):
 	for subdomain in GFYCAT_SUBDOMAINS:
 		url = 'http://%s.gfycat.com/%s' % (subdomain, name)
 		try:
-			download_file(url, filename)
-			break
+			return download_file(url, filename)
 		except StatusExc:
 			pass
 
@@ -200,7 +216,7 @@ def handle_vimeo(url, customname=None):
 		filename = customname + '.mp4'
 	else:
 		filename = name + '.mp4'
-	download_file(fileurl, filename)
+	return download_file(fileurl, filename)
 
 
 def handle_liveleak(url, customname=None):
@@ -231,23 +247,24 @@ def handle_liveleak(url, customname=None):
 		for res in LIVELEAK_RESOLUTIONS:
 			url = pagedata.replace('LIVELEAKRESOLUTION', res)
 			try:
-				download_file(url, name)
-				return
+				return download_file(url, name)
 			except StatusExc:
 				pass
-		download_file(original, name)
+		return download_file(original, name)
 
 
 
 def handle_youtube(url, customname=None):
-	# The customname doesn't do anything on this function
-	# but handle_master works better if everything uses
-	# the same format.
 	url = url.replace('&amp;', '&')
 	url = url.replace('feature=player_embedded&', '')
 	url = url.replace('&feature=player_embedded', '')
-	os.system('youtube-dl "{0}" --no-playlist --force-ipv4 -o "/{1}/%(title)s.%(ext)s"'.format(url, DOWNLOAD_DIRECTORY))
-
+	if not customname:
+		os.system(YOUTUBE_DL_FORMAT.format(url=url, dir=DOWNLOAD_DIRECTORY, name='%(title)s'))
+		return
+	os.system(YOUTUBE_DL_FORMAT.format(url=url, dir=DOWNLOAD_DIRECTORY, name=customname))
+	if DOWNLOAD_DIRECTORY:
+		return '%s/%s.mp4' % (DOWNLOAD_DIRECTORY, customname)
+	return '%s.mp4' % customname
 
 def handle_twitter(url, customname=None):
 	pagedata = request_get(url)
@@ -260,34 +277,32 @@ def handle_twitter(url, customname=None):
 		name = idnumber
 		customname = idnumber
 	tweetpath = '%s.html' % (DOWNLOAD_DIRECTORY + name)
-	if not os.path.exists(tweetpath):
-		psplit = '<p class="TweetTextSize'
-		tweettext = pagedata.split(psplit)[1]
-		tweettext = tweettext.split('</p>')[0]
-		tweettext = psplit + tweettext + '</p>'
-		tweettext = '<html><body>%s</body></html>' % tweettext
-		tweettext = tweettext.replace('/hashtag/', 'http://twitter.com/hashtag/')
-		tweethtml = open(tweetpath, 'w')
-		tweethtml.write(tweettext)
-		tweethtml.close()
-		print('\tSaved tweet text')
-	else:
-		print('\tTweet text already exists')
+	psplit = '<p class="TweetTextSize'
+	tweettext = pagedata.split(psplit)[1]
+	tweettext = tweettext.split('</p>')[0]
+	tweettext = psplit + tweettext + '</p>'
+	tweettext = '<html><body>%s</body></html>' % tweettext
+	tweettext = tweettext.replace('/hashtag/', 'http://twitter.com/hashtag/')
+	tweethtml = open(tweetpath, 'w', encoding='utf-8')
+	tweethtml.write(tweettext)
+	tweethtml.close()
+	print('\tSaved tweet text')
 	try:
 		link = pagedata.split('data-url="')[1]
 		link = link.split('"')[0]
 		if link != url:
 			handle_master(link, customname=customname)
-		return
+		return tweetpath
 	except IndexError:
 		try:
 			link = pagedata.split('data-expanded-url="')[1]
 			link = link.split('"')[0]
 			if link != url:
 				handle_master(link, customname=customname)
-			return
+			return tweetpath
 		except IndexError:
 			pass
+	return tweetpath
 	print('\tNo media detected')
 
 
@@ -298,7 +313,7 @@ def handle_generic(url, customname=None):
 			name = '%s.%s' % (customname, name.split('.')[-1])
 		if '.' not in name:
 			name += '.html'
-		download_file(url, name)
+		return download_file(url, name)
 	except:
 		pass
                                                                             ##
@@ -318,10 +333,9 @@ def handle_master(url, customname=None):
 	print('Handling %s' % url)
 	for handlerkey in HANDLERS:
 		if handlerkey.lower() in url.lower():
-			HANDLERS[handlerkey](url, customname=customname)
-			return
+			return HANDLERS[handlerkey](url, customname=customname)
 	if DO_GENERIC:
-		handle_generic(url, customname=customname)
+		return handle_generic(url, customname=customname)
 
 def test_imgur():
 	# Imgur gallery album
@@ -371,7 +385,7 @@ def test_youtube():
 	handle_master('https://www.youtube.com/watch?v=bEgeh5hA5ko')
 
 	# Youtube short link
-	handle_master('https://youtu.be/GjOBTstnW20')
+	handle_master('https://youtu.be/GjOBTstnW20', customname='youtube')
 
 	# Youtube player embed link
 	handle_master('https://www.youtube.com/watch?feature=player_embedded&amp;v=bEgeh5hA5ko')
@@ -395,6 +409,9 @@ def test_twitter():
 	# Twitter plain text
 	handle_master('https://twitter.com/SyriacMFS/status/556513635913437184')
 
+	# Twitter with arabic characters
+	handle_master('https://twitter.com/HadiAlabdallah/status/600885154991706113')
+
 def test_generic():
 	# Some link that might work
 	handle_master('https://raw.githubusercontent.com/voussoir/reddit/master/SubredditBirthdays/show/statistics.txt')
@@ -412,8 +429,8 @@ if __name__ == '__main__':
 		#test_imgur()
 		#test_gfycat()
 		#test_vimeo()
-		#test_liveleak()
-		#test_youtube()
-		test_twitter()
+		test_liveleak()
+		test_youtube()
+		#test_twitter()
 		#test_generic()
 		pass
