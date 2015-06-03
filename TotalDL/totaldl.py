@@ -234,7 +234,7 @@ def handle_liveleak(url, customname=None):
 		pagedata = pagedata.split('src="')[1]
 		pagedata = pagedata.split('"')[0]
 		print('\tFound youtube embed')
-		handle_master(pagedata)
+		handle_master(pagedata, customname=customname)
 	else:
 		pagedata = pagedata.split('file: "')[1]
 		pagedata = pagedata.split('",')[0]
