@@ -59,8 +59,9 @@ def make_sentence(length=None, joiner=' '):
 	import dictionary.common as common
 	if length is None:
 		length = DEFAULT_LENGTH
-	result = joiner.join(random.choice(common.words) for x in range(length))
-	result = result.replace(' ', joiner)
+	words = [random.choice(common.words) for x in range(length)]
+	words = [w.replace(' ', joiner) for w in words]
+	result = joiner.join(words)
 	return result
 
 if __name__ == '__main__':
