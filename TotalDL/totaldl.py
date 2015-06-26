@@ -63,7 +63,7 @@ if DOWNLOAD_DIRECTORY != '':
 class StatusExc(Exception):
 	pass
 
-def download_file(url, localname):
+def download_file(url, localname, headers={}):
 	localname = DOWNLOAD_DIRECTORY + localname
 	if 'twimg' in url:
 		localname = localname.replace(':large', '')
@@ -72,14 +72,15 @@ def download_file(url, localname):
 		print('\t%s already exists!!' % localname)
 		return localname
 	print('\tDownloading %s' % localname)
-	downloading = request_get(url, stream=True)
+	downloading = request_get(url, stream=True, headers=headers)
 	localfile = open(localname, 'wb')
 	for chunk in downloading.iter_content(chunk_size=1024):
 		if chunk:
 			localfile.write(chunk)
+	localfile.close()
 	return localname
 
-def request_get(url, stream=False):
+def request_get(url, stream=False, headers={}):
 	global last_request
 	now = time.time()
 	diff = now - last_request
@@ -87,8 +88,10 @@ def request_get(url, stream=False):
 		diff = SLEEPINESS - diff
 		time.sleep(diff)
 	last_request = time.time()
-	req = requests.get(url, stream=stream, headers=HEADERS)
-	if req.status_code != 200:
+	h = HEADERS.copy()
+	h.update(headers)
+	req = requests.get(url, stream=stream, headers=h)
+	if req.status_code not in [200,206]:
 		raise StatusExc("Status code %d on url %s" % (req.status_code, url))
 	return req
 
@@ -186,6 +189,24 @@ def handle_gfycat(url, customname=None):
 			return download_file(url, filename)
 		except StatusExc:
 			pass
+
+
+def handle_vidme(url, customname=None):
+	if customname is None:
+		customname = url.split('/')[-1]+'.mp4'
+	pagedata = request_get(url)
+	pagedata = pagedata.text
+	pagedata = pagedata.split('\n')
+	pagedata = [l for l in pagedata if '.mp4' in l and 'og:video:url' in l]
+	pagedata = pagedata[0]
+	pagedata = pagedata.split('content="')[1].split('"')[0]
+	pagedata = pagedata.replace('&amp;', '&')
+	headers = {'Referer': 'https://vid.me/',
+			   'Range':'bytes=0-',
+			   'Host':'d1wst0behutosd.cloudfront.net',
+			   'Cache-Control':'max-age=0'}
+
+	return download_file(pagedata, customname, headers=headers)
 
 
 def handle_vimeo(url, customname=None):
@@ -332,6 +353,7 @@ HANDLERS = {
 	'imgur.com': handle_imgur,
 	'gfycat.com': handle_gfycat,
 	'vimeo.com': handle_vimeo,
+	'vid.me': handle_vidme,
 	'liveleak.com': handle_liveleak,
 	'youtube.com': handle_youtube,
 	'youtu.be': handle_youtube,

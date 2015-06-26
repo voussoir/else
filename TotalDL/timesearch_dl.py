@@ -20,6 +20,8 @@ while True:
 		break
 	
 	url = item[7]
+	if 'youtube.com' in url and '?v=' not in url:
+		continue
 	cur2.execute('SELECT * FROM totaldl_urls WHERE url=?', [url])
 	if cur2.fetchone():
 		continue
