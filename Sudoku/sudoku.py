@@ -269,8 +269,8 @@ class Sudoku:
 		else:
 			print('Some mistakes')
 
-		print(self.entries_solution)
-		print(self.entries_current)
+		#print(self.entries_solution)
+		#print(self.entries_current)
 
 
 soduku = Sudoku()

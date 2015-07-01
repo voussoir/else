@@ -29,3 +29,7 @@ Generates randomized strings, useful for making passwords and such.
 
 
 To use the `sentence` function, you can download [this dictionary](https://github.com/voussoir/else/tree/master/Dictionary)
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/passwordy.png?raw=true" alt="hexclock"/>
+</p>

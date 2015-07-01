@@ -76,6 +76,10 @@ if __name__ == '__main__':
 		mode = 'password'
 		length = int(args[1])
 
+	elif args[1] in 'DdPp':
+		mode = 'password'
+		length = DEFAULT_LENGTH
+
 	elif 'sent' in args[1].lower() and argc == 1:
 		mode = 'sentence'
 		length = DEFAULT_SENTENCE
