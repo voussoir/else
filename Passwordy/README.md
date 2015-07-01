@@ -1,7 +1,7 @@
 Passwordy
 ======
 
-Generate randomized strings, useful for generating passwords and such.
+Generates randomized strings, useful for making passwords and such.
 
      ---------------------------------------------------------------
     |Generates a randomized password.                               |

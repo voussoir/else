@@ -66,9 +66,9 @@ def make_sentence(length=None, joiner=' '):
 
 if __name__ == '__main__':
 	args = sys.argv
-	argc = len(args)
+	argc = len(args) - 1
 
-	if argc == 1:
+	if argc == 0:
 		mode = 'password'
 		length = DEFAULT_LENGTH
 
@@ -76,27 +76,30 @@ if __name__ == '__main__':
 		mode = 'password'
 		length = int(args[1])
 
-	elif 'sent' in args[1].lower() and argc == 2:
+	elif 'sent' in args[1].lower() and argc == 1:
 		mode = 'sentence'
 		length = DEFAULT_SENTENCE
 
-	elif argc == 2:
+	elif argc == 1:
 		mode = None
 		print(HELP_MESSAGE)
 		print(HELP_SENTENCE)
 
-	elif args[2].isdigit():
+	elif 'sent' in args[1].lower() and args[2].isdigit():
 		mode = 'sentence'
 		length = int(args[2])
+
+	elif 'sent' in args[1].lower():
+		mode = 'sentence'
+		length = DEFAULT_SENTENCE
 
 	if mode == 'password':
 		punc = 'p' in args
 		digi = 'd' in args
-		
 		print(make_password(length, punc, digi))
 		
 	elif mode == 'sentence':
-		if argc == 4:
+		if argc == 3:
 			joiner = args[3]
 		else:
 			joiner = ' '
