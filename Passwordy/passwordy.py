@@ -76,14 +76,14 @@ if __name__ == '__main__':
 		mode = 'password'
 		length = int(args[1])
 
-	elif 'help' in args[1].lower():
-		mode = None
-		print(HELP_MESSAGE)
-		print(HELP_SENTENCE)
-
 	elif 'sent' in args[1].lower() and argc == 2:
 		mode = 'sentence'
 		length = DEFAULT_SENTENCE
+
+	elif argc == 2:
+		mode = None
+		print(HELP_MESSAGE)
+		print(HELP_SENTENCE)
 
 	elif args[2].isdigit():
 		mode = 'sentence'
