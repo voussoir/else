@@ -12,8 +12,8 @@ TERMINALWIDTH = shutil.get_terminal_size().columns
 def basex(number, base, alphabet='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
     """Converts an integer to a different base string."""
     if base > len(alphabet):
-        raise Exception('alphabet "%s" does not support base %d' % (
-                         alphabet, base))
+        raise Exception('alphabet %s does not support base %d' % (
+                         repr(alphabet), base))
     alphabet = alphabet[:base]
     if not isinstance(number, (int, str)):
         raise TypeError('number must be an integer')
