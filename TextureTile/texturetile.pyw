@@ -9,8 +9,8 @@ class TextureTile:
 
         self.t = tkinter.Tk()
         self.t.title(self.windowtitle)
-        self.w = 450
-        self.h = 475
+        self.w = 500
+        self.h = 525
         self.screenwidth = self.t.winfo_screenwidth()
         self.screenheight = self.t.winfo_screenheight()
         self.windowwidth = self.w
@@ -21,15 +21,19 @@ class TextureTile:
         self.t.geometry(self.geometrystring)
 
         self.entry_filename = tkinter.Entry(self.t, font=('Consolas', 12))
+        self.spinbox_x = tkinter.Spinbox(self.t, width=2, from_=1, to=2 ** 13)
+        self.spinbox_y = tkinter.Spinbox(self.t, width=2, from_=1, to=2 ** 13)
         self.button_load = tkinter.Button(self.t, text='Load', command=self.file_load_display)
         self.frame_filearea = tkinter.Frame(self.t)
         self.label_image = tkinter.Label(self.frame_filearea, bg='#222')
 
         self.t.columnconfigure(0, weight=1)
         self.t.rowconfigure(1, weight=1)
-        self.entry_filename.grid(row=0, column=0, sticky='ew')        
-        self.button_load.grid(row=0, column=1, sticky='ne')
-        self.frame_filearea.grid(row=1, column=0, columnspan=2, sticky='nsew')
+        self.entry_filename.grid(row=0, column=0, sticky='ew')
+        self.spinbox_x.grid(row=0, column=1)
+        self.spinbox_y.grid(row=0, column=2)
+        self.button_load.grid(row=0, column=3, sticky='ne')
+        self.frame_filearea.grid(row=1, column=0, columnspan=4, sticky='nsew')
         self.label_image.pack(expand=True, fill='both')
         #self.entry_filename.pack(fill='x')
         #self.button_load.pack()
@@ -39,10 +43,20 @@ class TextureTile:
         self.entry_filename.bind('<Return>', self.file_load_display)
         self.entry_filename.focus_set()
 
+        self.spinbox_x.delete(0, 'end')
+        self.spinbox_x.insert(0, 3)
+        self.spinbox_y.delete(0, 'end')
+        self.spinbox_y.insert(0, 3)
+
         self.t.mainloop()
 
     def file_load_display(self, *event):
         filename = self.entry_filename.get()
+        # I want to check the spinbox values up
+        # here so they can crash before wasting
+        # a file read.
+        xcount = int(self.spinbox_x.get())
+        ycount = int(self.spinbox_y.get())
         # Open file or turn red
         try:
             image = Image.open(filename)
@@ -55,9 +69,9 @@ class TextureTile:
         w = image.size[0]
         h = image.size[1]
         expanded = image.copy()
-        expanded = expanded.resize((w * 3, h * 3))
-        for x in range(3):
-            for y in range(3):
+        expanded = expanded.resize((w * xcount, h * ycount))
+        for x in range(xcount):
+            for y in range(ycount):
                 expanded.paste(image, (w*x, h*y))
 
         # Resize 9x'ed image into frame

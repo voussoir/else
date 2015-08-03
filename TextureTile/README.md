@@ -19,3 +19,7 @@ Make it any size at all!
 <p align="center">
   <img src="https://github.com/voussoir/else/blob/master/.GitImages/texturetile03.png?raw=true" alt="texture tile"/>
 </p>
+
+<p align="center">
+  <img src="https://github.com/voussoir/else/blob/master/.GitImages/texturetile04.png?raw=true" alt="texture tile"/>
+</p>
