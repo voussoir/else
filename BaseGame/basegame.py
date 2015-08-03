@@ -35,20 +35,23 @@ def changebase(number, frombase, tobase):
     result = int(number, frombase)
     return basex(result, tobase)
 
-def intinput(prompt, greaterthan=None):
+def intinput(prompt, greaterthan=None, notequal=None):
     ''' Prompt for input until the user enters an int '''
     while True:
         result = input(prompt)
         try:
             i = int(result)
-            if greaterthan is None or i > greaterthan:
-                return i
+            if isinstance(notequal, int) and i == notequal:
+                continue
+            if isinstance(greaterthan, int) and i < greaterthan:
+                continue
+            return i
         except ValueError:
             pass
 
 def configuration():
     frombase = intinput('  From base: ', 1)
-    tobase = intinput('    To base: ', 1)
+    tobase = intinput('    To base: ', 1, frombase)
     lower = intinput('Lower bound: ')
     upper = intinput('Upper bound: ', lower)
     return {

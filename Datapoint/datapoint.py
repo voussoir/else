@@ -9,6 +9,7 @@ class DataPoint:
         self.color_outbound = '#999'
         self.color_crossbar = '#bbb'
         self.color_point = '#000'
+        self.color_point_out = '#000'
         self.crossbar_count = 10
         self.point_diameter = 4
         self.margin = 0.10
@@ -27,6 +28,7 @@ class DataPoint:
 
         self.countdown = -1
         self.lastbump = 0
+        self.resized = True
         self.t.configure(bg='#f00')
         self.t.bind('<Configure>', self.movereplot)
         self.c = tkinter.Canvas(self.t)
@@ -35,6 +37,8 @@ class DataPoint:
         self.reset()
         self.previous_w = self.w
         self.previous_h = self.h
+        self.previous_x = self.windowx
+        self.previous_y = self.windowy
         self.clear_screen()
         self.draw_margin()
         self._started = autostart
@@ -59,6 +63,14 @@ class DataPoint:
             return self.h
         return self.t.winfo_height()
 
+    @property
+    def margin_x(self):
+        return self.window_width * self.margin
+
+    @property
+    def margin_y(self):
+        return self.window_height * self.margin
+
     def mainloop(self):
         self._started = True
         self.t.mainloop()
@@ -68,8 +80,8 @@ class DataPoint:
         When the user expands the window, replot the graph after a
         short delay.
         '''
-        previous = (self.previous_w, self.previous_h)
-        current = (self.window_width, self.window_height)
+        previous = (self.previous_w, self.previous_h, self.previous_x, self.previous_y)
+        current = (self.window_width, self.window_height, self.t.winfo_x(), self.t.winfo_y())
         now = time.time()
         if now - self.lastbump < 0.2:
             # Go away.
@@ -78,8 +90,12 @@ class DataPoint:
             # Set.
             self.previous_w = current[0]
             self.previous_h = current[1]
+            self.previous_x = current[2]
+            self.previous_y = current[3]
             self.countdown = 1
             self.lastbump = now
+            if previous[:2] != current[:2]:
+                self.resized = False
             self.t.after(500, self.movereplot)
             return
         if self.countdown > -1:
@@ -89,7 +105,9 @@ class DataPoint:
             self.t.after(500, self.movereplot)
         if self.countdown == 0:
             # Plot.
-            self.plotpoints([])
+            if not self.resized:
+                self.plot_points([])
+                self.resized = True
             return
 
     def reset(self):
@@ -105,8 +123,6 @@ class DataPoint:
         self.span_y = None
         self.drawable_w = None
         self.drawable_h = None
-        self.margin_x = self.window_width * self.margin
-        self.margin_y = self.window_height * self.margin
         self.clear_screen()
         self.draw_margin()
 
@@ -161,6 +177,9 @@ class DataPoint:
         hi_x = hi[0]
         hi_y = hi[1]
 
+        if self.crossbar_count < 1:
+            self.crossbar_count = 1
+
         if self.highest_x != self.lowest_x:
             # LOW X
             self.c.create_text(low_x+5, low_y+5,
@@ -170,8 +189,6 @@ class DataPoint:
                                text=str(round(self.highest_x, 4)), anchor='nw')
 
             increment_x = (self.highest_x - self.lowest_x) / self.crossbar_count
-            # crossbartop = (self.window_height - self.margin_y) - 5
-            # crossbarbot = (self.window_height - self.margin_y) + 5
             crossbartop = self.margin_y
             crossbarbot = self.window_height - self.margin_y
             for x in range(1, self.crossbar_count):
@@ -190,8 +207,6 @@ class DataPoint:
             self.c.create_text(low_x-5, hi_y,
                                text=str(round(self.highest_y, 4)), anchor='e')
             increment_y = (self.highest_y - self.lowest_y) / self.crossbar_count
-            # crossbarlef = self.margin_x - 5
-            # crossbarrgt = self.margin_x + 5
             crossbarlef = self.margin_x
             crossbarrgt = self.window_width - self.margin_x
             for y in range(1, self.crossbar_count):
@@ -215,19 +230,24 @@ class DataPoint:
         or vice-versa.
         '''
         if not reverse:
-            if len(self.POINTS) == 1:
-                return (self.window_width/2, self.window_height/2)
-            # Get percentage of the span
-            x = ((x) - self.lowest_x) / self.span_x
-            y = ((y) - self.lowest_y) / self.span_y
-            # Flip y
-            y = 1 - y
-            # Use the percentage to get a location on the board
-            x *= self.drawable_w
-            y *= self.drawable_h
-            # Put into drawing area
-            x += self.margin_x
-            y += self.margin_y
+            if self.highest_x == self.lowest_x:
+                x = self.window_width / 2
+            else:
+                # Get percentage of the span
+                x = ((x) - self.lowest_x) / self.span_x
+                # Use the percentage to get a location on the board
+                x *= self.drawable_w
+                # Put into drawing area
+                x += self.margin_x
+
+            if self.highest_y == self.lowest_y:
+                y = self.window_height / 2
+            else:
+                y = ((y) - self.lowest_y) / self.span_y
+                # Flip y
+                y = 1 - y
+                y *= self.drawable_h
+                y += self.margin_y
 
         else:
             if self.highest_x != self.lowest_x:
@@ -247,12 +267,13 @@ class DataPoint:
 
         return (x, y)
 
-    def plotpoints(self, points=[]):
+    def plot_points(self, points=[]):
         '''
         Plot points onto the canvas.
         var points = list, where each element is a 2-length tuple, where [0]
         is x and [1] is y coordinate.
         '''
+        original_len = len(self.POINTS)
         for point in points:
             self.POINTS.add(tuple(point))
 
@@ -292,19 +313,19 @@ class DataPoint:
                                outline=self.color_point)
             self.c.update()
 
-    def plotpoint(self, x, y):
-        self.plotpoints([[x, y]])
+    def plot_point(self, x, y):
+        self.plot_points([[x, y]])
 
     def set_origin(self, x, y):
         self.origin = (x, y)
-        self.plotpoints([])
+        self.plot_points([])
 
 
 def example(function):
     dp = DataPoint()
     points = list(range(100))
     points = [[p, function(p)] for p in points]
-    dp.plotpoints(points)
+    dp.plot_points(points)
     dp.mainloop()
 
 
@@ -330,9 +351,8 @@ def example2():
         (94, 22320), (95, 23703), (96, 40752), (97, 21730), (98, 27637),
         (99, 45931), (100, 18443), (101, 20048), (102, 18097), (103, 11430)
     ]
-    dp.plotpoints(points)
+    dp.plot_points(points)
     dp.mainloop()
-
 
 def examplefunction(x):
     x -= 50
