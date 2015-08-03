@@ -74,9 +74,6 @@ class TextureTile:
         image = ImageTk.PhotoImage(expanded)
         self.label_image.configure(image=image)
         self.label_image.dont_garbage_me_bro = image
-        r'C:\Users\Owner\AppData\Roaming\.MinecraftMulti\instances\Chocolate\minecraft\texturepacks\SixtyFox\textures\blocks\melon_top.png'
-        r'C:\users\owner\desktop\pi\imergers\ear.jpg'
-
 
 if __name__ == '__main__':
     t = TextureTile()
