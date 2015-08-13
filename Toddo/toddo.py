@@ -28,16 +28,35 @@ Use `toddo all` to see if there are entries for other tables.'''
 
 HELP_REMOVE = '''Provide an ID number to remove.'''
 
+DISPLAY_INDIVIDUAL = '''
+     ID: _id_
+  Table: _table_
+Created: _human_
+Message: _message_'''
+
 class ToddoExc(Exception):
     pass
 
 class Toddo():
     def __init__(self, dbname='C:/git/else/toddo/toddo.db'):
-        self.sql = sqlite3.connect(dbname)
-        self.cur = self.sql.cursor()
-        self.cur.execute('CREATE TABLE IF NOT EXISTS meta(key TEXT, val TEXT)')
-        self.cur.execute('CREATE TABLE IF NOT EXISTS todos(id INT, todotable TEXT, created INT, message TEXT)')
-        self.cur.execute('CREATE INDEX IF NOT EXISTS todoindex on todos(id)')
+        self.dbname = dbname
+        self._sql = None
+        self._cur = None
+
+    @property
+    def sql(self):
+        if self._sql is None:
+            self._sql = sqlite3.connect(self.dbname)
+        return self._sql
+
+    @property
+    def cur(self):
+        if self._cur is None:
+            self._cur = self.sql.cursor()
+            self._cur.execute('CREATE TABLE IF NOT EXISTS meta(key TEXT, val TEXT)')
+            self._cur.execute('CREATE TABLE IF NOT EXISTS todos(id INT, todotable TEXT, created INT, message TEXT)')
+            self._cur.execute('CREATE INDEX IF NOT EXISTS todoindex on todos(id)')
+        return self._cur
 
     def add_todo(self, message=None):
         '''
@@ -88,8 +107,14 @@ class Toddo():
         width = shutil.get_terminal_size()[0] - (messageleft + 1)
         message = nicewrap(message, width, messageleft)
 
-        return 'ID: %d\nTable: %s\nCreated: %s\nMessage: %s' % (
-            todo[SQL_ID], todo[SQL_TODOTABLE], human(todo[SQL_CREATED]), message)
+        output = DISPLAY_INDIVIDUAL
+        output = output.replace('_id_', str(todo[SQL_ID]))
+        output = output.replace('_table_', todo[SQL_TODOTABLE])
+        output = output.replace('_human_', human(todo[SQL_CREATED]))
+        output = output.replace('_message_', message)
+
+
+        return output
 
     def display_active_todos(self):
         '''

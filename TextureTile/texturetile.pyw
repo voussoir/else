@@ -50,6 +50,20 @@ class TextureTile:
 
         self.t.mainloop()
 
+    def fit_into_bounds(self, iw, ih, fw, fh):
+        '''
+        Given the w+h of the image and the w+h of the frame,
+        return new w+h that fits the image into the frame
+        while maintaining the aspect ratio and leaving blank space
+        everywhere else
+        '''
+        ratio = min(fw/iw, fh/ih)
+
+        w = int(iw * ratio)
+        h = int(ih * ratio)
+
+        return (w, h)
+
     def file_load_display(self, *event):
         filename = self.entry_filename.get()
         # I want to check the spinbox values up
@@ -79,12 +93,9 @@ class TextureTile:
         h = expanded.size[1]
         fw = self.label_image.winfo_width()
         fh = self.label_image.winfo_height()
-        ratio = min(fw/w, fh/h)
-        
-        w = int(w * ratio)
-        h = int(h * ratio)
+        wh = self.fit_into_bounds(w, h, fw, fh)
 
-        expanded = expanded.resize((w, h))
+        expanded = expanded.resize(wh)
         image = ImageTk.PhotoImage(expanded)
         self.label_image.configure(image=image)
         self.label_image.dont_garbage_me_bro = image
