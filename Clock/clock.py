@@ -12,7 +12,9 @@ MODE_CLOCK = 'clock'
 MODE_COUNTDOWN = 'countdown'
 MODE_STOPWATCH = 'stopwatch'
 
+# Monospace fonts work best
 FONT = 'Consolas'
+
 # Used for resizing the clock font to fit the frame.
 # For consolas, 1.33333 is a good value. It may differ
 # for other fonts
@@ -44,6 +46,9 @@ class Clock:
         self.frame_applet.pack_propagate(0)
         self.frame_applet.grid_propagate(0)
 
+        # tkinter elements belonging to any particular applet.
+        # They will be destroyed when switching modes.
+        # The dropdown and the frame_applet are not included here.
         self.elements = []
 
         # Instance is used to keep track of how many times we have
@@ -52,21 +57,13 @@ class Clock:
         # when we leave that mode.
         self.instance = 0
         
-        self.dropstring.set(MODE_COUNTDOWN)
+        self.dropstring.set(MODE_CLOCK)
 
         self.t.mainloop()
 
     @property
     def mode(self):
         return self.drop.cget('text')
-
-    def delete_applet_elements(self):
-        self.started = 0
-        self.frame_applet.unbind('<Configure>')
-        for x in range(len(self.elements)):
-            self.elements.pop().destroy()
-        self.frame_applet.rowconfigure(0, weight=0)
-        self.frame_applet.columnconfigure(0, weight=0)
 
 
     '''clock
@@ -77,6 +74,9 @@ class Clock:
      ######   #######    #####     ######   ### ###
     '''
     def build_gui_clock(self):
+        '''
+        A clock using the system's local time in 24 hour format.
+        '''
         def tick_clock():
             if this_instance != self.instance:
                 # used to break the "after" loop
@@ -98,7 +98,7 @@ class Clock:
         self.resize_widget_font(self.frame_applet, label_clock)
 
 
-    '''count
+    '''countdown
      ######    #####    ### ###    #####    #######
     #######   #######   ### ###   #######   #######
     ###       ### ###   ### ###   ### ###     ###  
@@ -106,14 +106,23 @@ class Clock:
      ######    #####     #####    ### ###     ###  
     '''
     def build_gui_countdown(self):
+        '''
+        A timer with two modes:
+        1. "in" - countdown a certain amount of time. Ex "5 hours"
+           This mode can be paused and resumed and the timer will pick up where it left off
 
+        2. "until" - countdown until a certain moment. Ex "13 august 2015 15:00"
+           In this mode, pausing only affects the display. Resuming the clock will skip to
+           maintain the correct end time.
+        '''
         def toggle_mode():
             reset_countdown()
 
             if label_countdown.mode is 'until':
+                # "in" mode does not need the dd mmm yyyy boxes
                 for item in elements_until:
                     item.grid_forget()
-                button_reset.grid(row=0, column=6)
+                # "in" mode can have arbitrary hours
                 spinbox_hour.configure(to=999)
                 label_countdown.mode = 'in'
             else:
@@ -121,7 +130,6 @@ class Clock:
                 spinbox_month.grid(row=0, column=2)
                 spinbox_year.grid(row=0, column=3)
                 spinbox_hour.configure(to=23)
-                #button_reset.grid_forget()
                 label_countdown.mode = 'until'
             button_countdownmode.configure(text=label_countdown.mode)
         
@@ -151,7 +159,7 @@ class Clock:
                 if label_countdown.destination is None:
                     try:
                         d = int(spinbox_day.get())
-                        mo = MONTHS_DICT[spinbox_month.get()]
+                        mo = MONTHS_DICT[spinbox_month.get().lower()]
                         y = int(spinbox_year.get())
                         h = int(spinbox_hour.get())
                         m = int(spinbox_minute.get())
@@ -173,18 +181,18 @@ class Clock:
                     except ValueError:
                         return
                 else:
+                    # check how long we were paused, then increase the
+                    # destination by that much so the countdown doesn't skip.
                     backlog = now - label_countdown.backlog
-                    #print(backlog)
                     label_countdown.destination += backlog
             label_countdown.is_running = True
             button_toggle.configure(text='stop')
             tick_countdown()
 
         def stop_countdown():
-            if label_countdown.mode is 'until':
-                pass
-            else:
-                label_countdown.backlog = time.time()
+            # Store the timestamp when the countdown was paused
+            # so that when it resumes, we know how long we were asleep
+            label_countdown.backlog = time.time()
             label_countdown.is_running = False
             button_toggle.configure(text='start')
 
@@ -195,7 +203,7 @@ class Clock:
             label_countdown.backlog = 0
 
         def toggle_countdown():
-            if label_countdown.is_running is True:
+            if label_countdown.is_running:
                 stop_countdown()
             else:
                 start_countdown()
@@ -220,6 +228,9 @@ class Clock:
         frame_controls = tkinter.Frame(self.frame_applet, bg=COLOR_BACKGROUND)
         frame_spinboxes = tkinter.Frame(frame_controls, bg=COLOR_BACKGROUND)
         label_countdown = tkinter.Label(frame_display, text='00:00:00.0', bg=COLOR_BACKGROUND, fg=COLOR_FONT)
+        # Although this says 'until', the applet will start in
+        # 'in' mode because I use the toggle towards the end to
+        # jog everything into place.
         label_countdown.mode = 'until'
         label_countdown.destination = None
         label_countdown.backlog = 0
@@ -252,18 +263,24 @@ class Clock:
         spinbox_hour.grid(row=0, column=4)
         spinbox_minute.grid(row=0, column=5)
         spinbox_second.grid(row=0, column=6)
-        button_toggle.grid(row=0, column=7)
+        # the day month year spinboxes are gridded
+        # during the toggle_mode method.
+        button_reset.grid(row=0, column=7)
+        button_toggle.grid(row=0, column=8)
 
         self.elements.append(frame_display)
+        self.elements.append(label_countdown)        
         self.elements.append(frame_controls)
-        self.elements.append(frame_spinboxes)
-        self.elements.append(label_countdown)
         self.elements.append(button_countdownmode)
+        self.elements.append(button_toggle)
+        self.elements.append(button_reset)
+        self.elements.append(frame_spinboxes)
         self.elements.append(spinbox_hour)
         self.elements.append(spinbox_minute)
         self.elements.append(spinbox_second)
-        self.elements.append(button_toggle)
-        self.elements.append(button_reset)
+        self.elements.append(spinbox_day)
+        self.elements.append(spinbox_month)
+        self.elements.append(spinbox_year)
 
         elements_until.append(spinbox_day)
         elements_until.append(spinbox_month)
@@ -275,7 +292,7 @@ class Clock:
         self.resize_widget_font(frame_display, label_countdown)
 
 
-    '''stop
+    '''stopwatch
       #####   #######    #####    ###### 
     #######   #######   #######   ### ###
       ###       ###     ### ###   ###### 
@@ -283,12 +300,18 @@ class Clock:
     #####       ###      #####    ###    
     '''
     def build_gui_stopwatch(self):
-        
+        '''
+        A timer that counts upward from 0.
+        '''
         def tick_stopwatch():
             if this_instance != self.instance:
                 return
             if not label_stopwatch.is_running:
                 return
+
+            # started_at is reset on every press of the resume button
+            # so we keep track of how much was on the clock last time
+            # and add it.
             elapsed = time.time() - label_stopwatch.started_at
             elapsed += label_stopwatch.backlog
 
@@ -302,7 +325,7 @@ class Clock:
                 self.resize_widget_font(frame_display, label_stopwatch)
             self.t.after(10, tick_stopwatch)
 
-        def toggle_stopwatch(*event):
+        def toggle_stopwatch():
             if label_stopwatch.is_running:
                 stop_stopwatch()
             else:
@@ -310,7 +333,11 @@ class Clock:
 
         def stop_stopwatch():
             if label_stopwatch.started_at is not None:
+                # This check is important in case we press the "reset"
+                # button without having started the clock yet.
                 elapsed = time.time() - label_stopwatch.started_at
+                # Keep track of how long the clock ran so we can
+                # pick up from here when we resume.
                 label_stopwatch.backlog += elapsed
             label_stopwatch.started_at = None
             label_stopwatch.is_running = False
@@ -322,7 +349,7 @@ class Clock:
             button_toggle.configure(text='stop')
             tick_stopwatch()
 
-        def reset_stopwatch(*event):
+        def reset_stopwatch():
             stop_stopwatch()
             label_stopwatch.backlog = 0
             label_stopwatch.configure(text='00:00:00.000')
@@ -372,7 +399,21 @@ class Clock:
     #######     ###     ### ###   #####     ### ###
      #####      ###     ### ###   #######   ### ###
     '''
+
+    def delete_applet_elements(self):
+        self.frame_applet.unbind('<Configure>')
+        for x in range(len(self.elements)):
+            self.elements.pop().destroy()
+        self.frame_applet.rowconfigure(0, weight=0)
+        self.frame_applet.columnconfigure(0, weight=0)
+
     def resize_widget_font(self, parent, subordinate):
+        '''
+        Given a frame and a subordinate widget, resize the font of the
+        widget to best fit the bounds of the frame.
+        '''
+        # When initializing the widgets, the width and height is usually 1, 1.
+        # Must use t.update to fix everything.
         self.t.update()
         frame_w = parent.winfo_width()
         frame_h = parent.winfo_height()
@@ -383,6 +424,10 @@ class Clock:
         subordinate.configure(font=font)
 
     def font_by_pixels(self, frame_w, frame_h, text):
+        '''
+        Given the size of a bounding box, find the best font size
+        to fit text in the bounds.
+        '''
         lines = text.split('\n')
         label_w = max(len(line) for line in lines)
         label_h = len(lines)
@@ -405,7 +450,7 @@ class Clock:
         hours, minutes = divmod(amount, 3600)
         minutes, seconds = divmod(minutes, 60)
 
-        return hours, minutes, seconds
+        return (hours, minutes, seconds)
 
     def trigger_choose_mode(self, *args):
         '''
