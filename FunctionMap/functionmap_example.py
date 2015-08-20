@@ -47,6 +47,7 @@ SAMPLE_COMMENTS = [
 'robot! add 10 10 robot! multiply 10 10 robot! exponent 10 10',
 'robot! add 1 1\nrobot! multiply 1 1',
 '   do ROBOT! add boom box',
+'robot! robot!',
 '']
 
 COMMAND_IDENTIFIERS = [c.lower() for c in COMMAND_IDENTIFIERS]
@@ -162,11 +163,18 @@ Found command: ['multiply', '1', '1']
 Using function: multiply
 Output: 1.0
 
-User said: ROBOT! add boom box
-Broken into: ['ROBOT!', 'add', 'boom', 'box']
+User said:    do ROBOT! add boom box
+Broken into: ['do', 'ROBOT!', 'add', 'boom', 'box']
 Found command: ['add', 'boom', 'box']
 Using function: add
 Output: None
+
+User said: robot! robot!
+Broken into: ['robot!', 'robot!']
+Found command: []
+Did nothing
+Found command: []
+Did nothing
 
 User said: 
 Broken into: []
