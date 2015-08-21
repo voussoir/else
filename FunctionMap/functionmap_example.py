@@ -23,7 +23,7 @@ def join(text=None, spacer=None, *trash):
         return
     return spacer.join(text.split(' '))
 
-def default_function(*trash):
+def whatever(*trash):
     return 'Look what I found: ' + str(trash)
 
 
@@ -33,6 +33,8 @@ FUNCTION_MAP = {
     'exponent': exponent,
     'join': join
 }
+DEFAULT_FUNCTION = whatever
+FUNCTION_MAP = {c.lower():FUNCTION_MAP[c] for c in FUNCTION_MAP}
 
 COMMAND_IDENTIFIERS = ['robot!']
 
@@ -48,21 +50,22 @@ SAMPLE_COMMENTS = [
 'robot! add 1 1\nrobot! multiply 1 1',
 '   do ROBOT! add boom box',
 'robot! robot!',
+'robot! add'
 '']
 
 COMMAND_IDENTIFIERS = [c.lower() for c in COMMAND_IDENTIFIERS]
 
-def handle_line(text):
+def functionmap_line(text):
     print('User said:', text)
     elements = shlex.split(text)
     print('Broken into:', elements)
+    results = []
     for element_index, element in enumerate(elements):
         if element.lower() not in COMMAND_IDENTIFIERS:
             continue
 
         arguments = elements[element_index:]
         assert arguments.pop(0).lower() in COMMAND_IDENTIFIERS
-        #arguments = arguments[1:]
 
         # If the user has multiple command calls on one line
         # (Which is stupid but they might do it anyway)
@@ -77,26 +80,35 @@ def handle_line(text):
             print('Did nothing')
             continue
 
-        function = FUNCTION_MAP.get(arguments[0], default_function)
+        command = arguments[0].lower()
+        actual_function = command in FUNCTION_MAP
+        function = FUNCTION_MAP.get(command, DEFAULT_FUNCTION)
         print('Using function:', function.__name__)
 
-        if function is not default_function:
-            # When using the default function, we want to pass in the
-            # first word because it might be important
-            # For other commands, we don't need it because add()
-            # doesn't need the string "add" for anything.
+        if actual_function:
+            # Currently, the first argument is the name of the command
+            # If we found an actual function, we can remove that
+            # (because add() doesn't need "add" as the first arg)
+            # If we're using the default, let's keep that first arg
+            # because it might be important.
             arguments = arguments[1:]
         result = function(*arguments)
         print('Output: %s' % result)
+        results.append(results)
+    return results
 
-def handle_comment(comment):
+def functionmap_comment(comment):
     lines = comment.split('\n')
+    results = []
     for line in lines:
-        handle_line(line)
+        result = functionmap_line(line)
+        if result is not None:
+            results += result
+    return results
 
 for comment in SAMPLE_COMMENTS:
     print()
-    handle_comment(comment)
+    functionmap_comment(comment)
 
 '''
 User said: robot! add 1 2
