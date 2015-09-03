@@ -281,7 +281,7 @@ class LogoGame:
 			if self.label_playerhash:
 				self.label_playerhash.configure(text=playerhash)
 		for logo in self.all_logos:
-			logo.solved = self.playerstats_hassolved(logo.id)
+			logo.solved = self.playerstats_gethassolved(logo.id)
 		print('Name: ' + self.stats_main.playername)
 		self.clean_empty_dbs()
 
