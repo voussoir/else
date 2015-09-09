@@ -11,7 +11,11 @@ import string
 import re
 import sys
 
-assert len(sys.argv) == 2
+assert len(sys.argv) in (2, 3)
+
+ctime = '-c' in sys.argv
+
+IGNORE_EXTENSIONS = ['.py', '.lnk']
 
 prefix = sys.argv[1]
 files = [os.path.abspath(x) for x in os.listdir()]
@@ -35,10 +39,17 @@ def natural_sort(l):
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)] 
     return sorted(l, key=alphanum_key)
 
-files = natural_sort(files)
+if ctime:
+    print('Sorting by time')
+    files.sort(key=os.path.getctime)
+else:
+    print('Sorting by name')
+    files = natural_sort(files)
 for (fileindex, filename) in enumerate(files):
     if '.' in filename:
         extension = '.' + filename.split('.')[-1]
+        if extension in IGNORE_EXTENSIONS:
+            continue
     else:
         extension = ''
     newname = format % (prefix, fileindex, extension)
