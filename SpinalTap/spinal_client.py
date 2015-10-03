@@ -70,7 +70,7 @@ class SpinalClient:
 		self.t.mainloop()
 
 	def add_pathline(self):
-		
+		pass
 
 if __name__ == '__main__':
 	s = SpinalClient()

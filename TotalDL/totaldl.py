@@ -10,7 +10,7 @@ DOWNLOAD_DIRECTORY = ''
 # Save files to this folder
 # If blank, it uses the local folder
 
-IMGUR_ALBUM_INDV = 'Viewfullresolution<'
+IMGUR_ALBUM_INDV = '<metaproperty="og:image"'
 IMGUR_ALBUM_INDV2 = 'linkrel="image_src"'
 # The HTML string which tells us that an image link is
 # on this line.
@@ -100,22 +100,12 @@ def request_get(url, stream=False, headers={}):
 def handle_imgur_html(url):
 	pagedata = request_get(url)
 	pagedata = pagedata.text.replace(' ', '')
-	pagedata = pagedata.replace('src="', 'href="')
-	pagedata = pagedata.replace(IMGUR_ALBUM_INDV2, IMGUR_ALBUM_INDV)
 	pagedata = pagedata.split('\n')
-	pagedata = [line.strip() for line in pagedata]
 	pagedata = [line for line in pagedata if IMGUR_ALBUM_INDV in line]
-	pagedata = [line.split('href=')[1] for line in pagedata]
-	pagedata = [line.replace('"//', '"http://') for line in pagedata]
-	pagedata = [line.split('"')[1] for line in pagedata]
-	links = []
-	first = pagedata[0].split('.')[0]
-	if [x.split('.')[0] for x in pagedata].count(first) > 1:
-		pagedata = pagedata[1:]
-	for image in pagedata:
-		image = image.split('?')[0]
-		if image not in links:
-			links.append(image)
+	pagedata = [line.split('content="')[1] for line in pagedata]
+	links = [line.split('"')[0] for line in pagedata]
+	links = [line.split('?')[0] for line in links]
+	print(links)
 	return links
 
 def handle_imgur(url, albumid='', customname=None):

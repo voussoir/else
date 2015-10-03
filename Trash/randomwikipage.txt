@@ -1,0 +1,21 @@
+import json
+import requests
+import time
+import string
+import random
+def get_random_wikipages(count):
+    print('requesting wiki pages')
+    HEADERS={'User-Agent': 'Random wikipage fetcher v1 - puts random wiki pages into reddit comments'}
+    links = []
+    url = 'https://powerlisting.wikia.com/wiki/Special:Random'
+    for x in range(count):
+        page = requests.get(url, '%x' % random.getrandbits(16), headers=HEADERS)
+        page.raise_for_status()
+        title = page.text.split('<title>')[1].split('</title>')[0]
+        title = title.replace(' - Superpower Wiki', '')
+        print(''.join(c for c in title if c in string.printable))
+        links.append('[%s](%s)' % (title, page.url))
+        time.sleep(5)
+    return '\n'.join(links)
+
+print(get_random_wikipages(3))

@@ -18,6 +18,8 @@ ctime = '-c' in sys.argv
 IGNORE_EXTENSIONS = ['.py', '.lnk']
 
 prefix = sys.argv[1]
+if prefix != '':
+    prefix += '_'
 files = [os.path.abspath(x) for x in os.listdir()]
 files = [item for item in files if os.path.isfile(item)]
 if __file__ in files:
@@ -28,7 +30,7 @@ zeropadding = len(str(len(files)))
 zeropadding = max(2, zeropadding)
 zeropadding = str(zeropadding)
 
-format = '%s_%0{pad}d%s'.format(pad=zeropadding)
+format = '%s%0{pad}d%s'.format(pad=zeropadding)
 print(format)
 
 def natural_sort(l):
