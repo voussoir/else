@@ -17,30 +17,30 @@ Usage:
 Reference table for files with NO EXTENSION.
 For each extension character, subtract 1 byte from secret size
 
-     pixels |      example dimensions | Secret file size
-        100 |                 10 x 10 |         32 bytes
-        400 |                 20 x 20 |        144 bytes
-      2,500 |                 50 x 50 |        932 bytes
-     10,000 |               100 x 100 |      3,744 bytes
-     40,000 |               200 x 200 |     14,994 bytes
-     25,000 |               500 x 500 |     93,744 bytes (91 kb)
-  1,000,000 |           1,000 x 1,000 |    374,994 bytes (366 kb)
-  4,000,000 |           2,000 x 2,000 |  1,499,994 bytes (1.43 mb)
- 25,000,000 |           5,000 x 5,000 |  9,374,994 bytes (8.94 mb)
-100,000,000 |         10,000 x 10,000 | 37,499,994 bytes (35.7 mb)
+     pixels |       example dimensions | Secret file size
+        100 |                  10 x 10 |         32 bytes
+        400 |                  20 x 20 |        144 bytes
+      2,500 |                  50 x 50 |        932 bytes
+     10,000 |                100 x 100 |      3,744 bytes
+     40,000 |                200 x 200 |     14,994 bytes
+     25,000 |                500 x 500 |     93,744 bytes (91 kb)
+  1,000,000 |            1,000 x 1,000 |    374,994 bytes (366 kb)
+  4,000,000 |            2,000 x 2,000 |  1,499,994 bytes (1.43 mb)
+ 25,000,000 |            5,000 x 5,000 |  9,374,994 bytes (8.94 mb)
+100,000,000 |          10,000 x 10,000 | 37,499,994 bytes (35.7 mb)
 
-    pixels |       example dimensions | Secret file size
-       100 |                  10 x 10 |         32 bytes
-       697 |            25 x 28 (700) |        256 bytes
-     2,745 |          50 x 55 (2,750) |      1,024 bytes (1 kb)
-    21,860 |       142 x 154 (21,868) |      8,192 bytes (8 kb)
-    87,396 |       230 x 380 (87,400) |     32,768 bytes (32 kb)
-   349,540 |      463 x 755 (349,565) |    131,072 bytes (128 kb)
- 1,398,116 |  1146 x 1120 (1,398,120) |    524,288 bytes (512 kb)
- 2,796,217 |  1621 x 1725 (2,796,225) |  1,048,576 bytes (1 mb)
-11,184,825 | 3500 x 3200 (11,200,000) |  4,194,304 bytes (4 mb)
-44,739,257 | 6700 x 6700 (44,890,000) | 16,777,216 bytes (16 mb)
-89,478,500 | 9500 x 9500 (90,250,000) | 33,554,432 bytes (32 mb)
+     pixels |       example dimensions | Secret file size
+        100 |                  10 x 10 |         32 bytes
+        697 |            25 x 28 (700) |        256 bytes
+      2,745 |          50 x 55 (2,750) |      1,024 bytes (1 kb)
+     21,860 |       142 x 154 (21,868) |      8,192 bytes (8 kb)
+     87,396 |       230 x 380 (87,400) |     32,768 bytes (32 kb)
+    349,540 |      463 x 755 (349,565) |    131,072 bytes (128 kb)
+  1,398,116 |  1146 x 1120 (1,398,120) |    524,288 bytes (512 kb)
+  2,796,217 |  1621 x 1725 (2,796,225) |  1,048,576 bytes (1 mb)
+ 11,184,825 | 3500 x 3200 (11,200,000) |  4,194,304 bytes (4 mb)
+ 44,739,257 | 6700 x 6700 (44,890,000) | 16,777,216 bytes (16 mb)
+ 89,478,500 | 9500 x 9500 (90,250,000) | 33,554,432 bytes (32 mb)
 
 '''
 from PIL import Image
@@ -125,8 +125,8 @@ def encode(imagefilename, secretfilename):
         raise StegError('The Secret can\'t be 0 bytes.')
 
     secret_extension = os.path.splitext(secretfilename)[1][1:]
-    secret_content_length = (len(secret) * 8) + (len(secret_extension) * 8) + 8
-    requiredpixels = math.ceil((secret_content_length + 32) / 3)
+    secret_content_length = (len(secret)) + (len(secret_extension)) + 1
+    requiredpixels = math.ceil(((secret_content_length * 8) + 32) / 3)
     if totalpixels < requiredpixels:
         raise StegError('Image does not have enough pixels to store the Secret'
                         'Must have at least %d pixels' % requiredpixels)
@@ -137,7 +137,7 @@ def encode(imagefilename, secretfilename):
     pixel = list(image.getpixel((0, 0)))
 
     # Write secret length
-    secret_content_length_b = bin(secret_content_length)[2:].rjust(32, '0')
+    secret_content_length_b = binary(secret_content_length).rjust(32, '0')
     for x in range(32):
         modify_pixel(secret_content_length_b[x])
         increment_pixel()
@@ -209,7 +209,7 @@ def decode(imagefilename):
         pixel_index += 1
     content_length = content_length[:-1]
     content_length = int(content_length, 2)
-    print('Content bits:', content_length)
+    print('Content bytes:', content_length)
     
     # Continue from the end of the header
     # This would have been automatic if I used `increment_pixel`
@@ -231,8 +231,8 @@ def decode(imagefilename):
     print('Extension:', extension)
 
     # Remove the extension length
-    content_length -= 8
-    content_length -= 8 * len(extension)
+    content_length -= 1
+    content_length -= len(extension)
 
     # Prepare writes
     newname = os.path.splitext(imagefilename)[0]
@@ -242,10 +242,9 @@ def decode(imagefilename):
     outfile = open(newname, 'wb')
 
     # extract data
-    content_bytes = content_length // 8
-    for byte in range(content_bytes):
+    for byte in range(content_length):
         if byte % 1024 == 0:
-            percentage = (byte + 1) / content_bytes
+            percentage = (byte + 1) / content_length
             percentage = '%07.3f%%\r' % (100 * percentage)
             print(percentage, end='')
 
@@ -254,7 +253,7 @@ def decode(imagefilename):
             channel = pixel[channel_index]
             channel = binary(channel)[-1]
             activebyte += channel
-            if not (byte == content_bytes - 1 and bit == 7):
+            if not (byte == content_length - 1 and bit == 7):
                 # If your Image dimensions are at the extreme limit of the Secret size,
                 # this would otherwise raise IndexError as it tries to grab the next pixel
                 # off the canvas.
