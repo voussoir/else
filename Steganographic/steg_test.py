@@ -28,4 +28,4 @@ def decode(i):
 #decode('examples\\steg_trespassing (3bp_thats_advertising_mp4).png')
 
 encode('examples\\trespassing.png', 'examples\\thats_advertising.mp4')
-decode('examples\\trespassing (thats_advertising_mp4).png')
+#decode('examples\\trespassing (thats_advertising_mp4).png')

@@ -5,13 +5,13 @@ The first 32 bits (10.66 pixels) will be used to store the length of the Secret 
 Then, the Secret's extension is stored. A null byte indicates the end of the extension. This section is of variable length.
 A file with no extension requires only that null byte. A file with an extension requires 1 additional byte per character.
 
-Smallest image possible = 16 pixels with 48 bit secret: 32 for header; 8 for null extension; 8 for data
-Each Image pixel holds 3 Secret bits, so the Image must have at least ((secretbytes * (8 / 3)) + 14) pixels
+Smallest image possible = 16 pixels with 48 bit secret: 32 for header; 8 for null extension; 8 for data.
+Each Image pixel holds 3 Secret bits, so the Image must have at least ((secretbytes * (8 / 3)) + 14) pixels.
 An Image can hold ((3 * (pixels - 14)) / 8) Secret bytes.
 
 Usage:
-> 3bitspixel.py encode imagefilename.png secretfilename.ext
-> 3bitspixel.py decode lacedimagename.png
+> steganographic.py encode imagefilename.png secretfilename.ext
+> steganographic.py decode lacedimagename.png
 
 
 Reference table for files with NO EXTENSION.
