@@ -32,9 +32,8 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
     global smallest_x
     global largest_x
     global largest_y
-    if thrown_angle in range(1, 179, 1) or thrown_angle in range(-181, -359, -1):
-        # A positive velocity implies a downward motion, so please reverse this.
-        starting_velocity *= -1
+    upward = thrown_angle in range(1, 179, 1) or thrown_angle in range(-181, -359, -1)
+    upward = -1 if upward else 1
     
     rads = math.radians(thrown_angle)
     sin = math.sin(rads)
@@ -42,10 +41,11 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
     tan = math.tan(rads)
 
     throw = {'angle': thrown_angle}
-    throw['horizontal_component'] = starting_velocity * cos
-    throw['vertical_component'] = starting_velocity * sin
+    throw['horizontal_component'] = starting_velocity * cos * -upward
+    throw['vertical_component'] = starting_velocity * sin * upward
+    #print(thrown_angle, starting_velocity, throw['horizontal_component'])
     throw['hang_time'] = time_to_known_distance(throw['vertical_component'], starting_y, acceleration=9.8)
-    throw['distance'] = abs(throw['hang_time'] * throw['horizontal_component'])
+    throw['distance'] = throw['hang_time'] * throw['horizontal_component']
 
     def parabola(x):
         # 100% credit goes to wikipedia authors
@@ -113,8 +113,8 @@ PLOT_STEP_X = 5
 
 throws = []
 angle_increment = 15
-angles = [180, 0]
-angles = [x * angle_increment for x in range(int(90 / angle_increment))]
+angles = [-1, 0, 1]
+#angles = [x * angle_increment for x in range(int(90 / angle_increment))]
 #angles += [x+90 for x in angles]
 for thrown_angle in (angles):
     t = make_throw(STARTING_X, STARTING_Y, STARTING_VELOCITY, thrown_angle)
@@ -137,13 +137,17 @@ for (index, t) in enumerate(throws):
     g = random.randint(0, 200)
     b = random.randint(0, 200)
     color = (r, g, b, 255)
-    #print(t['angle'], t['distance'])
+    print(t['angle'], t['distance'])
+    point_a = None
     for pointindex in range(len(t['parabola_points']) - 1):
-        point_a = t['parabola_points'][pointindex][:]
+        if point_a is None:
+            point_a = t['parabola_points'][pointindex][:]
+            point_a[0] = (round(point_a[0])) + abs(smallest_x) + PLOT_PAD_LEFT
+            point_a[1] = (largest_y - round(point_a[1]))
+        else:
+            point_a = point_b
         point_b = t['parabola_points'][pointindex + 1][:]
-        point_a[0] = (round(point_a[0])) + abs(smallest_x) + PLOT_PAD_LEFT
         point_b[0] = (round(point_b[0])) + abs(smallest_x) + PLOT_PAD_LEFT
-        point_a[1] = (largest_y - round(point_a[1]))
         point_b[1] = (largest_y - round(point_b[1]))
         try:
             # this ensures a solid, smooth line between each of the plotted points.
