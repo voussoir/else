@@ -137,7 +137,7 @@ for (index, t) in enumerate(throws):
     g = random.randint(0, 200)
     b = random.randint(0, 200)
     color = (r, g, b, 255)
-    print(t['angle'], t['distance'])
+    #print(t['angle'], t['distance'])
     point_a = None
     for pointindex in range(len(t['parabola_points']) - 1):
         if point_a is None:
