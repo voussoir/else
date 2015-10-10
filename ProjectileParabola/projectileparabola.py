@@ -62,7 +62,7 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
 
     y = 1
     x = starting_x
-    backwards = (thrown_angle in range(90, 270)) or (thrown_angle in range(-90, -270))
+    backwards = (thrown_angle in range(90, 270)) or (thrown_angle in range(-90, -270, -1))
     while y > 0:
         y = throw['parabola'](x) + starting_y
         if y < 0:
