@@ -1,0 +1,75 @@
+running install
+running bdist_egg
+running egg_info
+writing top-level names to snudown.egg-info\top_level.txt
+writing dependency_links to snudown.egg-info\dependency_links.txt
+writing snudown.egg-info\PKG-INFO
+reading manifest file 'snudown.egg-info\SOURCES.txt'
+writing manifest file 'snudown.egg-info\SOURCES.txt'
+installing library code to build\bdist.win32\egg
+running install_lib
+running build_ext
+gperf.exe src\html_entities.gperf --output-file=src\html_entities.h
+building 'snudown' extension
+creating build
+creating build\temp.win32-3.4
+creating build\temp.win32-3.4\Release
+creating build\temp.win32-3.4\Release\src
+creating build\temp.win32-3.4\Release\html
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tcsnudown.c /Fobuild\temp.win32-3.4\Release\snudown.obj
+snudown.c
+snudown.c(231) : warning C4087: 'PyInit_snudown' : declared with 'void' parameter list
+c:\git\else\snudowntest\snudown.c(163) : warning C4700: uninitialized local variable 'options' used
+c:\git\else\snudowntest\snudown.c(228) : warning C4715: 'PyInit_snudown' : not all control paths return a value
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tcsrc/autolink.c /Fobuild\temp.win32-3.4\Release\src/autolink.obj
+autolink.c
+src/autolink.c(266) : warning C4146: unary minus operator applied to unsigned type, result still unsigned
+src/autolink.c(325) : warning C4146: unary minus operator applied to unsigned type, result still unsigned
+src/autolink.c(422) : warning C4018: '>' : signed/unsigned mismatch
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tcsrc/buffer.c /Fobuild\temp.win32-3.4\Release\src/buffer.obj
+buffer.c
+src/buffer.c(124) : warning C4996: '_vsnprintf': This function or variable may be unsafe. Consider using _vsnprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+        D:\Visual Studio 1_0_0\VC\INCLUDE\stdio.h(363) : see declaration of '_vsnprintf'
+src/buffer.c(141) : warning C4996: '_vsnprintf': This function or variable may be unsafe. Consider using _vsnprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+        D:\Visual Studio 1_0_0\VC\INCLUDE\stdio.h(363) : see declaration of '_vsnprintf'
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tcsrc/markdown.c /Fobuild\temp.win32-3.4\Release\src/markdown.obj
+markdown.c
+c:\git\else\snudowntest\src\html_entities.h(32) : warning C4129: 's' : unrecognized character escape sequence
+c:\git\else\snudowntest\src\html_entities.h(32) : warning C4129: 's' : unrecognized character escape sequence
+c:\git\else\snudowntest\src\html_entities.h(32) : warning C4129: 'h' : unrecognized character escape sequence
+src/markdown.c(2168) : warning C4018: '>' : signed/unsigned mismatch
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tcsrc/stack.c /Fobuild\temp.win32-3.4\Release\src/stack.obj
+stack.c
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tchtml/houdini_href_e.c /Fobuild\temp.win32-3.4\Release\html/houdini_href_e.obj
+houdini_href_e.c
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tchtml/houdini_html_e.c /Fobuild\temp.win32-3.4\Release\html/houdini_html_e.obj
+houdini_html_e.c
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tchtml/html.c /Fobuild\temp.win32-3.4\Release\html/html.obj
+html.c
+D:\Visual Studio 1_0_0\VC\BIN\cl.exe /c /nologo /Ox /MD /W3 /GS- /DNDEBUG -Isrc -Ihtml -IC:\Python34\include -IC:\Python34\include /Tchtml/html_smartypants.c /Fobuild\temp.win32-3.4\Release\html/html_smartypants.obj
+html_smartypants.c
+html/html_smartypants.c(97) : warning C4996: '_snprintf': This function or variable may be unsafe. Consider using _snprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+        D:\Visual Studio 1_0_0\VC\INCLUDE\stdio.h(363) : see declaration of '_snprintf'
+creating build\lib.win32-3.4
+D:\Visual Studio 1_0_0\VC\BIN\link.exe /DLL /nologo /INCREMENTAL:NO /LIBPATH:C:\Python34\libs /LIBPATH:C:\Python34\PCbuild /EXPORT:PyInit_snudown build\temp.win32-3.4\Release\snudown.obj build\temp.win32-3.4\Release\src/autolink.obj build\temp.win32-3.4\Release\src/buffer.obj build\temp.win32-3.4\Release\src/markdown.obj build\temp.win32-3.4\Release\src/stack.obj build\temp.win32-3.4\Release\html/houdini_href_e.obj build\temp.win32-3.4\Release\html/houdini_html_e.obj build\temp.win32-3.4\Release\html/html.obj build\temp.win32-3.4\Release\html/html_smartypants.obj /OUT:build\lib.win32-3.4\snudown.pyd /IMPLIB:build\temp.win32-3.4\Release\snudown.lib /MANIFESTFILE:build\temp.win32-3.4\Release\snudown.pyd.manifest
+   Creating library build\temp.win32-3.4\Release\snudown.lib and object build\temp.win32-3.4\Release\snudown.exp
+creating build\bdist.win32
+creating build\bdist.win32\egg
+copying build\lib.win32-3.4\snudown.pyd -> build\bdist.win32\egg
+creating stub loader for snudown.pyd
+creating build\bdist.win32\egg\EGG-INFO
+copying snudown.egg-info\PKG-INFO -> build\bdist.win32\egg\EGG-INFO
+copying snudown.egg-info\SOURCES.txt -> build\bdist.win32\egg\EGG-INFO
+copying snudown.egg-info\dependency_links.txt -> build\bdist.win32\egg\EGG-INFO
+copying snudown.egg-info\top_level.txt -> build\bdist.win32\egg\EGG-INFO
+writing build\bdist.win32\egg\EGG-INFO\native_libs.txt
+creating 'dist\snudown-1.4.0-py3.4-win32.egg' and adding 'build\bdist.win32\egg' to it
+removing 'build\bdist.win32\egg' (and everything under it)
+Processing snudown-1.4.0-py3.4-win32.egg
+Removing c:\python34\lib\site-packages\snudown-1.4.0-py3.4-win32.egg
+Copying snudown-1.4.0-py3.4-win32.egg to c:\python34\lib\site-packages
+snudown 1.4.0 is already the active version in easy-install.pth
+
+Installed c:\python34\lib\site-packages\snudown-1.4.0-py3.4-win32.egg
+Processing dependencies for snudown==1.4.0
+Finished processing dependencies for snudown==1.4.0
