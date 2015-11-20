@@ -33,7 +33,7 @@ HELP_SENTENCE = '''
  ---------------------------------------------------------------
  '''[1:-1] % (DEFAULT_SENTENCE)
 
-def make_password(length=None, allowpunctuation=False, allowdigits=False):
+def make_password(length=None, allowpunctuation=False, allowdigits=False, digits_only=False, binary=False):
 	'''
 	Returns a string of length `length` consisting of a random selection
 	of uppercase and lowercase letters, as well as punctuation and digits
@@ -41,12 +41,17 @@ def make_password(length=None, allowpunctuation=False, allowdigits=False):
 	'''
 	if length is None:
 		length = DEFAULT_LENGTH
-		
-	s = string.ascii_letters
-	if allowpunctuation is True:
-		s += string.punctuation
-	if allowdigits is True:
-		s += string.digits
+	
+	if digits_only is False and binary is False:
+		s = string.ascii_letters
+		if allowpunctuation is True:
+			s += string.punctuation
+		if allowdigits is True:
+			s += string.digits
+	elif digits_only:
+		s = string.digits
+	elif binary:
+		s = '01'
 
 	password = ''.join([random.choice(s) for x in range(length)])
 	return password
@@ -100,7 +105,9 @@ if __name__ == '__main__':
 	if mode == 'password':
 		punc = 'p' in args
 		digi = 'd' in args
-		print(make_password(length, punc, digi))
+		digi_only = 'dd' in args
+		binary = 'b' in args
+		print(make_password(length, punc, digi, digi_only, binary))
 		
 	elif mode == 'sentence':
 		if argc == 3:

@@ -64,7 +64,8 @@
 import binascii
 import sys
 from PIL import Image
-
+import os
+print(os.getcwd())
 try:
     INPUTFILE = sys.argv[1]
 except:

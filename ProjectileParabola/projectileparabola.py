@@ -16,7 +16,7 @@ def quadratic_formula(a, b, c):
     discriminant = math.sqrt(discriminant)
     b *= -1
     possible = (b + discriminant, b - discriminant)
-    possible = [x / (2*a) for x in possible]
+    possible = tuple(x / (2*a) for x in possible)
     return possible
 
 def time_to_known_distance(velocity, distance, acceleration):
@@ -29,9 +29,11 @@ def time_to_known_distance(velocity, distance, acceleration):
         return min(possible)
 
 def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
+    # We don't track smallest_y because it's going to be 0!
     global smallest_x
     global largest_x
     global largest_y
+
     upward = thrown_angle in range(1, 179, 1) or thrown_angle in range(-181, -359, -1)
     upward = -1 if upward else 1
     
@@ -39,13 +41,6 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
     sin = math.sin(rads)
     cos = math.cos(rads)
     tan = math.tan(rads)
-
-    throw = {'angle': thrown_angle}
-    throw['horizontal_component'] = starting_velocity * cos * -upward
-    throw['vertical_component'] = starting_velocity * sin * upward
-    #print(thrown_angle, starting_velocity, throw['horizontal_component'])
-    throw['hang_time'] = time_to_known_distance(throw['vertical_component'], starting_y, acceleration=9.8)
-    throw['distance'] = throw['hang_time'] * throw['horizontal_component']
 
     def parabola(x):
         # 100% credit goes to wikipedia authors
@@ -56,15 +51,19 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
         y = left - (numerator / denominator)
         return y
 
+    throw = {'angle': thrown_angle}
     throw['parabola'] = parabola
+    throw['horizontal_component'] = starting_velocity * cos * -upward
+    throw['vertical_component'] = starting_velocity * sin * upward
+    throw['hang_time'] = time_to_known_distance(throw['vertical_component'], starting_y, acceleration=9.8)
+    throw['distance'] = throw['hang_time'] * throw['horizontal_component']
     throw['parabola_points'] = []
-    #print(throw['vertical_component'], throw['hang_time'])
 
     y = 1
     x = starting_x
     backwards = (thrown_angle in range(90, 270)) or (thrown_angle in range(-90, -270, -1))
     while y > 0:
-        y = throw['parabola'](x) + starting_y
+        y = parabola(x) + starting_y
         if y < 0:
             # To keep a smooth floor of 0, rescale the active x so that
             # it looks like it continues in the right direction underground.
@@ -77,7 +76,7 @@ def make_throw(starting_x, starting_y, starting_velocity, thrown_angle):
         if (smallest_x is None or x < smallest_x): smallest_x = math.floor(x)
         if (largest_x is None or x > largest_x): largest_x = math.ceil(x)
         if (largest_y is None or y > largest_y): largest_y = math.ceil(y)
-        throw['parabola_points'].append([int(x), int(y)])
+        throw['parabola_points'].append((int(x), int(y)))
         if backwards:
             x -= PLOT_STEP_X
         else:
@@ -141,12 +140,12 @@ for (index, t) in enumerate(throws):
     point_a = None
     for pointindex in range(len(t['parabola_points']) - 1):
         if point_a is None:
-            point_a = t['parabola_points'][pointindex][:]
+            point_a = list(t['parabola_points'][pointindex])
             point_a[0] = (round(point_a[0])) + abs(smallest_x) + PLOT_PAD_LEFT
             point_a[1] = (largest_y - round(point_a[1]))
         else:
             point_a = point_b
-        point_b = t['parabola_points'][pointindex + 1][:]
+        point_b = list(t['parabola_points'][pointindex + 1])
         point_b[0] = (round(point_b[0])) + abs(smallest_x) + PLOT_PAD_LEFT
         point_b[1] = (largest_y - round(point_b[1]))
         try:

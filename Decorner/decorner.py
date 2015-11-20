@@ -3,6 +3,7 @@ import sys
 
 imagename = sys.argv[1]
 image = Image.open(imagename)
+image = image.convert('RGBA')
 w = image.size[0] - 1
 h = image.size[1] - 1
 for i in range(5):

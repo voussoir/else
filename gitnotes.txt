@@ -1,0 +1,1 @@
+git filter-branch -f --index-filter "git rm -r --cached --ignore-unmatch SubredditBirthdays\sql.db" HEAD
