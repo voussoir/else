@@ -1,4 +1,0 @@
-TKCube
-=========
-
-Not done yet.

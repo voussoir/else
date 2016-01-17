@@ -4,6 +4,13 @@ import sqlite3
 import sys
 import textwrap
 
+try:
+    import colorama
+    colorama.init()
+    HAS_COLORAMA = True
+except:
+    HAS_COLORAMA = False
+
 SQL_ID = 0
 SQL_TODOTABLE = 1
 SQL_CREATED = 2
@@ -28,6 +35,7 @@ Use `toddo all` to see if there are entries for other tables.'''
 
 HELP_REMOVE = '''Provide an ID number to remove.'''
 
+# The newline at the top of this message is intentional
 DISPLAY_INDIVIDUAL = '''
      ID: _id_
   Table: _table_
@@ -57,6 +65,24 @@ class Toddo():
             self._cur.execute('CREATE TABLE IF NOT EXISTS todos(id INT, todotable TEXT, created INT, message TEXT)')
             self._cur.execute('CREATE INDEX IF NOT EXISTS todoindex on todos(id)')
         return self._cur
+
+    def _install_default_lastid(self):
+        self.cur.execute('SELECT val FROM meta WHERE key == "lastid"')
+        f = cur.fetchone()
+        if f is not None:
+            return int(f[0])
+        self.cur.execute('INSERT INTO meta VALUES("lastid", 1)')
+        self.sql.commit()
+        return 1
+
+    def _install_default_todotable(self):
+        self.cur.execute('SELECT val FROM meta WHERE key == "todotable"')
+        f = cur.fetchone()
+        if f is not None:
+            return f[0]
+        self.cur.execute('INSERT INTO meta VALUES("todotable", "default")')
+        self.sql.commit()
+        return 'default'
 
     def add_todo(self, message=None):
         '''
@@ -113,7 +139,6 @@ class Toddo():
         output = output.replace('_human_', human(todo[SQL_CREATED]))
         output = output.replace('_message_', message)
 
-
         return output
 
     def display_active_todos(self):
@@ -154,13 +179,38 @@ class Toddo():
             if '\n' in message:
                 message = message.split('\n')[0] + ' ...'
 
-            total = '%s : %s : %s : %s' % (todoid, todotable, timestamp, message)
             terminal_width = shutil.get_terminal_size()[0]
+            total = '%s : %s : %s' % (timestamp, todoid, message)
+            space_remaining = terminal_width - len(total)
             if len(total) > terminal_width:
                 total = total[:(terminal_width-(len(total)+4))] + '...'
             display.append(total)
 
         return '\n'.join(display)
+
+    def get_todotable(self):
+        self.cur.execute('SELECT val FROM meta WHERE key="todotable"')
+        todotable = self.cur.fetchone()
+        if todotable is None:
+            self._install_default_todotable()
+            todotable = 'default'
+        else:
+            todotable = todotable[0]
+        return todotable
+
+    def increment_lastid(self, increment=False):
+        '''
+        Increment the lastid in the meta table, THEN return it.
+        '''
+        self.cur.execute('SELECT val FROM meta WHERE key="lastid"')
+        lastid = self.cur.fetchone()
+        if lastid is None:
+            self._install_default_lastid()
+            return 1
+        else:
+            lastid = int(lastid[0]) + 1
+            self.cur.execute('UPDATE meta SET val=? WHERE key="lastid"', [lastid])
+            return lastid
     
     def switch_todotable(self, newtable=None):
         '''
@@ -178,47 +228,24 @@ class Toddo():
         self.sql.commit()
         return newtable
 
-    def increment_lastid(self, increment=False):
-        '''
-        Increment the lastid in the meta table, THEN return it.
-        '''
-        self.cur.execute('SELECT val FROM meta WHERE key="lastid"')
-        lastid = self.cur.fetchone()
-        if lastid is None:
-            self._install_default_lastid()
-            return 1
-        else:
-            lastid = int(lastid[0]) + 1
-            self.cur.execute('UPDATE meta SET val=? WHERE key="lastid"', [lastid])
-            return lastid
-
-    def get_todotable(self):
-        self.cur.execute('SELECT val FROM meta WHERE key="todotable"')
-        todotable = self.cur.fetchone()
-        if todotable is None:
-            self._install_default_todotable()
-            todotable = 'default'
-        else:
-            todotable = todotable[0]
-        return todotable
-
-    def _install_default_lastid(self):
-        '''
-        This method assumes that "lastid" does not already exist.
-        If it does, it's your fault for calling this.
-        '''
-        self.cur.execute('INSERT INTO meta VALUES("lastid", 1)')
-        self.sql.commit()
-        return 1
-
-    def _install_default_todotable(self):
-        '''
-        This method assumes that "todotable" does not already exist.
-        If it does, it's your fault for calling this.
-        '''
-        self.cur.execute('INSERT INTO meta VALUES("todotable", "default")')
-        self.sql.commit()
-        return 'default'
+def colorama_print(text):
+    alternator = False
+    terminal_size = shutil.get_terminal_size()[0]
+    for line in text.split('\n'):
+        line += ' ' * (terminal_size - (len(line)+1))
+        if HAS_COLORAMA:
+            if alternator:
+                sys.stdout.write(colorama.Fore.BLACK)
+                sys.stdout.write(colorama.Back.WHITE)
+            else:
+                sys.stdout.write(colorama.Fore.WHITE)
+                sys.stdout.write(colorama.Back.BLACK)
+        alternator = not alternator
+        print(line)
+    if HAS_COLORAMA:
+        sys.stdout.write(colorama.Back.RESET)
+        sys.stdout.write(colorama.Fore.RESET)
+        sys.stdout.flush()
 
 def human(timestamp):
     timestamp = datetime.datetime.utcfromtimestamp(timestamp)
@@ -282,14 +309,14 @@ if __name__ == '__main__':
             table = toddo.get_todotable()
             print(HELP_NOACTIVE % table)
         else:
-            print(message)
+            colorama_print(message)
 
     elif sys.argv[1] == 'all':
         message = toddo.display_todos_from_table(None)
         if message is None:
             print(HELP_NOENTRIES)
         else:
-            print(message)
+            colorama_print(message)
 
     elif sys.argv[1] == 'add':
         args = list(filter(None, sys.argv))

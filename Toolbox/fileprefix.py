@@ -31,7 +31,6 @@ zeropadding = max(2, zeropadding)
 zeropadding = str(zeropadding)
 
 format = '%s%0{pad}d%s'.format(pad=zeropadding)
-print(format)
 
 def natural_sort(l):
     '''
@@ -55,5 +54,6 @@ for (fileindex, filename) in enumerate(files):
     else:
         extension = ''
     newname = format % (prefix, fileindex, extension)
-    print(''.join([c for c in filename if c in string.printable]), '->', newname)
-    os.rename(filename, newname)
+    if os.path.basename(filename) != newname:
+        print(''.join([c for c in (filename + ' -> ' + newname) if c in string.printable]))
+        os.rename(filename, newname)

@@ -1,6 +1,13 @@
 Steganographic
 ==============
 
+    2015 01 15:
+        Now supports variable "bitness", the number of bits per color channel to overwrite.
+        Previously, bitness was always 1, to maximize transparency.
+        Now, bitness can be 1-8 to favor transparency or information density.
+
+&nbsp;
+
 Let's be honest, this was really just an excuse to make big Terminal headers out of hashmarks.
 
 &nbsp;
@@ -22,11 +29,13 @@ Each Image pixel holds 3 Secret bits, so the Image must have at least `((secretb
 An Image can hold `((3 * (pixels - 14)) / 8)` Secret bytes.  
 
     Usage:
-    > steganographic.py encode imagefilename.png secretfilename.ext
-    > steganographic.py decode lacedimagename.png
+    > steganographic.py encode imagefilename.png secretfilename.ext bitness
+    > steganographic.py decode lacedimagename.png bitness
+
+where bitness defaults to 1 in both cases.
 
 
-Reference table for files with NO EXTENSION.
+Reference table for files with NO EXTENSION and bitness of 1.
 For each extension character, subtract 1 byte from secret size
 
          pixels |       example dimensions | Secret file size
@@ -55,5 +64,5 @@ For each extension character, subtract 1 byte from secret size
      89,478,500 | 9500 x 9500 (90,250,000) | 33,554,432 bytes (32 mb)
 
 <p align="center">
-  <img src="https://github.com/voussoir/else/blob/master/.GitImages/steganographic_logo.png?raw=true" alt="steganographic"/>
+    <img src="https://github.com/voussoir/else/blob/master/.GitImages/steganographic_logo.png?raw=true" alt="steganographic"/>
 </p>
