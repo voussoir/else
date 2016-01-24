@@ -99,15 +99,24 @@ class BitsToImage:
 class ImageToBits:
     def __init__(self, image, bitness):
         self.image = image
+        self.bitness = bitness
         self.width = image.size[0]
+        self.height = image.size[1]
         self.pixel_index = -1
+        self.bit_index = bitness
         self.active_byte = []
+        self.pixels = self.image.getdata()
+        #self.bits = ''
+        #for pixel in self.pixels:
+        #    for channel in pixel:
+        #        self.bits += binary(channel)[-bitness:]
+        #print(len(self.bits))
+
 
     def _read(self):
         if len(self.active_byte) == 0:
             self.pixel_index += 1
-            (x, y) = index_to_xy(self.pixel_index, self.width)
-            self.active_byte = list(self.image.getpixel((x, y)))
+            self.active_byte = self.pixels[self.pixel_index]
             self.active_byte = self.active_byte[:3]
             self.active_byte = [binary(channel) for channel in self.active_byte]
             self.active_byte = [channel[-bitness:] for channel in self.active_byte]
@@ -115,6 +124,7 @@ class ImageToBits:
             self.active_byte = list(self.active_byte)
 
         ret = self.active_byte.pop(0)
+        self.bit_index += 1
         return ret
 
     def read(self, bits=1):
@@ -196,24 +206,14 @@ def encode(imagefilename, secretfilename, bitness=1):
     secret_content_length = (secret_size) + (len(secret_extension)) + 1
     requiredpixels = math.ceil(((secret_content_length * 8) + 32) / (3 * bitness))
     if totalpixels < requiredpixels:
-        raise StegError('Image does not have enough pixels to store the Secret'
+        raise StegError('Image does not have enough pixels to store the Secret. '
                         'Must have at least %d pixels' % requiredpixels)
 
     print('%d pixels available, %d required' % (totalpixels, requiredpixels))
 
     # --> YOU ARE HERE <--
 
-    # Because bitness may be between 1 and 8, we need to create a writing buffer
-    # called `binary_write_buffer`, so that we're always writing the same amount
-    # of data per color channel.
-    # If we were to write the secret length / extension on the fly, we might end
-    # up using the wrong number of bits for the final channel of some pixel.
-    # Example: 10010101 broken into groups of 3 is [100, 101, 01]
-    # Note that the last group is not the same size as the desired bitness, and
-    # will cause decode errors.
-
     pixel = list(image.getpixel((0, 0)))
-    binary_write_buffer = ''
 
     # Write secret length
     secret_content_length_b = binary(secret_content_length).rjust(32, '0')
