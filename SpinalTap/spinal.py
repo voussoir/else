@@ -1,260 +1,467 @@
-'''
-                            -----:::
-                     ...-----------:::::::::
-                ............---------:::::::,,,,
-             ..`````````.......--------:::::::,,,,,
-           .```````````````...:vv,------:::::::,,,,,"
-         ..``````````````````-zz+z:------::::::,,,,,,""
-       ....``````       `````-zzzz:------:::::::,,,,,,"""
-      .....`````         `````xzzx.-------::::::,,,,,,""""
-    ---..::-`````        ````,zzzz".------:::::::,,,_~~""""_
-   -----xzzzJ?~-```    `````_Jzzzzz~------::::::"vJonnnT"""__
-  ------L+zzzzzz?".`````.:~xzzzzz+++J/":--:::,;Jooonnnn+"""___
-  :------/z+zzzzzzzxL??xzzzzzzz+++++++TTzJJJ+ooooonnnoL""""___
- :::-------;J++zzzzzzzzzzzzzzzxxxJ+++TTTTTTToooooonT?""""""____
- :::::-------~L+++++++++++z/,------"v+TTTTTooooooz/","""""_____
-::::::::-------,vz+++++++z,----------"+TTooooooL_,,,""""""______
-,,:::::::::------:L++++++x---------:::JooooooJ",,,,""""""_______
-,,,,::::::::::::---?TTTTTTv:---::::::vooooooL,,,,,""""""________
-,,,,,,,::::::::::::~TTTTTTT+xv/;;/?xToooooon;,,,,""""""_________
- ,,,,,,,,,,:::::::,zooooooooooooooooooooonnn+",""""""__________
- """,,,,,,,,,,,,,,zoooooooooooooooooonnnnnnnn+"""""____________
-  """""",,,,,,,,,,ooooooooooooonnnnnnnnnnnnnnn_""_____________
-  """"""""""",,,,,+nnnnnnnnnnnnnnnnnnnnnnnnZZT"_______________
-   ____"""""""""""vnnnnnnnnnnnnnnnnnnnnZZZZZZ?_______________
-    ________"""""""znnnnnnnnnnnZZZZZZZZZZZZZz_______________
-      ______________JZZZZZZZZZZZZZZZZZZZZZZz______________
-       ______________/+ZZZZZZZZZZZZZeeeeZ+/______________
-         ______________;xoeeeeeeeeeeeeox;______________
-           _______________~vxJz++zJxv~_______________
-             ______________________________________
-                ________________________________
-                     _______________________
-                            ________
-
-'''
+import json
 import os
+import ratelimiter
 import shutil
+import sys
 import time
 
 BYTE = 1
-KILOBYTE = BYTE * 1024
-MEGABYTE = KILOBYTE * 1024
-GIGABYTE = MEGABYTE * 1024
-TERABYTE = GIGABYTE * 1024
+KIBIBYTE = BYTE * 1024
+MIBIBYTE = KIBIBYTE * 1024
+GIBIBYTE = MIBIBYTE * 1024
+TEBIBYTE = GIBIBYTE * 1024
 
-CHUNKSIZE = 64 * KILOBYTE
+CHUNK_SIZE = 64 * KIBIBYTE
 # Number of bytes to read and write at a time
 
-EXC_SRCNOTDIR = 'srcnotdir'
-EXC_SRCNOTFILE = 'srcnotfle'
-EXC_RECURDIR = 'recurdir'
-# These strings will become the `description` attribute
-# of a SpinalError when it is raised. Use it to determine
-# what type of SpinalError has occured.
 
+class DestinationIsDirectory(Exception):
+    pass
+
+class DestinationIsFile(Exception):
+    pass
+
+class RecursiveDirectory(Exception):
+    pass
+
+class SourceNotDirectory(Exception):
+    pass
+
+class SourceNotFile(Exception):
+    pass
 
 class SpinalError(Exception):
-    def __init__(self, err, desc):
-        super(SpinalError, self)
-        self.description = desc
+    pass
 
 
-def copyfile(src, dst, overwrite=True, callbackfunction=None):
+class SpinalTask:
+    def __init__(self, kwargs):
+        self.kwargs = kwargs
+        if 'source_dir' in self.kwargs:
+            self.method = copy_dir
+        elif 'source' in self.kwargs:
+            self.method = copy_file
+        else:
+            raise ValueError('Task is neither a file copy or directory copy', kwargs)
+
+    def execute(self, default_kwargs=None):
+        if default_kwargs is None:
+            kwargs = self.kwargs
+        else:
+            kwargs = {}
+            kwargs.update(default_kwargs)
+            kwargs.update(self.kwargs)
+        self.method(**kwargs)
+
+
+class SpinalTaskManager:
+    def __init__(self, default_kwargs=None):
+        self.tasks = []
+        if default_kwargs is not None:
+            self.default_kwargs = default_kwargs
+        else:
+            self.default_kwargs = {}
+
+    def execute(self):
+        while len(self.tasks) > 0:
+            task = self.tasks.pop(0)
+            task.execute(self.default_kwargs)
+
+
+def callback_exclusion(name, path_type):
     '''
-    Copy a file from src to dst.
-
-                 src : the file to copy.
-
-                 dst : the filename of the new copy.
-
-           overwrite : if True, copy src to dst even if
-                       dst already exists.
-                       else, do nothing.
-
-                       default = True
-
-    callbackfunction : if provided, this function will be called
-                       after writing each CHUNKSIZE bytes to dst
-                       with three parameters:
-                       name of file being copied,
-                       number of bytes written so far,
-                       total number of bytes needed.
-
-                       default = None
-
-    RETURN : [dst filename, number of bytes written to dst]
+    Example of an exclusion callback function.
     '''
+    print('Excluding', name)
 
-    src = os.path.abspath(src)
-    dst = os.path.abspath(dst)
+def callback_v1(filename, written_bytes, total_bytes):
+    '''
+    Example of a copy callback function.
 
-    if not os.path.isfile(src):
-        raise SpinalError("Source file is not a file: %s" % src,
-              EXC_SRCNOTFILE)
+    Prints "filename written/total (percent%)"
+    '''
+    if written_bytes >= total_bytes:
+        ends = '\n'
+    else:
+        ends = ''
+    percent = (100 * written_bytes) / total_bytes
+    percent = '%03.3f' % percent
+    written = '{:,}'.format(written_bytes)
+    total = '{:,}'.format(total_bytes)
+    written = written.rjust(len(total), ' ')
+    status = '{filename} {written}/{total} ({percent}%)\r'
+    status = status.format(filename=filename, written=written, total=total, percent=percent)
+    print(status, end=ends)
+    sys.stdout.flush()
 
-    totalbytes = os.path.getsize(src)
-    dstexists = os.path.exists(dst)
-    if dstexists and overwrite is False:
-        if callbackfunction is not None:
-            callbackfunction(dst, totalbytes, totalbytes)
-        return [dst, totalbytes]        
-    elif dstexists:
-        src_modtime = os.path.getmtime(src)
-        dst_modtime = os.path.getmtime(dst)
-        if src_modtime == dst_modtime:
-            if callbackfunction is not None:
-                callbackfunction(dst, totalbytes, totalbytes)
-            return [dst, totalbytes]
+def copy_file(
+    source,
+    destination,
+    bytes_per_second=None,
+    callback=None,
+    dry_run=False,
+    overwrite_old=True,
+    ):
+    '''
+    Copy a file from one place to another.
 
-    writtenbytes = 0
-    srcfile = open(src, 'rb')
-    dstfile = open(dst, 'wb')
+    source:
+        The file to copy.
+
+    destination:
+        The filename of the new copy.
+
+    bytes_per_second:
+        Restrict file copying to this many bytes per second. Can be an integer
+        or an existing Ratelimiter object.
+        The provided BYTE, KIBIBYTE, etc constants may help.
+
+        Default = None
+
+    callback:
+        If provided, this function will be called after writing
+        each CHUNK_SIZE bytes to destination with three parameters:
+        name of file being copied, number of bytes written so far,
+        total number of bytes needed.
+
+        Default = None
+
+    dry_run:
+        Do everything except the actual file copying.
+
+        Default = False
+
+    overwrite_old:
+        If True, overwrite the destination file if the source file
+        has a more recent "last modified" timestamp.
+
+        Default = True
+
+    Returns: [destination filename, number of bytes written to destination]
+    '''
+    # Prepare parameters
+    source = os.path.abspath(source)
+    destination = os.path.abspath(destination)
+
+    if not os.path.isfile(source):
+        raise SourceNotFile(source)
+
+    if os.path.isdir(destination):
+        raise DestinationIsDirectory(destination)
+
+    if isinstance(bytes_per_second, ratelimiter.Ratelimiter):
+        limiter = bytes_per_second
+    elif bytes_per_second is not None:
+        limiter = ratelimiter.Ratelimiter(allowance_per_period=bytes_per_second, period=1)
+    else:
+        limiter = None
+
+    source_bytes = os.path.getsize(source)
+
+    # Determine overwrite
+    destination_exists = os.path.exists(destination)
+    if destination_exists:
+        if overwrite_old is False:
+            return [destination, source_bytes]
+
+        source_modtime = os.path.getmtime(source)
+        destination_modtime = os.path.getmtime(destination)
+        if source_modtime == destination_modtime:
+            return [destination, source_bytes]
+
+    # Copy
+    if dry_run:
+        if callback is not None:
+            callback(destination, source_bytes, source_bytes)
+        return [destination, source_bytes]
+
+    written_bytes = 0
+    source_file = open(source, 'rb')
+    destionation_file = open(destination, 'wb')
     while True:
-        filedata = srcfile.read(CHUNKSIZE)
-        datasize = len(filedata)
-        if datasize == 0:
+        data_chunk = source_file.read(CHUNK_SIZE)
+        data_bytes = len(data_chunk)
+        if data_bytes == 0:
             break
 
-        dstfile.write(filedata)
-        writtenbytes += datasize
+        destionation_file.write(data_chunk)
+        written_bytes += data_bytes
 
-        if callbackfunction is not None:
-            callbackfunction(dst, writtenbytes, totalbytes)
+        if limiter is not None:
+            limiter.limit(data_bytes)
 
-    srcfile.close()
-    dstfile.close()
-    shutil.copystat(src, dst)
-    return [dst, writtenbytes]
+        if callback is not None:
+            callback(destination, written_bytes, source_bytes)
 
-def copydir(srcdir, dstdir, overwrite=True, precalcsize=False,
-            callbackfunction=None, callbackfile=None):
+    # Fin
+    source_file.close()
+    destionation_file.close()
+    shutil.copystat(source, destination)
+    return [destination, written_bytes]
+
+def copy_dir(
+    source_dir,
+    destination_dir=None,
+    destination_new_root=None,
+    bytes_per_second=None,
+    callback_directory=None,
+    callback_file=None,
+    dry_run=False,
+    exclude_directories=None,
+    exclude_filenames=None,
+    exclusion_callback=None,
+    overwrite_old=True,
+    precalcsize=False,
+    ):
     '''
-    Copy all of the contents from srcdir to dstdir,
+    Copy all of the contents from source_dir to destination_dir,
     including subdirectories.
 
-              srcdir : the directory which will be copied.
+    source_dir:
+        The directory which will be copied.
 
-              dstdir : the directory in which copied files are placed.
+    destination_dir:
+        The directory in which copied files are placed. Alternatively, use
+        destination_new_root.
 
-           overwrite : if True, overwrite any files in dstdir with
-                       the copies from srcdir should they already exist.
-                       else, ignore them.
+    destination_new_root:
+        Determine the destination path by calling
+        `new_root(source_dir, destination_new_root)`.
+        Thus, this path acts as a root and the rest of the path is matched.
 
-                       default = True
+    bytes_per_second:
+        Restrict file copying to this many bytes per second. Can be an integer
+        or an existing Ratelimiter object.
+        The provided BYTE, KIBIBYTE, etc constants may help.
 
-         precalcsize : if True, calculate the size of srcdir
-                       before beginning the operation. This number
-                       can be used in the callbackfunction.
-                       else, callbackfunction will receive
-                       written bytes as total bytes.
+        Default = None
 
-                       default = False
+    callback_directory:
+        This function will be called after each file copy with three parameters:
+        name of file copied, number of bytes written to destination_dir so far,
+        total bytes needed (from precalcsize).
 
-    callbackfunction : if provided, this function will be called
-                       after each file copy with three parameters:
-                       name of file copied,
-                       number of bytes written to dstdir so far,
-                       total bytes needed (from precalcsize).
+        Default = None
 
-                       default = None
+    callback_file:
+        Will be passed into each individual copy_file() as the `callback`
+        for that file.
 
-        callbackfile : will be passed into each individual copyfile() as
-                       the callbackfunction for that file.
+        Default = None
 
-                       default = None
+    dry_run:
+        Do everything except the actual file copying.
 
-    RETURN : [dstdir path, number of bytes written to dstdir]
+        Default = False
 
+    exclude_filenames:
+        A set of filenames that will not be copied. Entries can be absolute
+        paths to exclude that particular file, or plain names to exclude
+        all matches. For example:
+        {'C:\\folder\\file.txt', 'desktop.ini'}
+
+        Default = None
+
+    exclude_directories:
+        A set of directories that will not be copied. Entries can be
+        absolute paths to exclude that particular directory, or plain names
+        to exclude all matches. For example:
+        {'C:\\folder', 'thumbnails'}
+
+        Default = None
+
+    exclusion_callback:
+        This function will be called when a file or directory is excluded with
+        two parameters: the path, and 'file' or 'directory'.
+
+        Default = None
+
+    overwrite_old:
+        If True, overwrite the destination file if the source file
+        has a more recent "last modified" timestamp.
+
+        Default = True
+
+    precalcsize:
+        If True, calculate the size of source_dir before beginning the
+        operation. This number can be used in the callback_directory function.
+        Else, callback_directory will receive written bytes as total bytes
+        (showing 100% always).
+        This can take a long time.
+
+        Default = False
+
+    Returns: [destination_dir path, number of bytes written to destination_dir]
     '''
 
-    srcdir = os.path.abspath(srcdir)
-    dstdir = os.path.abspath(dstdir)
+    # Prepare parameters
+    if not is_xor(destination_dir, destination_new_root):
+        m = 'One and only one of `destination_dir` and '
+        m += '`destination_new_root` can be passed'
+        raise ValueError(m)
 
-    if dstdir.startswith(srcdir):
-        raise SpinalError("Will not copy a dir into itself %s" % dstdir,
-              EXC_RECURDIR)
+    if destination_new_root is not None:
+        destination_dir = new_root(source_dir, destination_new_root)
 
-    if os.path.isfile(srcdir):
-        raise SpinalError("Destination dir is a file: %s" % dstdir,
-              EXC_SRCNOTDIR)
+    source_dir = os.path.normpath(os.path.abspath(source_dir))
+    destination_dir = os.path.normpath(os.path.abspath(destination_dir))
+
+    if is_subfolder(source_dir, destination_dir):
+        raise RecursiveDirectory(source_dir, destination_dir)
+
+    if not os.path.isdir(source_dir):
+        raise SourceNotDirectory(source_dir)
+
+    if os.path.isfile(destination_dir):
+        raise DestinationIsFile(destination_dir)
+
+    if exclusion_callback is None:
+        exclusion_callback = lambda *x: None
+
+    if exclude_filenames is None:
+        exclude_filenames = set()
+
+    if exclude_directories is None:
+        exclude_directories = set()
+
+    exclude_filenames = {normalize(f) for f in exclude_filenames}
+    exclude_directories = {normalize(f) for f in exclude_directories}
 
     if precalcsize is True:
-        totalbytes = getdirsize(srcdir)
+        total_bytes = get_dir_size(source_dir)
     else:
-        totalbytes = 0
+        total_bytes = 0
 
-    walker = os.walk(srcdir)
-    writtenbytes = 0
-    for step in walker:
-        # (path, [dirs], [files])
-        srcpath = step[0]
-        dstpath = srcpath.replace(srcdir, dstdir)
-        files = step[2]
-        if not os.path.exists(dstpath):
-            os.makedirs(dstpath)
-        for filename in files:
-            srcfile = os.path.join(srcpath, filename)
-            dstfile = os.path.join(dstpath, filename)
-            copied = copyfile(srcfile, dstfile, overwrite=overwrite,
-                            callbackfunction=callbackfile)
-            copiedname = copied[0]
-            writtenbytes += copied[1]
-            if callbackfunction is None:
-                continue
+    if isinstance(bytes_per_second, ratelimiter.Ratelimiter):
+        limiter = bytes_per_second
+    elif bytes_per_second is not None:
+        limiter = ratelimiter.Ratelimiter(allowance_per_period=bytes_per_second, period=1)
+    else:
+        limiter = None
 
-            if totalbytes == 0:
-                # precalcsize was not used. Just report the written bytes
-                callbackfunction(copiedname, writtenbytes, writtenbytes)
+    # Copy
+    written_bytes = 0
+    for (source_location, base_filename) in walk_generator(source_dir):
+        # Terminology:
+        # abspath: C:\folder\subfolder\filename.txt
+        # base_filename: filename.txt
+        # folder: subfolder
+        # location: C:\folder\subfolder
+        #source_location = normalize(source_location)
+        #base_filename = normalize(base_filename)
+
+        source_folder_name = os.path.split(source_location)[1]
+        source_abspath = os.path.join(source_location, base_filename)
+
+        destination_abspath = source_abspath.replace(source_dir, destination_dir)
+        destination_location = os.path.split(destination_abspath)[0]
+
+        if base_filename in exclude_filenames:
+            exclusion_callback(source_abspath, 'file')
+            continue
+        if source_abspath in exclude_filenames:
+            exclusion_callback(source_abspath, 'file')
+            continue
+        if source_location in exclude_directories:
+            exclusion_callback(source_location, 'directory')
+            continue
+        if source_folder_name in exclude_directories:
+            exclusion_callback(source_location, 'directory')
+            continue
+
+        if os.path.isdir(destination_abspath):
+            raise DestinationIsDirectory(destination_abspath)
+
+        if not os.path.isdir(destination_location):
+            os.makedirs(destination_location)
+
+        copied = copy_file(
+            source_abspath,
+            destination_abspath,
+            bytes_per_second=limiter,
+            callback=callback_file,
+            dry_run=dry_run,
+            overwrite_old=overwrite_old,
+        )
+
+        copiedname = copied[0]
+        written_bytes += copied[1]
+
+        if callback_directory is not None:
+            if precalcsize is False:
+                callback_directory(copiedname, written_bytes, written_bytes)
             else:
-                # provide the precalcsize
-                callbackfunction(copiedname, writtenbytes, totalbytes)
+                callback_directory(copiedname, written_bytes, total_bytes)
 
-    return [dstdir, writtenbytes]
+    return [destination_dir, written_bytes]
 
-def getdirsize(srcdir):
+def execute_spinaltask(task):
     '''
-    Using os.walk, return the total number of bytes
-    this directory contains, including all subdirectories.
+    Execute a spinal task.
     '''
+    pass
 
-    srcdir = os.path.abspath(srcdir)
+def get_dir_size(source_dir):
+    '''
+    Calculate the total number of bytes across all files in this directory
+    and its subdirectories.
+    '''
+    source_dir = os.path.abspath(source_dir)
 
-    if not os.path.isdir(srcdir):
-        raise SpinalError("Source dir is not a directory: %s" % srcdir,
-              EXC_SRCNOTDIR)
+    if not os.path.isdir(source_dir):
+        raise SourceNotDirectory(source_dir)
 
-    totalbytes = 0
-    walker = os.walk(srcdir)
-    for step in walker:
-        # (path, [dirs], [files])
-        path = step[0]
-        files = step[2]
+    total_bytes = 0
+    for (directory, filename) in walk_generator(source_dir):
+        filename = os.path.join(directory, filename)
+        filesize = os.path.getsize(filename)
+        total_bytes += filesize
+
+    return total_bytes
+
+def is_subfolder(parent, child):
+    '''
+    Determine whether parent contains child.
+    '''
+    parent = normalize(os.path.abspath(parent)) + os.sep
+    child = normalize(os.path.abspath(child)) + os.sep
+    return child.startswith(parent)
+
+def is_xor(*args):
+    '''
+    Return True if and only if one arg is truthy.
+    '''
+    return [bool(a) for a in args].count(True) == 1
+
+def new_root(filepath, root):
+    '''
+    Prepend `root` to `filepath`, drive letter included. For example:
+    "C:\\folder\\subfolder\\file.txt" and "C:\\backups" becomes
+    "C:\\backups\\C\\folder\\subfolder\\file.txt"
+
+    I use this so that my G: drive can have backups from my C: and D: drives
+    while preserving directory structure in G:\\D and G:\\C.
+    '''
+    filepath = os.path.abspath(filepath)
+    root = os.path.abspath(root)
+    filepath = filepath.replace(':', os.sep)
+    filepath = os.path.normpath(filepath)
+    filepath = os.path.join(root, filepath)
+    return filepath
+
+def normalize(text):
+    '''
+    Apply os.path.normpath and os.path.normcase.
+    '''
+    return os.path.normpath(os.path.normcase(text))
+
+def walk_generator(path):
+    '''
+    Yield filenames from os.walk so the caller doesn't need to deal with the
+    nested for-loops.
+    '''
+    path = os.path.abspath(path)
+    walker = os.walk(path)
+    for (location, folders, files) in walker:
         for filename in files:
-            fpath = os.path.join(path, filename)
-            totalbytes += os.path.getsize(fpath)
-
-    return totalbytes
-
-def cb(filename, written, total):
-    '''
-    Example of a callbackfunction.
-
-    Prints the number of bytes written,
-    total bytes needed,
-    and percentage so far.
-    '''
-
-    name = os.path.basename(filename)
-
-    if written >= total:
-        ends = '\n'
-    else:
-        ends = '\n'
-    percentage = (100 * written) / total
-    percentage = '%03.3f' % percentage
-    written = '{:,}'.format(written)
-    total = '{:,}'.format(total)
-    written = (' '*(len(total)-len(written))) + written
-    status = '%s %s / %s (%s)\r' % (name, written, total, percentage)
-    print(status, end=ends)
+            yield (location, filename)

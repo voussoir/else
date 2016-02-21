@@ -16,7 +16,6 @@ DIGEST:
         -dv "x.db" | --databasename "x.db" : Use a custom database filename. By default, databases
                                              are named after the web domain.
 
-
 DOWNLOAD:
     Download the files whose URLs are enabled in the database.
 
@@ -74,6 +73,7 @@ import os
 import ratelimiter
 ## import re
 import requests
+import shutil
 import sqlite3
 ## import sys
 ## tkinter
@@ -81,36 +81,48 @@ import urllib.parse
 
 FILENAME_BADCHARS = '/\\:*?"<>|'
 
+TERMINAL_WIDTH = shutil.get_terminal_size().columns
+
 # When doing a basic scan, we will not send HEAD requests to URLs that end in these strings,
 # because they're probably files.
 # This isn't meant to be a comprehensive filetype library, but it covers enough of the
 # typical opendir to speed things up.
 SKIPPABLE_FILETYPES = [
+'.aac',
 '.avi',
+'.bin',
 '.bmp',
+'.bz2',
 '.epub',
+'.exe',
 '.db',
 '.flac',
 '.gif',
-'.gz'
+'.gz',
 '.ico',
 '.iso',
 '.jpeg',
 '.jpg',
 '.m3u',
 '.m4a',
+'.m4v',
+'.mka',
 '.mkv',
 '.mov',
 '.mp3',
 '.mp4',
 '.nfo',
 '.ogg',
+'.ott',
 '.pdf',
 '.png',
+'.rar',
 '.srt',
 '.tar',
+'.ttf',
 '.txt',
 '.webm',
+'.wma',
 '.zip',
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)
@@ -227,9 +239,10 @@ class Walker:
         if walkurl[-1] != '/':
             walkurl += '/'
         self.walkurl = walkurl
-        if databasename is None:
+        if databasename is None or databasename == "":
             self.domain = url_to_filepath(walkurl)[0]
             databasename = self.domain + '.db'
+            databasename = databasename.replace(':', '')
         self.databasename = databasename
 
         self.sql = sqlite3.connect(self.databasename)
@@ -292,7 +305,7 @@ class Walker:
 
         if not url.startswith(self.walkurl):
             # Don't follow external links or parent directory.
-            print('Skipping "%s" due to external url.' % url)
+            safeprint('Skipping "%s" due to external url.' % url)
             return
 
         urll = url.lower()
@@ -300,7 +313,7 @@ class Walker:
             skippable = any(urll.endswith(ext) for ext in SKIPPABLE_FILETYPES)
             if skippable:
                 safeprint('Skipping "%s" due to extension.' % url)
-                self.smart_insert(url=url)
+                self.smart_insert(url=url, commit=False)
                 return
             self.cur.execute('SELECT * FROM urls WHERE url == ?', [url])
             skippable = self.cur.fetchone() is not None
@@ -335,13 +348,22 @@ class Walker:
             print('Queued %d urls' % added)
         else:
             # This is not an index page, so save it.
-            self.smart_insert(head=head)
+            self.smart_insert(head=head, commit=False)
 
     def walk(self, url=None):
         self.queue.append(url)
-        while len(self.queue) > 0:
-            url = self.queue.pop(0)
-            self.process_url(url)
+        try:
+            while len(self.queue) > 0:
+                # Popping from right helps keep the queue short because it handles the files
+                # early.
+                url = self.queue.pop(-1)
+                self.process_url(url)
+                line = '{:,} Remaining'.format(len(self.queue))
+                print(line)
+        except:
+            self.sql.commit()
+            raise
+        self.sql.commit()
 ##                                                                                                ##
 ## WALKER ##########################################################################################
 
@@ -384,7 +406,7 @@ def do_request(message, method, url):
     safeprint(message, end='')
     sys.stdout.flush()
     response = method(url)
-    safeprint(response)
+    safeprint(response.status_code)
     response.raise_for_status()
     return response
     
@@ -619,16 +641,24 @@ def list_basenames(args):
     cur = sql.cursor()
     cur.execute('SELECT basename FROM urls WHERE do_download == 1 ORDER BY LENGTH(basename) DESC LIMIT 1')
 
-    longest = len(cur.fetchone()[0])
-    cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY basename')
-    form = '{bn:<%ds}  :  {url}' % longest
+    fetch = cur.fetchone()
+    if fetch is None:
+        return
+    longest = len(fetch[0])
+    cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY LOWER(basename)')
+    form = '{bn:<%ds}  :  {url}  :  {byt}' % longest
     if outputfile:
         outputfile = open(outputfile, 'w', encoding='utf-8')
     while True:
         fetch = cur.fetchone()
         if fetch is None:
             break
-        line = form.format(bn=fetch[SQL_BASENAME], url=fetch[SQL_URL])
+        byt = fetch[SQL_CONTENT_LENGTH]
+        if byt is None:
+            byt = ''
+        else:
+            byt = '{:,}'.format(byt)
+        line = form.format(bn=fetch[SQL_BASENAME], url=fetch[SQL_URL], byt=byt)
         if outputfile:
             outputfile.write(line + '\n')
         else:
