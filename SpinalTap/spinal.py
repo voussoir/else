@@ -34,40 +34,6 @@ class SpinalError(Exception):
     pass
 
 
-class SpinalTask:
-    def __init__(self, kwargs):
-        self.kwargs = kwargs
-        if 'source_dir' in self.kwargs:
-            self.method = copy_dir
-        elif 'source' in self.kwargs:
-            self.method = copy_file
-        else:
-            raise ValueError('Task is neither a file copy or directory copy', kwargs)
-
-    def execute(self, default_kwargs=None):
-        if default_kwargs is None:
-            kwargs = self.kwargs
-        else:
-            kwargs = {}
-            kwargs.update(default_kwargs)
-            kwargs.update(self.kwargs)
-        self.method(**kwargs)
-
-
-class SpinalTaskManager:
-    def __init__(self, default_kwargs=None):
-        self.tasks = []
-        if default_kwargs is not None:
-            self.default_kwargs = default_kwargs
-        else:
-            self.default_kwargs = {}
-
-    def execute(self):
-        while len(self.tasks) > 0:
-            task = self.tasks.pop(0)
-            task.execute(self.default_kwargs)
-
-
 def callback_exclusion(name, path_type):
     '''
     Example of an exclusion callback function.
@@ -96,7 +62,8 @@ def callback_v1(filename, written_bytes, total_bytes):
 
 def copy_file(
     source,
-    destination,
+    destination=None,
+    destination_new_root=None,
     bytes_per_second=None,
     callback=None,
     dry_run=False,
@@ -109,7 +76,13 @@ def copy_file(
         The file to copy.
 
     destination:
-        The filename of the new copy.
+        The filename of the new copy. Alternatively, use
+        destination_new_root.
+
+    destination_new_root:
+        Determine the destination path by calling
+        `new_root(source_dir, destination_new_root)`.
+        Thus, this path acts as a root and the rest of the path is matched.
 
     bytes_per_second:
         Restrict file copying to this many bytes per second. Can be an integer
@@ -140,6 +113,14 @@ def copy_file(
     Returns: [destination filename, number of bytes written to destination]
     '''
     # Prepare parameters
+    if not is_xor(destination, destination_new_root):
+        m = 'One and only one of `destination` and '
+        m += '`destination_new_root` can be passed'
+        raise ValueError(m)
+
+    if destination_new_root is not None:
+        destination = new_root(source, destination_new_root)
+
     source = os.path.abspath(source)
     destination = os.path.abspath(destination)
 
