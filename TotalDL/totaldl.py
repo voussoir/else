@@ -58,8 +58,8 @@ last_request = 0
 if DOWNLOAD_DIRECTORY != '':
     if DOWNLOAD_DIRECTORY[-1] not in ['/', '\\']:
         DOWNLOAD_DIRECTORY += '\\'
-    if not os.path.exists(DOWNLOAD_DIRECTORY):
-        os.makedirs(DOWNLOAD_DIRECTORY)
+
+    os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
 
 class StatusExc(Exception):
     pass
@@ -67,8 +67,8 @@ class StatusExc(Exception):
 def download_file(url, localname, headers={}):
     localname = os.path.join(DOWNLOAD_DIRECTORY, localname)
     dirname = os.path.split(localname)[0]
-    if dirname != '' and not os.path.exists(dirname):
-        os.makedirs(dirname)
+    if dirname != '':
+        os.makedirs(dirname, exist_ok=True)
     if 'twimg' in url:
         localname = localname.replace(':large', '')
         localname = localname.replace(':small', '')
@@ -188,8 +188,7 @@ def handle_imgur(url, albumid='', customname=None):
 
             if IMGUR_ALBUMFOLDERS:
 
-                if not os.path.exists(DOWNLOAD_DIRECTORY + albumid):
-                    os.makedirs(DOWNLOAD_DIRECTORY + albumid)
+                os.makedirs(DOWNLOAD_DIRECTORY + albumid, exist_ok=True)
                 localpath = '%s\\%s' % (albumid, name)
     
             else:
@@ -352,13 +351,18 @@ def handle_youtube(url, customname=None):
 def handle_generic(url, customname=None):
     print('Generic')
     try:
+        remote_name = url.split('/')[-1]
         if customname:
             name = customname
         else:
-            name = url.split('/')[-1]
+            name = remote_name
 
         base = name.split('.')[0]
-        ext = name.split('.')[-1]
+        if '.' in name:
+            ext = name.split('.')[-1]
+        elif '.' in remote_name:
+            ext = remote_name.split('.')[-1]
+
         if ext in [base, '']:
             ext = 'html'
         print(base)

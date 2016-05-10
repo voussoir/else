@@ -2,7 +2,7 @@ from PIL import Image
 import os
 import sys
 
-close_enough_threshold = 90
+close_enough_threshold = 10
 filename = sys.argv[1]
 try:
     close_enough_threshold = int(sys.argv[2])
@@ -17,12 +17,11 @@ def close_enough(a, b):
 
 def deletterbox(filename):
     image = Image.open(filename)
-    trim_top(image)
     for x in range(4):
         image = trim_top(image)
-        image = image.rotate(90)
-    #(base, ext) = os.path.splitext(filename)
-    #filename = base + 'X' + ext
+        image = image.rotate(90, expand=True)
+    (base, ext) = os.path.splitext(filename)
+    filename = base + 'X' + ext
     image.save(filename, quality=100)
 
 def trim_top(image):

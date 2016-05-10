@@ -14,3 +14,7 @@ A couple of tools for copying files and directories.
 
     2016 03 04
     - Created a FilePath class to cache os.stat data, which should reduce the number of unecessary filesystem calls.
+
+    2016 03 18
+    - Added `glob.escape` to `get_path_casing`.
+    - Added callbacks for some extra debug output.

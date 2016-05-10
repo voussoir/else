@@ -2,12 +2,5 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
-; Shift-T causes the mousewheel to scroll down.
-; I used this to throw lots of dosh in Killing Floor.
-+T::
-    While GetKeyState("t", "P")
-    {
-        Click WheelDown
-        Sleep 20
-    }
-Return
+; USE CTRL + SPACE TO TOGGLE THE EFFECT ON AND OFF
+^SPACE::  Winset, Alwaysontop, , A

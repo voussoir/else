@@ -49,9 +49,7 @@ def start(path, objectives=[32], subfolder="pixel", outpath=""):
 					print('Unlisted "%s": not .jpg or .png' % name)
 				break
 
-	if not os.path.exists(outpath):
-		print('Creating directory: ' + outpath)
-		os.makedirs(outpath)
+	os.makedirs(outpath, exist_ok=True)
 
 	for name in images:
 		filepath = path + name

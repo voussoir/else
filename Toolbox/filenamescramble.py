@@ -15,8 +15,9 @@ for filepath in argv:
     folder = os.path.dirname(filepath)
     basename = os.path.basename(filepath)
     extension = os.path.splitext(basename)[1]
-    newname = [random.choice(string.ascii_letters) for x in range(16)]
+    newname = [random.choice(string.ascii_lowercase) for x in range(9)]
     newname = ''.join(newname)
-    newname = '%s\\%s%s' % (folder, newname, extension)
-    os.rename(filepath, newname)
+    newname = newname + extension
+    newname = os.path.join(folder, newname)
+    #os.rename(filepath, newname)
     print('%s -> %s' % (filepath, newname))

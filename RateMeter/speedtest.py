@@ -1,0 +1,39 @@
+import bytestring
+import downloady
+import ratemeter
+import requests
+import time
+
+URL = 'http://cdn.speedof.me/sample32768k.bin?r=0.8817502672426312'
+METER = ratemeter.RateMeter(span=10)
+METER_2 = ratemeter.RateMeter(span=None)
+class G:
+    pass
+
+g = G()
+g.total = 0
+g.start = None
+g.last = int(time.time())
+
+def callback_progress(bytes_downloaded, bytes_total):
+    if g.start is None:
+        g.start = time.time()
+    percent = 100 * bytes_downloaded / bytes_total
+    percent = '%07.3f%%:' % percent
+    chunk = bytes_downloaded - g.total
+    g.total = bytes_downloaded
+    METER.digest(chunk)
+    METER_2.digest(chunk)
+    now = round(time.time(), 1)
+    if now > g.last:
+        g.last = now
+        percent = percent.rjust(9, ' ')
+        rate = bytestring.bytestring(METER.report()[2]).rjust(15, ' ')
+        rate2 = bytestring.bytestring(METER_2.report()[2]).rjust(15, ' ')
+        elapsed = str(round(now-g.start, 1)).rjust(10, ' ')
+        print(percent, rate, rate2, elapsed, end='\r', flush=True)
+        #print(METER.report(), METER_2.report())
+
+print(URL)
+print('Progress'.rjust(9, ' '), 'bps over 10s'.rjust(15, ' '), 'bps overall'.rjust(15, ' '), 'elapsed'.rjust(10, ' '))
+downloady.download_file(URL, 'nul', callback_progress=callback_progress)

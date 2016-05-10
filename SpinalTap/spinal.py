@@ -47,6 +47,10 @@ class SpinalError(Exception):
     pass
 
 class FilePath:
+    '''
+    Class for consolidating lots of `os.path` operations,
+    and caching `os.stat` results.
+    '''
     def __init__(self, path):
         self.path = os.path.abspath(path)
         self._stat = None
@@ -59,7 +63,7 @@ class FilePath:
         return self.path.__hash__()
 
     def __repr__(self):
-        return repr(self.path)
+        return 'FilePath(%s)' % repr(self.path)
 
     @property
     def isdir(self):
@@ -92,12 +96,18 @@ class FilePath:
         return self._stat
 
     def type_getter(self, attr, resolution):
-        if getattr(self, attr) is None:
+        '''
+        Try to return the cached type. Call resolution(self.stat.st_mode) if
+        we don't have the stat data yet.
+        '''
+        value = getattr(self, attr)
+        if value is None:
             if self.stat is False:
                 return False
             else:
-                setattr(self, attr, resolution(self.stat.st_mode))
-        return getattr(self, attr)
+                value = resolution(self.stat.st_mode)
+                setattr(self, attr, value)
+        return value
 
 
 def bytes_to_unit_string(bytes):
@@ -114,13 +124,13 @@ def callback_exclusion(name, path_type):
     '''
     Example of an exclusion callback function.
     '''
-    print('Excluding', name)
+    print('Excluding', path_type, name)
 
 def callback_v1(fpobj, written_bytes, total_bytes):
     '''
     Example of a copy callback function.
 
-    Prints "fpobj written/total (percent%)"
+    Prints "filename written/total (percent%)"
     '''
     filename = fpobj.path.encode('ascii', 'replace').decode()
     if written_bytes >= total_bytes:
@@ -158,12 +168,14 @@ def copy_dir(
     destination_new_root=None,
     bytes_per_second=None,
     callback_directory=None,
+    callback_exclusion=None,
     callback_file=None,
     callback_permission_denied=None,
+    callback_verbose=None,
     dry_run=False,
     exclude_directories=None,
     exclude_filenames=None,
-    exclusion_callback=None,
+    files_per_second=None,
     overwrite_old=True,
     precalcsize=False,
     ):
@@ -183,6 +195,8 @@ def copy_dir(
         `new_root(source, destination_new_root)`.
         Thus, this path acts as a root and the rest of the path is matched.
 
+        `destination` and `destination_new_root` are mutually exclusive.
+
     bytes_per_second:
         Restrict file copying to this many bytes per second. Can be an integer
         or an existing Ratelimiter object.
@@ -194,6 +208,13 @@ def copy_dir(
         This function will be called after each file copy with three parameters:
         name of file copied, number of bytes written to destination so far,
         total bytes needed (from precalcsize).
+        If `precalcsize` is False, this function will receive written bytes
+        for both written and total, showing 100% always.
+
+        Default = None
+
+    callback_exclusion:
+        Passed directly into `walk_generator`.
 
         Default = None
 
@@ -206,6 +227,11 @@ def copy_dir(
     callback_permission_denied:
         Will be passed into each individual `copy_file` operation as the
         `callback_permission_denied` for that file.
+
+        Default = None
+
+    callback_verbose:
+        If provided, this function will be called with some operation notes.
 
         Default = None
 
@@ -224,8 +250,9 @@ def copy_dir(
 
         Default = None
 
-    exclusion_callback:
-        Passed directly into `walk_generator`.
+    files_per_second:
+        Maximum number of files to be processed per second. Helps to keep CPU usage
+        low.
 
         Default = None
 
@@ -251,7 +278,7 @@ def copy_dir(
     # Prepare parameters
     if not is_xor(destination, destination_new_root):
         m = 'One and only one of `destination` and '
-        m += '`destination_new_root` can be passed'
+        m += '`destination_new_root` can be passed.'
         raise ValueError(m)
 
     source = str_to_fp(source)
@@ -260,6 +287,9 @@ def copy_dir(
     if destination_new_root is not None:
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
+
+    callback_directory = callback_directory or do_nothing
+    callback_verbose = callback_verbose or do_nothing
 
     if is_subfolder(source, destination):
         raise RecursiveDirectory(source, destination)
@@ -275,20 +305,17 @@ def copy_dir(
     else:
         total_bytes = 0
 
-    if isinstance(bytes_per_second, ratelimiter.Ratelimiter):
-        limiter = bytes_per_second
-    elif bytes_per_second is not None:
-        limiter = ratelimiter.Ratelimiter(allowance_per_period=bytes_per_second, period=1)
-    else:
-        limiter = None
+    bytes_per_second = limiter_or_none(bytes_per_second)
+    files_per_second = limiter_or_none(files_per_second)
 
     # Copy
     written_bytes = 0
     walker = walk_generator(
         source,
+        callback_exclusion=callback_exclusion,
+        callback_verbose=callback_verbose,
         exclude_directories=exclude_directories,
         exclude_filenames=exclude_filenames,
-        exclusion_callback=exclusion_callback,
         )
     for (source_abspath) in walker:
         # Terminology:
@@ -304,15 +331,15 @@ def copy_dir(
             raise DestinationIsDirectory(destination_abspath)
 
         destination_location = os.path.split(destination_abspath.path)[0]
-        if not os.path.isdir(destination_location):
-            os.makedirs(destination_location)
+        os.makedirs(destination_location, exist_ok=True)
 
         copied = copy_file(
             source_abspath,
             destination_abspath,
-            bytes_per_second=limiter,
+            bytes_per_second=bytes_per_second,
             callback=callback_file,
             callback_permission_denied=callback_permission_denied,
+            callback_verbose=callback_verbose,
             dry_run=dry_run,
             overwrite_old=overwrite_old,
         )
@@ -320,11 +347,13 @@ def copy_dir(
         copiedname = copied[0]
         written_bytes += copied[1]
 
-        if callback_directory is not None:
-            if precalcsize is False:
-                callback_directory(copiedname, written_bytes, written_bytes)
-            else:
-                callback_directory(copiedname, written_bytes, total_bytes)
+        if precalcsize is False:
+            callback_directory(copiedname, written_bytes, written_bytes)
+        else:
+            callback_directory(copiedname, written_bytes, total_bytes)
+
+        if files_per_second is not None:
+            files_per_second.limit(1)
 
     return [destination, written_bytes]
 
@@ -334,6 +363,7 @@ def copy_file(
     destination_new_root=None,
     bytes_per_second=None,
     callback=None,
+    callback_verbose=None,
     dry_run=False,
     overwrite_old=True,
     callback_permission_denied=None,
@@ -377,6 +407,11 @@ def copy_file(
 
         Default = None
 
+    callback_verbose:
+        If provided, this function will be called with some operation notes.
+
+        Default = None
+
     dry_run:
         Do everything except the actual file copying.
 
@@ -404,19 +439,16 @@ def copy_file(
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
 
+    callback = callback or do_nothing
+    callback_verbose = callback_verbose or do_nothing
+
     if not source.isfile:
         raise SourceNotFile(source)
 
     if destination.isdir:
         raise DestinationIsDirectory(destination)
 
-    if isinstance(bytes_per_second, ratelimiter.Ratelimiter):
-        limiter = bytes_per_second
-    elif bytes_per_second is not None:
-        limiter = ratelimiter.Ratelimiter(allowance_per_period=bytes_per_second, period=1)
-    else:
-        limiter = None
-
+    bytes_per_second = limiter_or_none(bytes_per_second)
 
     # Determine overwrite
     if destination.stat is not False:
@@ -437,11 +469,11 @@ def copy_file(
 
     source_bytes = source.size
     destination_location = os.path.split(destination.path)[0]
-    if not os.path.exists(destination_location):
-        os.makedirs(destination_location)
+    os.makedirs(destination_location, exist_ok=True)
     written_bytes = 0
 
     try:
+        callback_verbose('Opening handles.')
         source_file = open(source.path, 'rb')
         destination_file = open(destination.path, 'wb')
     except PermissionError as exception:
@@ -460,30 +492,37 @@ def copy_file(
         destination_file.write(data_chunk)
         written_bytes += data_bytes
 
-        if limiter is not None:
-            limiter.limit(data_bytes)
+        if bytes_per_second is not None:
+            bytes_per_second.limit(data_bytes)
 
-        if callback is not None:
-            callback(destination, written_bytes, source_bytes)
+        callback(destination, written_bytes, source_bytes)
 
     # Fin
+    callback_verbose('Closing handles.')
     source_file.close()
     destination_file.close()
+    callback_verbose('Copying metadata')
     shutil.copystat(source.path, destination.path)
     return [destination, written_bytes]
+
+def do_nothing(*args):
+    '''
+    Used by other functions as the default callback.
+    '''
+    return
 
 def get_path_casing(path):
     '''
     Take what is perhaps incorrectly cased input and get the path's actual
     casing according to the filesystem.
 
-    Thank you
+    Thank you:
     Ethan Furman http://stackoverflow.com/a/7133137/5430534
     xvorsx http://stackoverflow.com/a/14742779/5430534
-
     '''
     p = str_to_fp(path)
     path = p.path
+    path = glob.escape(path)
     (drive, subpath) = os.path.splitdrive(path)
     pattern = ["%s[%s]" % (piece[:-1], piece[-1]) for piece in subpath.split(os.sep)[1:]]
     pattern = os.sep.join(pattern)
@@ -504,10 +543,8 @@ def get_dir_size(path):
         raise SourceNotDirectory(path)
 
     total_bytes = 0
-    for (directory, filename) in walk_generator(path):
-        filename = os.path.join(directory, filename)
-        filesize = os.path.getsize(filename)
-        total_bytes += filesize
+    for filepath in walk_generator(path):
+        total_bytes += filepath.size
 
     return total_bytes
 
@@ -524,6 +561,15 @@ def is_xor(*args):
     Return True if and only if one arg is truthy.
     '''
     return [bool(a) for a in args].count(True) == 1
+
+def limiter_or_none(value):
+    if isinstance(value, ratelimiter.Ratelimiter):
+        limiter = value
+    elif value is not None:
+        limiter = ratelimiter.Ratelimiter(allowance_per_period=value, period=1)
+    else:
+        limiter = None
+    return limiter
 
 def new_root(filepath, root):
     '''
@@ -557,13 +603,24 @@ def str_to_fp(path):
 
 def walk_generator(
     path,
+    callback_exclusion=None,
+    callback_verbose=None,
     exclude_directories=None,
     exclude_filenames=None,
-    exclusion_callback=None,
     ):
     '''
-    Yield (location, filename) from the file tree similar to os.walk.
-    Example value: ('C:\\Users\\Michael\\Music', 'song.mp3')
+    Yield FilePath objects from the file tree similar to os.walk.
+
+    callback_exclusion:
+        This function will be called when a file or directory is excluded with
+        two parameters: the path, and 'file' or 'directory'.
+
+        Default = None
+
+    callback_verbose:
+        If provided, this function will be called with some operation notes.
+
+        Default = None
 
     exclude_filenames:
         A set of filenames that will not be copied. Entries can be absolute
@@ -580,12 +637,6 @@ def walk_generator(
         {'C:\\folder', 'thumbnails'}
 
         Default = None
-
-    exclusion_callback:
-        This function will be called when a file or directory is excluded with
-        two parameters: the path, and 'file' or 'directory'.
-
-        Default = None
     '''
     if exclude_directories is None:
         exclude_directories = set()
@@ -593,8 +644,8 @@ def walk_generator(
     if exclude_filenames is None:
         exclude_filenames = set()
 
-    if exclusion_callback is None:
-        exclusion_callback = lambda *x: None
+    callback_exclusion = callback_exclusion or do_nothing
+    callback_verbose = callback_verbose or do_nothing
 
     exclude_filenames = {normalize(f) for f in exclude_filenames}
     exclude_directories = {normalize(f) for f in exclude_directories}
@@ -602,11 +653,11 @@ def walk_generator(
     path = str_to_fp(path).path
 
     if normalize(path) in exclude_directories:
-        exclusion_callback(path, 'directory')
+        callback_exclusion(path, 'directory')
         return
 
     if normalize(os.path.split(path)[1]) in exclude_directories:
-        exclusion_callback(path, 'directory')
+        callback_exclusion(path, 'directory')
         return
 
     directory_queue = collections.deque()
@@ -616,7 +667,9 @@ def walk_generator(
     # Thank you for your cooperation.
     while len(directory_queue) > 0:
         location = directory_queue.popleft()
+        callback_verbose('listdir: %s' % location)
         contents = os.listdir(location)
+        callback_verbose('received %d items' % len(contents))
 
         directories = []
         for base_name in contents:
@@ -624,24 +677,25 @@ def walk_generator(
 
             if os.path.isdir(absolute_name):
                 if normalize(absolute_name) in exclude_directories:
-                    exclusion_callback(absolute_name, 'directory')
+                    callback_exclusion(absolute_name, 'directory')
                     continue
 
                 if normalize(base_name) in exclude_directories:
-                    exclusion_callback(absolute_name, 'directory')
+                    callback_exclusion(absolute_name, 'directory')
                     continue
 
                 directories.append(absolute_name)
 
             else:
                 if normalize(base_name) in exclude_filenames:
-                    exclusion_callback(absolute_name, 'file')
+                    callback_exclusion(absolute_name, 'file')
                     continue
                 if normalize(absolute_name) in exclude_filenames:
-                    exclusion_callback(absolute_filename, 'file')
+                    callback_exclusion(absolute_filename, 'file')
                     continue
 
                 yield(str_to_fp(absolute_name))
 
+        # Extendleft causes them to get reversed, so flip it first.
         directories.reverse()
         directory_queue.extendleft(directories)

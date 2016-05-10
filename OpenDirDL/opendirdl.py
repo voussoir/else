@@ -11,10 +11,11 @@ DIGEST:
     > opendirdl digest http://website.com/directory/ <flags>
 
     flags:
-                           -f | --fullscan : When included, perform HEAD requests on all files, to
-                                             know the size of the entire directory.
-        -dv "x.db" | --databasename "x.db" : Use a custom database filename. By default, databases
-                                             are named after the web domain.
+    -f | --fullscan:
+        When included, perform HEAD requests on all files, to know the size of the entire directory.
+
+    -db "x.db" | --databasename "x.db":
+        Use a custom database filename. By default, databases are named after the web domain.
 
 DOWNLOAD:
     Download the files whose URLs are enabled in the database.
@@ -22,12 +23,15 @@ DOWNLOAD:
     > opendirdl download website.com.db <flags>
 
     flags:
-               -o "x" | --outputdir "x" : Save the files to a custom directory, "x". By default,
-                                          files are saved to a folder named after the web domain.
-                      -ow | --overwrite : When included, download and overwrite files even if they
-                                          already exist in the output directory.
-        -bps 100 | --bytespersecond 100 : Ratelimit yourself to downloading at 100 BYTES per second.
-                                          The webmaster will appreciate this.
+    -o "x" | --outputdir "x":
+        Save the files to a custom directory, "x". By default, files are saved to a folder named
+        after the web domain.
+
+    -ow | --overwrite:
+        When included, download and overwrite files even if they already exist in the output directory.
+
+    -bps 100 | --bytespersecond 100:
+        Ratelimit yourself to downloading at 100 BYTES per second. The webmaster will appreciate this.
 
 KEEP_PATTERN:
     Enable URLs which match a regex pattern. Matches are based on the percent-encoded strings!
@@ -46,10 +50,9 @@ LIST_BASENAMES:
     > opendirdl list_basenames website.com.db <flags>
 
     flags:
-        -o "x.txt" | --outputfile "x.txt" : Output the results to a file instead of stdout. This is
-                                            useful if the filenames contain special characters that
-                                            crash Python, or are so long that the console becomes
-                                            unreadable.
+    -o "x.txt" | --outputfile "x.txt":
+        Output the results to a file instead of stdout. This is useful if the filenames contain
+        special characters that crash Python, or are so long that the console becomes unreadable.
 
 MEASURE:
     Sum up the filesizes of all enabled URLs.
@@ -57,25 +60,27 @@ MEASURE:
     > opendirdl measure website.com.db <flags>
 
     flags:
-        -f | --fullscan : When included, perform HEAD requests on any URL whose size is not known.
-                          If this flag is not included, and some file's size is unkown, you will
-                          receive a note.
+    -f | --fullscan:
+        When included, perform HEAD requests on any URL whose size is not known. If this flag is
+        not included, and some file's size is unkown, you will receive a printed note.
 '''
 
 # Module names preceeded by two hashes indicate modules that are imported during
 # a function, because they are not used anywhere else and we don't need to waste
 # time importing them usually.
 
+import sys
+
+sys.path.append('C:\\git\\else\\ratelimiter'); import ratelimiter
+
 import argparse
 ## import bs4
 ## import hashlib
 import os
-import ratelimiter
 ## import re
 import requests
 import shutil
 import sqlite3
-## import sys
 ## tkinter
 import urllib.parse
 
@@ -196,8 +201,7 @@ class Downloader:
             # Ignore this value of `root`, because we might have a custom outputdir.
             root = self.outputdir
             folder = os.path.join(root, folder)
-            if not os.path.exists(folder):
-                os.makedirs(folder)
+            os.makedirs(folder, exist_ok=True)
             fullname = os.path.join(folder, basename)
             temporary_basename = hashit(url, 16) + '.oddltemporary'
             temporary_fullname = os.path.join(folder, temporary_basename)

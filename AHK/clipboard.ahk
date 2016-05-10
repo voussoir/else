@@ -2,12 +2,6 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
-; Shift-T causes the mousewheel to scroll down.
-; I used this to throw lots of dosh in Killing Floor.
-+T::
-    While GetKeyState("t", "P")
-    {
-        Click WheelDown
-        Sleep 20
-    }
-Return
+; CTRL+SPACE pastes the clipboard as if it was typed manually.
+^SPACE::  SendInput % RegExReplace(Clipboard, "\r\n?|\n\r?", "`n")
+
