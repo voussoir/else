@@ -8,14 +8,10 @@ class RateMeter:
         This class is used to calculate a rolling average of
         units per second over `span` seconds.
 
-        Minimum span is 1 second.
-
         Set `span` to None to calculate unit/s over the lifetime of the object
         after the first digest, rather than over a span.
         This saves the effort of tracking timestamps. Don't just use a large number!
         '''
-        if span is not None and span < 1:
-            raise ValueError('Span must be >= 1')
         self.sum = 0
         self.span = span
 
@@ -23,9 +19,8 @@ class RateMeter:
         self.first_digest = None
 
     def digest(self, value):
-        now = math.ceil(time.time())
+        now = time.time()
         self.sum += value
-
 
         if self.span is None:
             if self.first_digest is None:

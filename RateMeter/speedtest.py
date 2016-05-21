@@ -4,8 +4,8 @@ import ratemeter
 import requests
 import time
 
-URL = 'http://cdn.speedof.me/sample32768k.bin?r=0.8817502672426312'
-METER = ratemeter.RateMeter(span=10)
+URL = 'http://cdn.speedof.me/sample32768k.bin?r=0.881750426312'
+METER = ratemeter.RateMeter(span=5)
 METER_2 = ratemeter.RateMeter(span=None)
 class G:
     pass
@@ -13,7 +13,7 @@ class G:
 g = G()
 g.total = 0
 g.start = None
-g.last = int(time.time())
+g.last = time.time()
 
 def callback_progress(bytes_downloaded, bytes_total):
     if g.start is None:
@@ -25,7 +25,7 @@ def callback_progress(bytes_downloaded, bytes_total):
     METER.digest(chunk)
     METER_2.digest(chunk)
     now = round(time.time(), 1)
-    if now > g.last:
+    if now > g.last or (bytes_downloaded >= bytes_total):
         g.last = now
         percent = percent.rjust(9, ' ')
         rate = bytestring.bytestring(METER.report()[2]).rjust(15, ' ')
@@ -35,5 +35,5 @@ def callback_progress(bytes_downloaded, bytes_total):
         #print(METER.report(), METER_2.report())
 
 print(URL)
-print('Progress'.rjust(9, ' '), 'bps over 10s'.rjust(15, ' '), 'bps overall'.rjust(15, ' '), 'elapsed'.rjust(10, ' '))
+print('Progress'.rjust(9, ' '), 'bps over 5s'.rjust(15, ' '), 'bps overall'.rjust(15, ' '), 'elapsed'.rjust(10, ' '))
 downloady.download_file(URL, 'nul', callback_progress=callback_progress)

@@ -2,10 +2,10 @@ import time
 
 
 class Ratelimiter:
-    def __init__(self, allowance_per_period, period, operation_cost=1, mode='sleep'):
+    def __init__(self, allowance_per_period, period=1, operation_cost=1, mode='sleep'):
         '''
         allowance_per_period:
-            The number of operations we can perform per `period` seconds.
+            Our spending balance per `period` seconds.
 
         period:
             The number of seconds over which we can perform `allowance_per_period` operations.
@@ -15,12 +15,17 @@ class Ratelimiter:
             Pass a `cost` parameter to `self.limit` to use a nondefault value.
 
         mode:
-            'sleep':  If we do not have the balance for an operation, sleep until we do.
-                      Return True every time.
-            'reject': If we do not have the balance for an operation, return False.
+            'sleep':
+                If we do not have the balance for an operation, sleep until we do.
+                Return True every time.
+
+            'reject':
+                If we do not have the balance for an operation, return False.
+                The cost is not subtracted, so hopefully we have enough next time.
         '''
         if mode not in ('sleep', 'reject'):
             raise ValueError('Invalid mode %s' % repr(mode))
+
         self.allowance_per_period = allowance_per_period
         self.period = period
         self.operation_cost = operation_cost
@@ -28,29 +33,34 @@ class Ratelimiter:
 
         self.last_operation = time.time()
         self.balance = 0
-        self.gain_rate = allowance_per_period / period
+
+    @property
+    def gain_rate(self):
+        return self.allowance_per_period / self.period
 
     def limit(self, cost=None):
+        '''
+        See the main class docstring for info about cost and mode behavior.
+        '''
         if cost is None:
             cost = self.operation_cost
-        timediff = time.time() - self.last_operation
-        self.balance += timediff * self.gain_rate
+
+        time_diff = time.time() - self.last_operation
+        self.balance += time_diff * self.gain_rate
         self.balance = min(self.balance, self.allowance_per_period)
-        successful = False
 
-        deficit = cost - self.balance
-        if deficit > 0 and self.mode == 'sleep':
-            time_needed = (deficit / self.gain_rate)
-            #print(self.balance, deficit, 'Need to sleep %f' % time_needed)
-            time.sleep(time_needed)
-            self.balance = cost
-
-        #print(self.balance)
         if self.balance >= cost:
-            #print('pass')
             self.balance -= cost
-            successful = True
+            succesful = True
+        else:
+            if self.mode == 'reject':
+                succesful = False
+            else:
+                deficit = cost - self.balance
+                time_needed = deficit / self.gain_rate
+                time.sleep(time_needed)
+                self.balance = 0
+                succesful = True
 
         self.last_operation = time.time()
-
-        return successful
+        return succesful

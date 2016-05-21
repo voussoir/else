@@ -1,87 +1,107 @@
-'''
+DOCSTRING='''
 OpenDirDL
 downloads open directories
 
-Usage:
+The basics:
+1. Create a database of the directory's files with
+   > opendirdl digest http://website.com/directory/
+2. Enable and disable the files you are interested in with
+   > opendirdl remove_pattern ".*"
+   > opendirdl keep_pattern "Daft%20Punk"
+   > opendirdl remove_pattern "folder\.jpg"
+   Note the percent-encoded string.
+3. Download the enabled files with
+   > opendirdl download database.db
 
-DIGEST:
+Specifics:
+
+digest:
     Recursively fetch directories and build a database of file URLs.
 
-    > opendirdl digest !clipboard <flags>
     > opendirdl digest http://website.com/directory/ <flags>
+    > opendirdl digest !clipboard <flags>
 
     flags:
     -f | --fullscan:
-        When included, perform HEAD requests on all files, to know the size of the entire directory.
+        When included, perform HEAD requests on all files, to know the size of
+        the entire directory.
 
     -db "x.db" | --databasename "x.db":
-        Use a custom database filename. By default, databases are named after the web domain.
+        Use a custom database filename. By default, databases are named after
+        the web domain.
 
-DOWNLOAD:
-    Download the files whose URLs are enabled in the database.
+download:
+    Download the files whose URLs are Enabled in the database.
 
     > opendirdl download website.com.db <flags>
 
     flags:
     -o "x" | --outputdir "x":
-        Save the files to a custom directory, "x". By default, files are saved to a folder named
-        after the web domain.
+        Save the files to a custom directory, "x". By default, files are saved
+        to a folder named after the web domain.
 
     -ow | --overwrite:
-        When included, download and overwrite files even if they already exist in the output directory.
+        When included, download and overwrite files even if they already exist
+        in the output directory.
 
     -bps 100 | --bytespersecond 100:
-        Ratelimit yourself to downloading at 100 BYTES per second. The webmaster will appreciate this.
+        Ratelimit yourself to downloading at 100 BYTES per second.
+        The webmaster will appreciate this.
 
-KEEP_PATTERN:
-    Enable URLs which match a regex pattern. Matches are based on the percent-encoded strings!
+keep_pattern:
+    Enable URLs which match a regex pattern. Matches are based on the percent-
+    encoded strings!
 
-    > opendirdl keep_pattern website.com.db ".*"
+    > opendirdl keep_pattern database.db ".*"
 
-REMOVE_PATTERN:
-    Disable URLs which match a regex pattern. Matches are based on the percent-encoded strings!
+remove_pattern:
+    Disable URLs which match a regex pattern. Matches are based on the percent-
+    encoded strings!
 
-    > opendirdl remove_pattern website.com.db ".*"
+    > opendirdl remove_pattern database.db ".*"
 
-LIST_BASENAMES:
-    List enabled URLs in order of their base filename. This makes it easier to find titles of
-    interest in a directory that is very scattered or poorly organized.
+list_basenames:
+    List enabled URLs in order of their base filename. This makes it easier to
+    find titles of interest in a directory that is very scattered or poorly
+    organized.
 
     > opendirdl list_basenames website.com.db <flags>
 
     flags:
     -o "x.txt" | --outputfile "x.txt":
-        Output the results to a file instead of stdout. This is useful if the filenames contain
-        special characters that crash Python, or are so long that the console becomes unreadable.
+        Output the results to a file instead of stdout. This is useful if the
+        filenames contain special characters that crash Python, or are so long
+        that the console becomes unreadable.
 
-MEASURE:
-    Sum up the filesizes of all enabled URLs.
+measure:
+    Sum up the filesizes of all Enabled URLs.
 
-    > opendirdl measure website.com.db <flags>
+    > opendirdl measure database.db <flags>
 
     flags:
     -f | --fullscan:
-        When included, perform HEAD requests on any URL whose size is not known. If this flag is
-        not included, and some file's size is unkown, you will receive a printed note.
+        When included, perform HEAD requests when a file's size is not known.
+        If this flag is not included, and some file's size is unkown, you will
+        receive a printed note.
 '''
 
-# Module names preceeded by two hashes indicate modules that are imported during
+
+# Module names preceeded by `## ~` indicate modules that are imported during
 # a function, because they are not used anywhere else and we don't need to waste
 # time importing them usually.
-
 import sys
 
 sys.path.append('C:\\git\\else\\ratelimiter'); import ratelimiter
 
 import argparse
-## import bs4
-## import hashlib
+## ~import bs4
+## ~import hashlib
 import os
-## import re
+## ~import re
 import requests
 import shutil
 import sqlite3
-## tkinter
+## ~tkinter
 import urllib.parse
 
 FILENAME_BADCHARS = '/\\:*?"<>|'
@@ -249,6 +269,7 @@ class Walker:
             databasename = databasename.replace(':', '')
         self.databasename = databasename
 
+        safeprint('Opening %s' % self.databasename)
         self.sql = sqlite3.connect(self.databasename)
         self.cur = self.sql.cursor()
         db_init(self.sql, self.cur)
@@ -269,7 +290,7 @@ class Walker:
         External links, index sort links, and desktop.ini are discarded.
         '''
         import bs4
-        soup = bs4.BeautifulSoup(response.text)
+        soup = bs4.BeautifulSoup(response.text, 'html.parser')
         elements = soup.findAll(tag)
         for element in elements:
             try:
@@ -615,10 +636,10 @@ def filter_pattern(databasename, regex, action='keep', *trash):
 
             should_keep = (keep and contains)
             if keep and contains and not current_do_dl:
-                safeprint('Keeping "%s"' % url)
+                safeprint('Enabling "%s"' % url)
                 cur.execute('UPDATE urls SET do_download = 1 WHERE url == ?', [url])
             if remove and contains and current_do_dl:
-                safeprint('Removing "%s"' % url)
+                safeprint('Disabling "%s"' % url)
                 cur.execute('UPDATE urls SET do_download = 0 WHERE url == ?', [url])
     sql.commit()
 
@@ -735,6 +756,9 @@ def remove_pattern(args):
 
 
 if __name__ == '__main__':
+    if listget(sys.argv, 1, '').lower() in ('help', '-h', '--help'):
+        print(DOCSTRING)
+        quit()
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
@@ -758,7 +782,7 @@ if __name__ == '__main__':
 
     p_list_basenames = subparsers.add_parser('list_basenames')
     p_list_basenames.add_argument('databasename')
-    p_list_basenames.add_argument('-o', '--outputfile', dest='outputfile', default=None)
+    p_list_basenames.add_argument('outputfile', nargs='?', default=None)
     p_list_basenames.set_defaults(func=list_basenames)
 
     p_measure = subparsers.add_parser('measure')

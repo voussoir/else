@@ -1,7 +1,16 @@
 Steganographic
 ==============
 
-    2015 01 15:
+    2016 05 12:
+        Now pads the remaining pixels with random data. Previously, the fact that the secret
+        file resided in only as many pixels as it needed meant there was a sudden decrease in
+        visual noise when the secret ended. Now there is noise throughout.
+        Your secret file should resemble random noise for this to be effective. Thus
+        encryption is recommended.
+        This does not change decoding, because the decoder only reads as many bytes as
+        needed.
+
+    2016 01 15:
         Now supports variable "bitness", the number of bits per color channel to overwrite.
         Previously, bitness was always 1, to maximize transparency.
         Now, bitness can be 1-8 to favor transparency or information density.

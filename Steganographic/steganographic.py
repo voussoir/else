@@ -178,10 +178,6 @@ def set_bit(number, index, newvalue):
   ####      ##    ####      ####      ####    ####      ####  ####        ####  ####        ####      ##
 ##############    ####      ####        ########          ######        ##########        ##############
 def encode(imagefilename, secretfilename, bitness=1):
-    global image
-    global pixel
-    global pixel_index
-    global channel_index
     pixel_index = 0
     channel_index = 0
 
@@ -198,18 +194,18 @@ def encode(imagefilename, secretfilename, bitness=1):
     image = Image.open(imagefilename)
     image_steg = BitsToImage(image, bitness)
 
-    totalpixels = image.size[0] * image.size[1]
-    if totalpixels < HEADER_SIZE:
+    total_pixels = image.size[0] * image.size[1]
+    if total_pixels < HEADER_SIZE:
         raise StegError('Image cannot have fewer than %d pixels. They are used to store Secret\'s length' % HEADER_SIZE)
 
     secret_extension = os.path.splitext(secretfilename)[1][1:]
     secret_content_length = (secret_size) + (len(secret_extension)) + 1
     requiredpixels = math.ceil(((secret_content_length * 8) + 32) / (3 * bitness))
-    if totalpixels < requiredpixels:
+    if total_pixels < requiredpixels:
         raise StegError('Image does not have enough pixels to store the Secret. '
                         'Must have at least %d pixels' % requiredpixels)
 
-    print('%d pixels available, %d required' % (totalpixels, requiredpixels))
+    print('%d pixels available, %d required' % (total_pixels, requiredpixels))
 
     # --> YOU ARE HERE <--
 
@@ -226,23 +222,40 @@ def encode(imagefilename, secretfilename, bitness=1):
 
     # Write the secret data
     bytes_written = 0
-    done = False
-    secretfile = open(secretfilename, 'rb')
-    while not done:
-        if bytes_written % 1024 == 0:
-            percentage = (bytes_written + 1) / secret_size
-            percentage = '%07.3f%%\r' % (100 * percentage)
-            print(percentage, end='')
+    one_complete_file = False
 
-        bytes = secretfile.read(FILE_READ_SIZE)
+    # Yes, we're assuming the whole file fits in memory.
+    secret_file = open(secretfilename, 'rb')
+    secret_data = secret_file.read()
+    secret_data_size = len(secret_data)
+    secret_index = 0
+    for pixel_number in range(total_pixels):
+        if pixel_number % 4 == 0:
+            #percentage = (bytes_written + 1) / secret_size
+            #percentage = '%07.3f%%\r' % (100 * percentage)
+            #print(percentage, end='')
+            print(pixel_number)
 
-        done = len(bytes) == 0
+        secret_chunk = secret_data[secret_index:secret_index+FILE_READ_SIZE]
+        secret_index += FILE_READ_SIZE
+        if len(secret_chunk) < FILE_READ_SIZE:
+            one_complete_file = True
+            #secret_index = 0
+            rs = FILE_READ_SIZE - len(secret_chunk)
+            secret_chunk += os.urandom(rs)
+            #secret_chunk += secret_data[secret_index:secret_index+rs]
 
-        bytes = list(bytes)
-        bytes = [binary(byte) for byte in bytes]
-        bytes_written += len(bytes)
-        bytes = ''.join(bytes)
-        image_steg.write(bytes)
+        secret_chunk = list(secret_chunk)
+        secret_chunk = [binary(byte) for byte in secret_chunk]
+        bytes_written += len(secret_chunk)
+        secret_chunk = ''.join(secret_chunk)
+        try:
+            image_steg.write(secret_chunk)
+        except IndexError:
+            if one_complete_file:
+                break
+            else:
+                raise
 
     # haha
     print('100.000%')
@@ -271,7 +284,6 @@ def encode(imagefilename, secretfilename, bitness=1):
   ####  ####        ####      ##      ####    ####      ####  ####        ####  ####        ####      ##
 ##########        ##############        ########          ######        ##########        ##############
 def decode(imagefilename, bitness=1):
-
     print('Extracting content from "%s"' % imagefilename)
     image = Image.open(imagefilename)
     image_steg = ImageToBits(image, bitness)
@@ -331,16 +343,16 @@ if __name__ == '__main__':
     command = listget(sys.argv, 1, '').lower()
     if command not in ['encode', 'decode']:
         print('Usage:')
-        print('> steganographic.py encode imagefilename.png secretfilename.ext')
-        print('> steganographic.py decode lacedimagename.png')
+        print('> steganographic.py encode imagefilename.png secretfilename.ext bitness')
+        print('> steganographic.py decode lacedimagename.png bitness')
         quit()
 
     imagefilename = sys.argv[2]
 
     if command == 'encode':
         secretfilename = sys.argv[3]
-        bitness = int(listget(sys.argv, 4, 1))
+        bitness = int(sys.argv[4])
         encode(imagefilename, secretfilename, bitness)
     else:
-        bitness = int(listget(sys.argv, 3, 1))
+        bitness = int(sys.argv[3])
         decode(imagefilename, bitness)
