@@ -2,9 +2,13 @@ import bytestring
 import downloady
 import ratemeter
 import requests
+import sys
 import time
 
-URL = 'http://cdn.speedof.me/sample32768k.bin?r=0.881750426312'
+if len(sys.argv) == 2:
+    URL = sys.argv[1]
+else:
+    URL = 'http://cdn.speedof.me/sample32768k.bin?r=0.881750426312'
 METER = ratemeter.RateMeter(span=5)
 METER_2 = ratemeter.RateMeter(span=None)
 class G:

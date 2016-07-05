@@ -279,6 +279,7 @@ def handle_vidble(url, customname=None):
             name = image.split('/')[-1]
             localname = '{folder}\\{index}_{name}'.format(folder=folder, index=index, name=name)
             image = 'https://vidble.com' + image
+            image = image.replace('_med', '')
             download_file(image, localname)
     else:
         localname = url.split('/')[-1]

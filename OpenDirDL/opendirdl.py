@@ -4,14 +4,14 @@ downloads open directories
 
 The basics:
 1. Create a database of the directory's files with
-   > opendirdl digest http://website.com/directory/
+    > opendirdl digest http://website.com/directory/
 2. Enable and disable the files you are interested in with
-   > opendirdl remove_pattern ".*"
-   > opendirdl keep_pattern "Daft%20Punk"
-   > opendirdl remove_pattern "folder\.jpg"
+    > opendirdl remove_pattern ".*"
+    > opendirdl keep_pattern "Daft%20Punk"
+    > opendirdl remove_pattern "folder\.jpg"
    Note the percent-encoded string.
 3. Download the enabled files with
-   > opendirdl download database.db
+    > opendirdl download database.db
 
 Specifics:
 
@@ -52,13 +52,13 @@ keep_pattern:
     Enable URLs which match a regex pattern. Matches are based on the percent-
     encoded strings!
 
-    > opendirdl keep_pattern database.db ".*"
+    > opendirdl keep_pattern website.com.db ".*"
 
 remove_pattern:
     Disable URLs which match a regex pattern. Matches are based on the percent-
     encoded strings!
 
-    > opendirdl remove_pattern database.db ".*"
+    > opendirdl remove_pattern website.com.db ".*"
 
 list_basenames:
     List enabled URLs in order of their base filename. This makes it easier to
@@ -76,13 +76,27 @@ list_basenames:
 measure:
     Sum up the filesizes of all Enabled URLs.
 
-    > opendirdl measure database.db <flags>
+    > opendirdl measure website.com.db <flags>
 
     flags:
     -f | --fullscan:
         When included, perform HEAD requests when a file's size is not known.
         If this flag is not included, and some file's size is unkown, you will
         receive a printed note.
+
+tree:
+    Print the file / folder tree.
+
+    > opendirdl tree website.com.db <flags>
+
+    flags:
+    -o "x.txt" | --outputfile "x.txt":
+        Output the results to a file instead of stdout. This is useful if the
+        filenames contain special characters that crash Python, or are so long
+        that the console becomes unreadable.
+
+        If the filename ends with ".html", the webpage will use collapsible
+        boxes rather than plain text.
 '''
 
 
@@ -91,10 +105,14 @@ measure:
 # time importing them usually.
 import sys
 
+# Please consult my github repo for these files
+# https://github.com/voussoir/else
 sys.path.append('C:\\git\\else\\ratelimiter'); import ratelimiter
+sys.path.append('C:\\git\\else\\bytestring'); import bytestring
 
 import argparse
 ## ~import bs4
+import collections
 ## ~import hashlib
 import os
 ## ~import re
@@ -107,6 +125,8 @@ import urllib.parse
 FILENAME_BADCHARS = '/\\:*?"<>|'
 
 TERMINAL_WIDTH = shutil.get_terminal_size().columns
+
+DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 
 # When doing a basic scan, we will not send HEAD requests to URLs that end in these strings,
 # because they're probably files.
@@ -152,23 +172,43 @@ SKIPPABLE_FILETYPES = [
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)
 
-BYTE = 1
-KIBIBYTE = 1024 * BYTE
-MIBIBYTE = 1024 * KIBIBYTE
-GIBIBYTE = 1024 * MIBIBYTE
-TEBIBYTE = 1024 * GIBIBYTE
-SIZE_UNITS = (TEBIBYTE, GIBIBYTE, MIBIBYTE, KIBIBYTE, BYTE)
+# oh shit
+HTML_TREE_HEADER = '''
+<meta charset="UTF-8">
 
-UNIT_STRINGS = {
-    BYTE: 'b',
-    KIBIBYTE: 'KiB',
-    MIBIBYTE: 'MiB',
-    GIBIBYTE: 'GiB',
-    TEBIBYTE: 'TiB',
+<script type="text/javascript">
+function collapse(id)
+{
+    div = document.getElementById(id);
+    if (div.style.display != "none")
+    {
+        div.style.display = "none";
+    }
+    else
+    {
+        div.style.display = "block";
+    }
 }
+</script>
 
-DOWNLOAD_CHUNK = 2 * KIBIBYTE
-
+<style>
+*
+{
+    font-family: Consolas;
+}
+button
+{
+    display: block;
+}
+div
+{
+    padding: 10px;
+    padding-left: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #000;
+}
+</style>
+'''
 
 DB_INIT = '''
 CREATE TABLE IF NOT EXISTS urls(
@@ -202,8 +242,7 @@ class Downloader:
             # If they aren't, it's the user's fault.
             self.cur.execute('SELECT url FROM urls LIMIT 1')
             url = self.cur.fetchone()[0]
-            # returns (root, path, filename). Keep root.
-            outputdir = url_to_filepath(url)[0]
+            outputdir = url_to_filepath(url)['root']
         self.outputdir = outputdir
 
     def download(self, overwrite=False, bytespersecond=None):
@@ -216,13 +255,13 @@ class Downloader:
                 break
             url = fetch[SQL_URL]
 
-            ''' Creating the Path '''
-            (root, folder, basename) = url_to_filepath(url)
+            ''' Creating the permanent and temporary filenames '''
+            url_filepath = url_to_filepath(url)
             # Ignore this value of `root`, because we might have a custom outputdir.
-            root = self.outputdir
-            folder = os.path.join(root, folder)
+            root = url_filepath['root']
+            folder = os.path.join(root, url_filepath['folder'])
             os.makedirs(folder, exist_ok=True)
-            fullname = os.path.join(folder, basename)
+            fullname = os.path.join(folder, url_filepath['filename'])
             temporary_basename = hashit(url, 16) + '.oddltemporary'
             temporary_fullname = os.path.join(folder, temporary_basename)
 
@@ -252,6 +291,89 @@ class Generic:
     def __init__(self, **kwargs):
         for kwarg in kwargs:
             setattr(self, kwarg, kwargs[kwarg])
+
+
+class TreeNode:
+    def __init__(self, identifier, data, parent=None):
+        assert isinstance(identifier, str)
+        assert '\\' not in identifier
+        self.identifier = identifier
+        self.data = data
+        self.parent = parent
+        self.children = {}
+
+    def __getitem__(self, key):
+        return self.children[key]
+
+    def __repr__(self):
+        return 'TreeNode %s' % self.abspath()
+
+    def abspath(self):
+        node = self
+        nodes = [node]
+        while node.parent is not None:
+            node = node.parent
+            nodes.append(node)
+        nodes.reverse()
+        nodes = [node.identifier for node in nodes]
+        return '\\'.join(nodes)
+
+    def add_child(self, other_node, overwrite_parent=False):
+        self.check_child_availability(other_node.identifier)
+        if other_node.parent is not None and not overwrite_parent:
+            raise ValueError('That node already has a parent. Try `overwrite_parent=True`')
+
+        other_node.parent = self
+        self.children[other_node.identifier] = other_node
+        return other_node
+
+    def check_child_availability(self, identifier):
+        if ':' in identifier:
+            raise Exception('Only roots may have a colon')
+        if identifier in self.children:
+            raise Exception('Node %s already has child %s' % (self.identifier, identifier))
+
+    def detach(self):
+        del self.parent.children[self.identifier]
+        self.parent = None
+
+    def listnodes(self, customsort=None):
+        items = list(self.children.items())
+        if customsort is None:
+            items.sort(key=lambda x: x[0].lower())
+        else:
+            items.sort(key=customsort)
+        return [item[1] for item in items]
+
+    def merge_other(self, othertree, otherroot=None):
+        newroot = None
+        if ':' in othertree.identifier:
+            if otherroot is None:
+                raise Exception('Must specify a new name for the other tree\'s root')
+            else:
+                newroot = otherroot
+        else:
+            newroot = othertree.identifier
+        othertree.identifier = newroot
+        othertree.parent = self
+        self.check_child_availability(newroot)
+        self.children[newroot] = othertree
+
+    def printtree(self, customsort=None):
+        for node in self.walk(customsort):
+            print(node.abspath())
+
+    def sorted_children(self):
+        keys = sorted(self.children.keys())
+        for key in keys:
+            yield (key, self.children[key])
+
+    def walk(self, customsort=None):
+        yield self
+        for child in self.listnodes(customsort=customsort):
+            #print(child)
+            #print(child.listnodes())
+            yield from child.walk(customsort=customsort)
 ##                                                                                                ##
 ## GENERIC #########################################################################################
 
@@ -264,7 +386,7 @@ class Walker:
             walkurl += '/'
         self.walkurl = walkurl
         if databasename is None or databasename == "":
-            self.domain = url_to_filepath(walkurl)[0]
+            self.domain = url_to_filepath(walkurl)['root']
             databasename = self.domain + '.db'
             databasename = databasename.replace(':', '')
         self.databasename = databasename
@@ -275,7 +397,7 @@ class Walker:
         db_init(self.sql, self.cur)
 
         self.fullscan = bool(fullscan)
-        self.queue = []
+        self.queue = collections.deque()
         self.seen_directories = set()
 
     def smart_insert(self, url=None, head=None, commit=True):
@@ -301,7 +423,8 @@ class Walker:
             if not href.startswith(self.walkurl):
                 # Don't go to other sites or parent directories.
                 continue
-            if 'C=' in href and 'O=' in href:
+            #if 'C=' in href and 'O=' in href:
+            if any(sorter in href for sorter in ('?C=', '?O=', '?M=', '?D=', '?N=', '?S=')):
                 # Alternative sort modes for index pages.
                 continue
             if href.endswith('desktop.ini'):
@@ -376,12 +499,12 @@ class Walker:
             self.smart_insert(head=head, commit=False)
 
     def walk(self, url=None):
-        self.queue.append(url)
+        self.queue.appendleft(url)
         try:
             while len(self.queue) > 0:
                 # Popping from right helps keep the queue short because it handles the files
                 # early.
-                url = self.queue.pop(-1)
+                url = self.queue.popleft()
                 self.process_url(url)
                 line = '{:,} Remaining'.format(len(self.queue))
                 print(line)
@@ -395,16 +518,6 @@ class Walker:
 
 ## GENERAL FUNCTIONS ###############################################################################
 ##                                                                                                ##
-def bytes_to_unit_string(bytes):
-    size_unit = 1
-    for unit in SIZE_UNITS:
-        if bytes >= unit:
-            size_unit = unit
-            break
-    size_unit_string = UNIT_STRINGS[size_unit]
-    size_string = '%.3f %s' % ((bytes / size_unit), size_unit_string)
-    return size_string
-
 def db_init(sql, cur):
     lines = DB_INIT.split(';')
     for line in lines:
@@ -419,20 +532,19 @@ def dict_to_file(jdict, filename):
     filehandle.write(text)
     filehandle.close()
 
-def do_get(url):
+def do_get(url, raise_for_status=True):
     return do_request('GET', requests.get, url)
 
-def do_head(url):
+def do_head(url, raise_for_status=True):
     return do_request('HEAD', requests.head, url)
 
-def do_request(message, method, url):
-    import sys
+def do_request(message, method, url, raise_for_status=True):
     message = '{message:>4s}: {url} : '.format(message=message, url=url)
-    safeprint(message, end='')
-    sys.stdout.flush()
+    safeprint(message, end='', flush=True)
     response = method(url)
     safeprint(response.status_code)
-    response.raise_for_status()
+    if raise_for_status:
+        response.raise_for_status()
     return response
     
 def download_file(url, filehandle, hookfunction=None, headers={}, bytespersecond=None):
@@ -511,7 +623,8 @@ def safeprint(text, **kwargs):
 
 def smart_insert(sql, cur, url=None, head=None, commit=True):
     '''
-    INSERT or UPDATE the appropriate entry.
+    INSERT or UPDATE the appropriate entry, or DELETE if the head
+    shows a 403 / 404.
     '''
     if bool(url) is bool(head):
         raise ValueError('One and only one of `url` or `head` is necessary.')
@@ -523,21 +636,28 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
 
     elif head is not None:
         # When doing a full scan, we get a Response object.
-        url = head.url
-        content_length = head.headers.get('Content-Length', None)
-        if content_length is not None:
-            content_length = int(content_length)
-        content_type = head.headers.get('Content-Type', None)
+        if head.status_code in [403, 404]:
+            cur.execute('DELETE FROM urls WHERE url == ?', [url])
+            if commit:
+                sql.commit()
+            return (url, None, 0, None, 0)
+        else:
+            url = head.url
+            content_length = head.headers.get('Content-Length', None)
+            if content_length is not None:
+                content_length = int(content_length)
+            content_type = head.headers.get('Content-Type', None)
 
-    basename = url_to_filepath(url)[2]
+    basename = url_to_filepath(url)['filename']
     basename = urllib.parse.unquote(basename)
     do_download = True
+
     cur.execute('SELECT * FROM urls WHERE url == ?', [url])
     existing_entry = cur.fetchone()
     is_new = existing_entry is None
+
     data = (url, basename, content_length, content_type, do_download)
     if is_new:
-        
         cur.execute('INSERT INTO urls VALUES(?, ?, ?, ?, ?)', data)
     else:
         command = '''
@@ -547,6 +667,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
             WHERE url == ?
         '''
         cur.execute(command, [content_length, content_type, url])
+
     if commit:
         sql.commit()
     return data
@@ -554,6 +675,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
 def url_to_filepath(text):
     text = urllib.parse.unquote(text)
     parts = urllib.parse.urlsplit(text)
+    scheme = parts.scheme
     root = parts.netloc
     (folder, filename) = os.path.split(parts.path)
     while folder.startswith('/'):
@@ -566,41 +688,57 @@ def url_to_filepath(text):
     # ...but Files are not.
     filename = filepath_sanitize(filename)
 
-    return (root, folder, filename)
+    result = {
+        'scheme': scheme,
+        'root': root,
+        'folder': folder,
+        'filename': filename,
+    }
+    return result
 ##                                                                                                ##
 ## GENERAL FUNCTIONS ###############################################################################
 
 
 ## COMMANDLINE FUNCTIONS ###########################################################################
 ##                                                                                                ##
-def digest(args):
-    fullscan = args.fullscan
-    if isinstance(fullscan, str):
-        fullscan = bool(eval(fullscan))
-    walkurl = args.walkurl
-    if walkurl == '!clipboard':
+def digest(databasename, walkurl, fullscan=False):
+    if walkurl in ('!clipboard', '!c'):
         walkurl = get_clipboard()
         safeprint('From clipboard: %s' % walkurl)
     walker = Walker(
-        databasename=args.databasename,
+        databasename=databasename,
         fullscan=fullscan,
         walkurl=walkurl,
         )
     walker.walk()
 
-def download(args):
-    bytespersecond = args.bytespersecond
+def digest_argparse(args):
+    return digest(
+        databasename=args.databasename,
+        walkurl=args.walkurl,
+        fullscan=args.fullscan,
+    )
+
+def download(databasename, outputdir=None, overwrite=False, bytespersecond=None):
     if isinstance(bytespersecond, str):
         bytespersecond = eval(bytespersecond)
 
     downloader = Downloader(
-        databasename=args.databasename,
-        outputdir=args.outputdir,
+        databasename=databasename,
+        outputdir=outputdir,
         )
     downloader.download(
         bytespersecond=bytespersecond,
-        overwrite=args.overwrite,
+        overwrite=overwrite,
         )
+
+def download_argparse(args):
+    return download(
+        databasename=args.databasename,
+        outputdir=args.outputdir,
+        overwrite=args.overwrite,
+        bytespersecond=args.bytespersecond,
+    )
 
 def filter_pattern(databasename, regex, action='keep', *trash):
     '''
@@ -653,15 +791,12 @@ def keep_pattern(args):
         regex=args.regex,
         )
 
-def list_basenames(args):
+def list_basenames(databasename, outputfile=None):
     '''
     Given a database, print the entries in order of the file basenames.
     This makes it easier to find interesting titles without worrying about
     what directory they're in.
     '''
-    databasename = args.databasename
-    outputfile = args.outputfile
-
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
     cur.execute('SELECT basename FROM urls WHERE do_download == 1 ORDER BY LENGTH(basename) DESC LIMIT 1')
@@ -691,14 +826,18 @@ def list_basenames(args):
     if outputfile:
         outputfile.close()
 
-def measure(args):
+def list_basenames_argparse(args):
+    return list_basenames(
+        databasename=args.databasename,
+        outputfile=args.outputfile,
+    )
+
+def measure(databasename, fullscan=False):
     '''
     Given a database, print the sum of all Content-Lengths.
     If `fullscan`, then URLs with no Content-Length will be
     HEAD requested, and the result will be saved back into the file.
     '''
-    databasename = args.databasename
-    fullscan = args.fullscan
     if isinstance(fullscan, str):
         fullscan = bool(fullscan)
 
@@ -708,25 +847,29 @@ def measure(args):
     cur2 = sql.cursor()
     cur2.execute('SELECT * FROM urls WHERE do_download == 1')
     filecount = 0
-    files_without_size = 0
+    unmeasured_file_count = 0
     try:
         while True:
             fetch = cur2.fetchone()
             if fetch is None:
                 break
+
             size = fetch[SQL_CONTENT_LENGTH]
-            if size is None:
-                if fullscan:
-                    url = fetch[SQL_URL]
-                    head = do_head(url)
-                    fetch = smart_insert(sql, cur1, head=head, commit=False)
-                    size = fetch[SQL_CONTENT_LENGTH]
-                    if size is None:
-                        safeprint('"%s" is not revealing Content-Length' % url)
-                        size = 0
-                else:
-                    files_without_size += 1
+
+            if fullscan:
+                url = fetch[SQL_URL]
+                head = do_head(url, raise_for_status=False)
+                fetch = smart_insert(sql, cur1, head=head, commit=False)
+                size = fetch[SQL_CONTENT_LENGTH]
+                if size is None:
+                    safeprint('"%s" is not revealing Content-Length' % url)
                     size = 0
+
+
+            elif fetch[SQL_CONTENT_LENGTH] is None:
+                unmeasured_file_count += 1
+                size = 0
+
             totalsize += size
             filecount += 1
     except:
@@ -734,13 +877,19 @@ def measure(args):
         raise
 
     sql.commit()
-    short_string = bytes_to_unit_string(totalsize)
+    short_string = bytestring.bytestring(totalsize)
     totalsize_string = '{} ({:,} bytes) in {:,} files'.format(short_string, totalsize, filecount)
     print(totalsize_string)
-    if files_without_size > 0:
-        print('Note: %d files do not have a stored Content-Length.' % files_without_size)
+    if unmeasured_file_count > 0:
+        print('Note: %d files do not have a stored Content-Length.' % unmeasured_file_count)
         print('Run `measure` with `-f` or `--fullscan` to HEAD request those files.')
     return totalsize
+
+def measure_argparse(args):
+    return measure(
+        databasename=args.databasename,
+        fullscan=args.fullscan,
+    )
 
 def remove_pattern(args):
     '''
@@ -751,6 +900,160 @@ def remove_pattern(args):
         databasename=args.databasename,
         regex=args.regex,
         )
+
+def tree(databasename, output_filename=None):
+    sql = sqlite3.connect(databasename)
+    cur = sql.cursor()
+    cur.execute('SELECT * FROM urls WHERE do_download == 1')
+    items = cur.fetchall()
+    if len(items) == 0:
+        return
+
+    items.sort(key=lambda x: x[SQL_URL])
+
+    path_parts = url_to_filepath(items[0][SQL_URL])
+    root_identifier = path_parts['root']
+    #print('Root', root_identifier)
+    root_data = {'name': root_identifier, 'item_type': 'directory'}
+    tree = TreeNode(identifier=root_identifier, data=root_data)
+    node_map = {}
+
+    unmeasured_file_count = 0
+
+    for item in items:
+        path = url_to_filepath(item[SQL_URL])
+        scheme = path['scheme']
+        path = '\\'.join([path['root'], path['folder'], path['filename']])
+        parts = path.split('\\')
+        for (index, part) in enumerate(parts):
+            index += 1
+            this_path = '/'.join(parts[:index])
+            parent_path = '/'.join(parts[:index-1])
+            #safeprint('this:' + this_path)
+            #safeprint('parent:' + parent_path)
+            #input()
+            data = {
+                'name': part,
+                'url': scheme + '://' + this_path,
+            }
+            if index == len(parts):
+                data['item_type'] = 'file'
+                if item[SQL_CONTENT_LENGTH]:
+                    data['size'] = item[SQL_CONTENT_LENGTH]
+                else:
+                    unmeasured_file_count += 1
+                    data['size'] = 0
+            else:
+                data['item_type'] = 'directory'
+
+
+            # Ensure this comment is in a node of its own
+            this_node = node_map.get(this_path, None)
+            if this_node:
+                # This ID was detected as a parent of a previous iteration
+                # Now we're actually filling it in.
+                this_node.data = data
+            else:
+                this_node = TreeNode(this_path, data)
+                node_map[this_path] = this_node
+
+            # Attach this node to the parent.
+            if parent_path == root_identifier:
+                try:
+                    tree.add_child(this_node)
+                except:
+                    pass
+            else:
+                parent_node = node_map.get(parent_path, None)
+                if not parent_node:
+                    parent_node = TreeNode(parent_path, data=None)
+                    node_map[parent_path] = parent_node
+                try:
+                    parent_node.add_child(this_node)
+                except:
+                    pass
+                this_node.parent = parent_node
+            #print(this_node.data)
+
+    def write(line, outfile=None):
+        if outfile is None:
+            safeprint(line)
+        else:
+            outfile.write(line + '\n')
+
+    def recursive_get_size(node):
+        size = node.data.get('size', 0)
+        if size:
+            # Files have this attribute, dirs don't
+            return size
+
+        for child in node.children.values():
+            size += recursive_get_size(child)
+        node.data['size'] = size
+        return size
+
+    def recursive_print_node(node, depth=0, outfile=None):
+        if use_html:
+            if node.data['item_type'] == 'directory':
+                div_id = hashit(node.identifier, 16)
+                line = '<button onclick="collapse(\'{div_id}\')">{name} ({size})</button>'
+                line += '<div id="{div_id}">'
+                line = line.format(
+                    div_id=div_id,
+                    name=node.data['name'],
+                    size=bytestring.bytestring(node.data['size']),
+                )
+            else:
+                line = '<a href="{url}">{name} ({size})</a><br>'
+                line = line.format(
+                    url=node.data['url'],
+                    name=node.data['name'],
+                    size=bytestring.bytestring(node.data['size']),
+                )
+        else:
+            line = '{space}{bar}{name} : ({size})'
+            line = line.format(
+                space='|   '*(depth-1),
+                bar='|---' if depth > 0 else '',
+                name=node.data['name'],
+                size=bytestring.bytestring(node.data['size'])
+            )
+        write(line, outfile)
+
+        for (key, child) in node.sorted_children():
+            recursive_print_node(child, depth+1, outfile=outfile)
+
+        if node.data['item_type'] == 'directory':
+            if use_html:
+                write('</div>', outfile)
+            else:
+                # This helps put some space between sibling directories
+                write('|   ' * (depth), outfile)
+
+    recursive_get_size(tree)
+    use_html = output_filename.lower().endswith('.html')
+
+    if output_filename is not None:
+        output_file = open(output_filename, 'w', encoding='utf-8')
+
+    if use_html:
+        write(HTML_TREE_HEADER, outfile=output_file)
+
+    recursive_print_node(tree, outfile=output_file)
+    if unmeasured_file_count > 0:
+        write('Note: %d files do not have a stored Content-Length.' % unmeasured_file_count, outfile=output_file)
+        write('Run `measure` with `-f` or `--fullscan` to HEAD request those files.', outfile=output_file)
+
+    if output_file is not None:
+        output_file.close()
+    return tree
+
+def tree_argparse(args):
+    return tree(
+        databasename=args.databasename,
+        output_filename=args.outputfile,
+    )
+
 ##                                                                                                ##
 ## COMMANDLINE FUNCTIONS ###########################################################################
 
@@ -765,15 +1068,15 @@ if __name__ == '__main__':
     p_digest = subparsers.add_parser('digest')
     p_digest.add_argument('walkurl')
     p_digest.add_argument('-db', '--database', dest='databasename', default=None)
-    p_digest.add_argument('-f', '--fullscan', action='store_true')
-    p_digest.set_defaults(func=digest)
+    p_digest.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
+    p_digest.set_defaults(func=digest_argparse)
 
     p_download = subparsers.add_parser('download')
     p_download.add_argument('databasename')
     p_download.add_argument('-o', '--outputdir', dest='outputdir', default=None)
-    p_download.add_argument('-ow', '--overwrite', dest='overwrite', default=False)
     p_download.add_argument('-bps', '--bytespersecond', dest='bytespersecond', default=None)
-    p_download.set_defaults(func=download)
+    p_download.add_argument('-ow', '--overwrite', dest='overwrite', action='store_true')
+    p_download.set_defaults(func=download_argparse)
 
     p_keep_pattern = subparsers.add_parser('keep_pattern')
     p_keep_pattern.add_argument('databasename')
@@ -782,18 +1085,23 @@ if __name__ == '__main__':
 
     p_list_basenames = subparsers.add_parser('list_basenames')
     p_list_basenames.add_argument('databasename')
-    p_list_basenames.add_argument('outputfile', nargs='?', default=None)
-    p_list_basenames.set_defaults(func=list_basenames)
+    p_list_basenames.add_argument('-o', '--outputfile', dest='outputfile', default=None)
+    p_list_basenames.set_defaults(func=list_basenames_argparse)
 
     p_measure = subparsers.add_parser('measure')
     p_measure.add_argument('databasename')
-    p_measure.add_argument('-f', '--fullscan', action='store_true')
-    p_measure.set_defaults(func=measure)
+    p_measure.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
+    p_measure.set_defaults(func=measure_argparse)
 
     p_remove_pattern = subparsers.add_parser('remove_pattern')
     p_remove_pattern.add_argument('databasename')
     p_remove_pattern.add_argument('regex')
     p_remove_pattern.set_defaults(func=remove_pattern)
+
+    p_tree = subparsers.add_parser('tree')
+    p_tree.add_argument('databasename')
+    p_tree.add_argument('-o', '--outputfile', dest='outputfile', default=None)
+    p_tree.set_defaults(func=tree_argparse)
 
     args = parser.parse_args()
     args.func(args)

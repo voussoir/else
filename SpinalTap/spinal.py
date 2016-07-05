@@ -66,6 +66,10 @@ class FilePath:
         return 'FilePath(%s)' % repr(self.path)
 
     @property
+    def basename(self):
+        return os.path.basename(self.path)
+
+    @property
     def isdir(self):
         return self.type_getter('_isdir', stat.S_ISDIR)
 
@@ -602,7 +606,7 @@ def str_to_fp(path):
     return path
 
 def walk_generator(
-    path,
+    path='.',
     callback_exclusion=None,
     callback_verbose=None,
     exclude_directories=None,

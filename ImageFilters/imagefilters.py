@@ -10,12 +10,26 @@ KERNEL_EDGE_DETECTION_H = [
     [-2, 0, 2],
     [-2, 0, 2],
 ]
+KERNEL_EDGE_DETECTION_V = [
+    [-2, -2, 2],
+    [0, 0, 0],
+    [2, 2, 2],
+]
 def index_to_xy(index, width):
     (y, x) = divmod(index, width)
     return (x, y)
 
 def xy_to_index(x, y, width):
     return (y * width) + x
+
+def add(image_a, image_b):
+    pixels_a = image_a.getdata()
+    pixels_b = image_b.getdata()
+    assert len(pixels_a) == len(pixels_b)
+    pixels_c = [a + b for (a, b) in zip(pixels_a, pixels_b)]
+    new_image = PIL.Image.new('L', (image_a.size))
+    new_image.putdata(pixels_c, 1, 0)
+    return new_image
 
 def apply_filter(old_image, kernel):
     kernel_height = len(kernel)
@@ -49,6 +63,8 @@ def apply_filter(old_image, kernel):
             if subject_y < 0 or subject_y >= image_height:
                 continue
             for (kernel_x, kernel_entry) in enumerate(kernel_row):
+                if kernel_entry == 0:
+                    continue
                 subject_x = x - (kernel_center[0] - kernel_x)
                 if subject_x < 0 or subject_x >= image_width:
                     continue
@@ -61,8 +77,8 @@ def apply_filter(old_image, kernel):
         operation_avg = abs(operation_sum / operation_denominator)
         #n_operation_avg = int(map_range(operation_avg, lower, upper, 0, 255))
         if index % 4096 == 0:
-            print(x, y, operation_sum, operation_denominator, operation_avg)
-            #print(y, '/', image_height)
+            #print(x, y, operation_sum, operation_denominator, operation_avg)
+            print(y, '/', image_height)
         new_pixels[index] = operation_avg
 
     #print(new_pixels)
@@ -91,7 +107,10 @@ def map_range(x, old_low, old_high, new_low, new_high):
     return y
 
 if __name__ == '__main__':
-    i = PIL.Image.open('ear.jpg')
+    i = PIL.Image.open('icon.jpg')
     i = i.convert('L')
-    i = apply_filter(apply_filter(i, KERNEL_GAUSSIAN_BLUR), KERNEL_EDGE_DETECTION_H)
-    i.save('ear.png')
+    i = apply_filter(i, KERNEL_GAUSSIAN_BLUR)
+    a = apply_filter(i, KERNEL_EDGE_DETECTION_H)
+    b = apply_filter(i, KERNEL_EDGE_DETECTION_V)
+    i = add(a, b)
+    i.save('icon.png')

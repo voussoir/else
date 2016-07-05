@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>/new</title>
+</head>
+
+<body>
+    <div id="control_panel">
+        <input type="text" id="subreddit_field" placeholder="learnpython">
+        <button id="start_button" onclick="start()">Start</button>
+        <a id="browser_link"></a>
+        <button id="clear_button" onclick="clear_workspace()">Clear workspace</button>
+    </div>
+
+    <div id="workspace">
+    </div>
+</body>
+
+</html>
+
+
+<style>
+html
+{
+    background-color: #1b1c18;
+}
+body
+{
+    background-color: #272822;
+    margin-left:  10%;
+    margin-right: 10%;
+    padding: 5px;
+}
+#control_panel
+{
+    background-color: #284142;
+    padding: 5px;
+}
+#workspace
+{
+}
+
+a
+{
+    color: #ddd;
+    text-decoration: none;
+    font-family: sans-serif;
+}
+
+a:hover
+{
+    text-decoration: underline;
+}
+
+.submission
+{
+    padding: 10px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+
+    margin: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+
+    box-shadow: 5px 5px 10px 0px rgba(0,0,0,0.5);
+    background-color: #284142;
+}
+</style>
+
+
+<script type="text/javascript">
+/*
+    Thanks Joe Marini for the tab focus code
+    http://www.html5rocks.com/en/tutorials/pagevisibility/intro/
+*/
+
+var CHECK_DELAY = 30 * 1000;
+var WORKSPACE = document.getElementById("workspace");
+
+var HTTPClient = function()
+{
+    /* Thanks ttgagne http://stackoverflow.com/a/22076667 */
+    var asynchronous = true;
+    this.get = function(url, callback)
+    {
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function()
+        { 
+            if (request.readyState == 4 && request.status == 200)
+            {
+                callback(request.responseText);
+            }
+        }
+        request.open("GET", url, asynchronous);
+        //request.withCredentials = true;
+        request.send(null);
+    }
+}
+
+function apply_to_page(text)
+{
+    var j = JSON.parse(text);
+    var submissions = j["data"]["children"];
+    submissions.reverse();  // newest last
+    var new_items = 0;
+    for (var index = 0; index < submissions.length; index += 1)
+    {
+        var submission = submissions[index]["data"];
+        if (done_ids.has(submission["id"]))
+        {
+            continue;
+        }
+
+        done_ids.add(submission["id"]);
+
+        if (first_loop)
+        {
+            continue;
+        }
+
+        new_items += 1;
+        var div = document.createElement("div");
+        div.className = "submission";
+
+        var anchor = document.createElement("a");
+        anchor.innerHTML = "/r/" + submission["subreddit"] + " - " + submission["title"];
+        anchor.href = "https://reddit.com/r/" + submission["subreddit"] + "/comments/" + submission["id"];
+        anchor.target = "_blank";
+
+        var timestamp = document.createElement("span");
+        var submission_time = new Date(submission["created_utc"])
+        timestamp.innerHTML = "" + submission_time.getHours() + ":" + submission_time.getMinutes();
+
+        div.appendChild(anchor);
+        //WORKSPACE.insertBefore(div, WORKSPACE.firstChild);
+        WORKSPACE.appendChild(div);
+    }
+    console.log("+" + new_items);
+    if (new_items > 0 && !page_focused_cached)
+    {
+        unread_notification_count += new_items;
+        update_title();
+    }
+    first_loop = false;
+}
+
+function check_forever()
+{
+    clearTimeout(check_timer);
+    check_once();
+    check_timer = setTimeout(check_forever, CHECK_DELAY);
+}
+
+function check_once()
+{
+    console.log("checking");
+    if (subreddit == "")
+    {
+        console.log("no subreddit");
+        return;
+    }
+    var url = "https://api.reddit.com/r/" + subreddit + "/new.json";
+    session.get(url, apply_to_page);
+}
+
+function clear_workspace()
+{
+    while (WORKSPACE.children.length > 0)
+    {
+        WORKSPACE.removeChild(WORKSPACE.firstChild);
+    }
+}
+
+function on_focus_change()
+{
+    if (page_focused_fresh())
+    {
+        unread_notification_count = 0;
+        update_title();
+    }
+}
+
+function page_focused_fresh()
+{
+    var property = visibility_property();
+    if (!property)
+    {
+        page_focused_cached = true;
+        return true;
+    }
+    else
+    {
+        page_focused_cached = !document[property];
+    }
+    return page_focused_cached;
+}
+
+function start()
+{
+    console.log("start");
+    first_loop = true;
+    clear_workspace();
+    var field = document.getElementById("subreddit_field");
+    var text = field.value;
+    text = text.replace("/r/", "").replace("r/", "");
+    subreddit = text;
+    var link = document.getElementById("browser_link");
+    var url = "https://reddit.com/r/" + subreddit + "/new";
+    link.href = url;
+    link.innerHTML = url;
+    update_title();
+    check_forever();
+}
+
+function update_title()
+{
+    var title = subreddit + "/new";
+    if (unread_notification_count > 0)
+    {
+        title = "(" + unread_notification_count + ") " + title;
+    }
+    document.title = title;
+}
+
+function visibility_property()
+{
+    var prefixes = ["webkit","moz","ms","o"];
+    
+    if ("hidden" in document)
+    {
+        return "hidden";
+    }
+
+    for (var i = 0; i < prefixes.length; i++)
+    {
+        hidden_attribute = prefixes[i] + "Hidden";
+        if ((hidden_attribute) in document) 
+            return hidden_attribute;
+    }
+
+    return null;
+}
+
+var done_ids = new Set();
+var first_loop = true;
+
+var unread_notification_count = 0;
+var subreddit = "";
+var check_timer = null;
+
+var page_focused_cached;
+page_focused_fresh();
+
+var my_visibility_property = visibility_property();
+if (my_visibility_property)
+{
+      var my_event_name = my_visibility_property.replace(/[H|h]idden/,'') + 'visibilitychange';
+      document.addEventListener(my_event_name, on_focus_change);
+}
+
+var session = new HTTPClient();
+</script>

@@ -252,19 +252,23 @@ def regrid_frames():
 def unregister_line(line):
     variables['lines'].remove(line)
 
-t = tkinter.Tk()
+def main():
+    t = tkinter.Tk()
 
-frame_add = tkinter.Frame(t)
-entry_add = tkinter.Entry(frame_add)
-entry_add.grid(row=0, column=0)
-tkinter.Button(frame_add, text='+', command=create_line_frame).grid(row=0, column=1)
-frame_add.grid(row=0, column=0)
+    frame_add = tkinter.Frame(t)
+    entry_add = tkinter.Entry(frame_add)
+    entry_add.grid(row=0, column=0)
+    tkinter.Button(frame_add, text='+', command=create_line_frame).grid(row=0, column=1)
+    frame_add.grid(row=0, column=0)
 
-frame_delay = tkinter.Frame(t)
-tkinter.Label(frame_delay, text='Speed:')
-thread = threading.Thread(target=print_loop)
-thread.daemon=True
-thread.start()
+    frame_delay = tkinter.Frame(t)
+    tkinter.Label(frame_delay, text='Speed:')
+    thread = threading.Thread(target=print_loop)
+    thread.daemon=True
+    thread.start()
 
-create_line_frame([0])
-t.mainloop()
+    create_line_frame([0])
+    t.mainloop()
+
+if __name__ == '__main__':
+    main()

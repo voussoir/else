@@ -10,6 +10,7 @@ except:
     pass
 
 def close_enough(a, b):
+    #print(a, b)
     for (a_channel, b_channel) in zip(a, b):
         if abs(a_channel - b_channel) > close_enough_threshold:
             return False
@@ -17,15 +18,26 @@ def close_enough(a, b):
 
 def deletterbox(filename):
     image = Image.open(filename)
+    (base, ext) = os.path.splitext(filename)
     for x in range(4):
         image = trim_top(image)
-        image = image.rotate(90, expand=True)
-    (base, ext) = os.path.splitext(filename)
-    filename = base + 'X' + ext
+        print('size', image.size)
+        #image.save('%s_%d%s' % (base, x, ext))
+
+        rotated = image.rotate(90, expand=True)
+        # There is currently a bug in PIL which causes rotated images
+        # to have a 1 px black border on the top and left
+        if rotated.size != image.size:
+            rotated = rotated.crop([1, 1, rotated.size[0], rotated.size[1]])
+
+        image = rotated
+        print()
+    filename = base + '_crop' + ext
     image.save(filename, quality=100)
 
 def trim_top(image):
     letterbox_color = image.getpixel((0, 0))
+    print('letterbox color', letterbox_color)
     for y in range(image.size[1]):
         solid = True
         for x in range(image.size[0]):
@@ -33,12 +45,12 @@ def trim_top(image):
             #print(pixel)
             if not close_enough(letterbox_color, pixel):
                 solid = False
-                #print(y,pixel)
+                print('broke at', y,pixel)
                 break
         if not solid:
             break
     bounds = (0, y, image.size[0], image.size[1])
-    print(bounds)
+    print('bounds', bounds)
     image = image.crop(bounds)
     return image
 

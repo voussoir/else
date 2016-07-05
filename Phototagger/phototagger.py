@@ -1,3 +1,8 @@
+
+
+
+
+
 import datetime
 import os
 import PIL.Image
@@ -10,31 +15,44 @@ ID_LENGTH = 22
 VALID_TAG_CHARS = string.ascii_lowercase + string.digits + '_-'
 MAX_TAG_NAME_LENGTH = 32
 
-SQL_LASTID_COLUMNCOUNT = 2
-SQL_LASTID_TAB = 0
-SQL_LASTID_ID = 1
+SQL_LASTID_COLUMNS = [
+    'table',
+    'last_id',
+]
 
-SQL_PHOTO_COLUMNCOUNT = 8
-SQL_PHOTO_ID = 0
-SQL_PHOTO_FILEPATH = 1
-SQL_PHOTO_EXTENSION = 2
-SQL_PHOTO_WIDTH = 3
-SQL_PHOTO_HEIGHT = 4
-SQL_PHOTO_AREA = 5
-SQL_PHOTO_BYTES = 6
-SQL_PHOTO_CREATED = 7
+SQL_PHOTO_COLUMNS = [
+    'id',
+    'filepath',
+    'extension',
+    'width',
+    'height',
+    'ratio',
+    'area',
+    'bytes',
+    'created',
+]
 
-SQL_PHOTOTAG_COLUMNCOUNT = 2
-SQL_PHOTOTAG_PHOTOID = 0
-SQL_PHOTOTAG_TAGID = 1
+SQL_PHOTOTAG_COLUMNS = [
+    'photoid',
+    'tagid',
+]
 
-SQL_SYN_COLUMNCOUNT = 2
-SQL_SYN_NAME = 0
-SQL_SYN_MASTER = 1
+SQL_SYN_COLUMNS = [
+    'name',
+    'master',
+]
 
-SQL_TAG_COLUMNCOUNT = 2
-SQL_TAG_ID = 0
-SQL_TAG_NAME = 1
+SQL_TAG_COLUMNS = [
+    'id',
+    'name',
+]
+
+SQL_LASTID = {key:index for (index, key) in enumerate(SQL_LASTID_COLUMNS)}
+SQL_PHOTO = {key:index for (index, key) in enumerate(SQL_PHOTO_COLUMNS)}
+SQL_PHOTOTAG = {key:index for (index, key) in enumerate(SQL_PHOTOTAG_COLUMNS)}
+SQL_SYN = {key:index for (index, key) in enumerate(SQL_SYN_COLUMNS)}
+SQL_TAG = {key:index for (index, key) in enumerate(SQL_TAG_COLUMNS)}
+
 
 DB_INIT = '''
 CREATE TABLE IF NOT EXISTS photos(
@@ -43,6 +61,7 @@ CREATE TABLE IF NOT EXISTS photos(
     extension TEXT,
     width INT,
     height INT,
+    ratio REAL,
     area INT,
     bytes INT,
     created INT
@@ -50,6 +69,10 @@ CREATE TABLE IF NOT EXISTS photos(
 CREATE TABLE IF NOT EXISTS tags(
     id TEXT,
     name TEXT
+    );
+CREATE TABLE IF NOT EXISTS albums(
+    albumid TEXT,
+    photoid TEXT
     );
 CREATE TABLE IF NOT EXISTS photo_tag_rel(
     photoid TEXT,
@@ -75,15 +98,6 @@ CREATE INDEX IF NOT EXISTS index_tagrel_tagid on photo_tag_rel(tagid);
 
 CREATE INDEX IF NOT EXISTS index_tagsyn_name on tag_synonyms(name);
 '''
-
-def assert_lower(*args):
-    previous = args[0]
-    for element in args[1:]:
-        if element is None:
-            continue
-        if element < previous:
-            raise ValueError('Min and Max out of order')
-        previous = element
 
 def basex(number, base, alphabet='0123456789abcdefghijklmnopqrstuvwxyz'):
     '''
@@ -131,12 +145,8 @@ def is_xor(*args):
     '''
     return [bool(a) for a in args].count(True) == 1
 
-def min_max_query_builder(name, sign, value):
-    if value is None:
-        return
-    value = str(int(value))
-    name = normalize_tagname(name)
-    return ' '.join([name, sign, value])
+def min_max_query_builder(name, comparator, value):
+    return ' '.join([name, comparator, value])
 
 def normalize_tagname(tagname):
     '''
@@ -207,6 +217,9 @@ class PhotoDB:
         photos. Photos may be selected by which tags they contain.
         Entries contain a unique ID and a name.
 
+    albums:
+        Rows represent the inclusion of a photo in an album
+
     photo_tag_rel:
         Rows represent a Photo's ownership of a particular Tag.
 
@@ -253,8 +266,6 @@ class PhotoDB:
         Raises NoSuchTag and NoSuchPhoto as appropriate.
         '''
         tag = self.get_tag(tagid=tagid, tagname=tagname, resolve_synonyms=True)
-        if tag is None:
-            raise_nosuchtag(tagid=tagid, tagname=tagname)
 
         self.cur.execute('SELECT * FROM photo_tag_rel WHERE photoid == ? AND tagid == ?', [photoid, tag.id])
         if self.cur.fetchone() is not None:
@@ -293,7 +304,7 @@ class PhotoDB:
         temp_cur = self.sql.cursor()
         temp_cur.execute('SELECT * FROM photo_tag_rel WHERE tagid == ?', [oldtag.id])
         for relationship in fetch_generator(temp_cur):
-            photoid = relationship[SQL_PHOTOTAG_PHOTOID]
+            photoid = relationship[SQL_PHOTOTAG['photoid']]
             self.cur.execute('SELECT * FROM photo_tag_rel WHERE tagid == ?', [mastertag.id])
             if self.cur.fetchone() is not None:
                 continue
@@ -305,6 +316,48 @@ class PhotoDB:
         
         # Enjoy your new life as a monk.
         self.new_tag_synonym(oldtag.name, mastertag.name, commit=False)
+        self.sql.commit()
+
+    def delete_photo(self, photoid):
+        '''
+        Delete a photo and its relation to any tags and albums.
+        '''
+        photo = self.get_photo_by_id(photoid)
+        if photo is None:
+            raise NoSuchPhoto(photoid)
+        self.cur.execute('DELETE FROM photos WHERE id == ?', [photoid])
+        self.cur.execute('DELETE FROM photo_tag_rel WHERE photoid == ?', [photoid])
+        self.sql.commit()
+
+    def delete_tag(self, tagid=None, tagname=None):
+        '''
+        Delete a tag, its synonyms, and its relation to any photos.
+        '''
+
+        tag = self.get_tag(tagid=tagid, tagname=tagname, resolve_synonyms=False)
+
+        if tag is None:
+            message = 'Is it a synonym?'
+            raise_nosuchtag(tagid=tagid, tagname=tagname, comment=message)
+
+        self.cur.execute('DELETE FROM tags WHERE id == ?', [tag.id])
+        self.cur.execute('DELETE FROM photo_tag_rel WHERE tagid == ?', [tag.id])
+        self.cur.execute('DELETE FROM tag_synonyms WHERE mastername == ?', [tag.name])
+        self.sql.commit()
+
+    def delete_tag_synonym(self, tagname):
+        '''
+        Delete a tag synonym.
+        This will have no effect on photos or other synonyms because
+        they always resolve to the master tag before application.
+        '''
+        tagname = normalize_tagname(tagname)
+        self.cur.execute('SELECT * FROM tag_synonyms WHERE name == ?', [tagname])
+        fetch = self.cur.fetchone()
+        if fetch is None:
+            raise NoSuchSynonym(tagname)
+
+        self.cur.execute('DELETE FROM tag_synonyms WHERE name == ?', [tagname])
         self.sql.commit()
 
     def generate_id(self, table):
@@ -330,7 +383,7 @@ class PhotoDB:
                 new_id = 1
             else:
                 # Use database value
-                new_id = int(fetch[SQL_LASTID_ID]) + 1
+                new_id = int(fetch[SQL_LASTID['last_id']]) + 1
                 do_update = True
                 
         new_id_s = str(new_id).rjust(self.id_length, '0')
@@ -340,6 +393,10 @@ class PhotoDB:
             self.cur.execute('INSERT INTO id_numbers VALUES(?, ?)', [table, new_id_s])
         self._last_ids[table] = new_id
         return new_id_s
+
+    @not_implemented
+    def get_album_by_id(self, albumid):
+        return
 
     def get_photo_by_id(self, photoid):
         '''
@@ -433,30 +490,99 @@ class PhotoDB:
                 If False, Photos need only comply with the `tag_musts`.
                 If True, Photos need to comply with both `tag_musts` and `tag_mays`.
         '''
+        maximums = {key:int(val) for (key, val) in maximums.items()}
+        minimums = {key:int(val) for (key, val) in minimums.items()}
+
+        # Raise for cases where the minimum > maximum
+        for (maxkey, maxval) in maximums.items():
+            if maxkey not in minimums:
+                continue
+            minval = minimums[maxkey]
+            if minval > maxval:
+                raise ValueError('Impossible min-max for %s' % maxkey)
+
         conditions = []
-        minmaxers = {'<=':maximums, '>=': minimums}
+        minmaxers = {'<=': maximums, '>=': minimums}
+
+        # Convert the min-max parameters into query strings
         for (comparator, minmaxer) in minmaxers.items():
             for (field, value) in minmaxer.items():
                 if field not in Photo.int_properties:
                     raise ValueError('Unknown Photo property: %s' % field)
+
+                value = str(value)
                 query = min_max_query_builder(field, comparator, value)
                 conditions.append(query)
+
         if extension is not None:
             if isinstance(extension, str):
                 extension = [extension]
-            # Don't inject me bro
+
+            # Normalize to prevent injections
             extension = [normalize_tagname(e) for e in extension]
             extension = ['extension == "%s"' % e for e in extension]
             extension = ' OR '.join(extension)
             extension = '(%s)' % extension
             conditions.append(extension)
-        conditions = [query for query in conditions if query is not None]
+
+        def setify(l):
+            return set(self.get_tag_by_name(t) for t in l) if l else set()
+        tag_musts = setify(tag_musts)
+        tag_mays = setify(tag_mays)
+        tag_forbids = setify(tag_forbids)
+
+        base = '%s EXISTS (SELECT 1 FROM photo_tag_rel WHERE photo_tag_rel.photoid == photos.id AND photo_tag_rel.tagid %s %s)'
+        for tag in tag_musts:
+            query = base % ('', '==', '"%s"' % tag.id)
+            conditions.append(query)
+
+        if tag_forbid_unspecified and len(tag_mays) > 0:
+            acceptable = tag_mays.union(tag_musts)
+            acceptable = ['"%s"' % t.id for t in acceptable]
+            acceptable = ', '.join(acceptable)
+            query = base % ('NOT', 'NOT IN', '(%s)' % acceptable)
+            conditions.append(query)
+
+        for tag in tag_forbids:
+            query = base % ('NOT', '==', '"%s"' % tag.id)
+            conditions.append(query)
+
         if len(conditions) == 0:
             raise ValueError('No search query provided')
-        conditions = ' AND '.join(conditions)
-        print(conditions)
 
-        query = 'SELECT * FROM photos WHERE %s' % conditions
+        conditions = [query for query in conditions if query is not None]
+        conditions = ['(%s)' % c for c in conditions]
+        conditions = ' AND '.join(conditions)
+        conditions = 'WHERE %s' % conditions
+
+
+        query = 'SELECT * FROM photos %s' % conditions
+        print(query)
+        temp_cur = self.sql.cursor()
+        temp_cur.execute(query)
+        acceptable_tags = tag_musts.union(tag_mays)
+        while True:
+            fetch = temp_cur.fetchone()
+            if fetch is None:
+                break
+
+            photo = self.tuple_to_photo(fetch)
+
+            # if any(forbid in photo.tags for forbid in tag_forbids):
+            #     print('Forbidden')
+            #     continue
+
+            # if tag_forbid_unspecified:
+            #     if any(tag not in acceptable_tags for tag in photo.tags):
+            #         print('Forbid unspecified')
+            #         continue
+
+            # if any(must not in photo.tags for must in tag_musts):
+            #     print('No must')
+            #     continue
+
+            yield photo
+
 
     def get_tag(self, tagid=None, tagname=None, resolve_synonyms=True):
         '''
@@ -469,13 +595,13 @@ class PhotoDB:
             return self.get_tag_by_id(tagid)
         elif tagname is not None:
             return self.get_tag_by_name(tagname, resolve_synonyms=resolve_synonyms)
-        return None
+        raise_nosuchtag(tagid=tagid, tagname=tagname)
 
     def get_tag_by_id(self, tagid):
         self.cur.execute('SELECT * FROM tags WHERE id == ?', [tagid])
         tag = self.cur.fetchone()
         if tag is None:
-            return None
+            return raise_nosuchtag(tagid=tagid)
         tag = self.tuple_to_tag(tag)
         return tag
 
@@ -489,14 +615,14 @@ class PhotoDB:
             self.cur.execute('SELECT * FROM tag_synonyms WHERE name == ?', [tagname])
             fetch = self.cur.fetchone()
             if fetch is not None:
-                mastertagname = fetch[SQL_SYN_MASTER]
+                mastertagname = fetch[SQL_SYN['master']]
                 tag = self.get_tag_by_name(mastertagname)
                 return tag
 
         self.cur.execute('SELECT * FROM tags WHERE name == ?', [tagname])
         fetch = self.cur.fetchone()
         if fetch is None:
-            return None
+            raise_nosuchtag(tagname=tagname)
 
         tag = self.tuple_to_tag(fetch)
         return tag
@@ -508,14 +634,14 @@ class PhotoDB:
         temp_cur = self.sql.cursor()
         temp_cur.execute('SELECT * FROM photo_tag_rel WHERE photoid == ?', [photoid])
         tags = fetch_generator(temp_cur)
-        tagobjects = []
+        tagobjects = set()
         for tag in tags:
-            tagid = tag[SQL_PHOTOTAG_TAGID]
+            tagid = tag[SQL_PHOTOTAG['tagid']]
             tagobj = self.get_tag_by_id(tagid)
-            tagobjects.append(tagobj)
+            tagobjects.add(tagobj)
         return tagobjects
 
-    def new_photo(self, filename, tags=[], allow_duplicates=False):
+    def new_photo(self, filename, tags=None, allow_duplicates=False):
         '''
         Given a filepath, determine its attributes and create a new Photo object in the
         database. Tags may be applied now or later.
@@ -539,22 +665,26 @@ class PhotoDB:
         extension = normalize_tagname(extension)
         (width, height) = image.size
         area = width * height
+        ratio = width / height
         bytes = os.path.getsize(filename)
         created = int(getnow())
         photoid = self.generate_id('photos')
 
-        data = [None] * SQL_PHOTO_COLUMNCOUNT
-        data[SQL_PHOTO_ID] = photoid
-        data[SQL_PHOTO_FILEPATH] = filename
-        data[SQL_PHOTO_EXTENSION] = extension
-        data[SQL_PHOTO_WIDTH] = width
-        data[SQL_PHOTO_HEIGHT] = height
-        data[SQL_PHOTO_AREA] = area
-        data[SQL_PHOTO_BYTES] = bytes
-        data[SQL_PHOTO_CREATED] = created
+        data = [None] * len(SQL_PHOTO_COLUMNS)
+        data[SQL_PHOTO['id']] = photoid
+        data[SQL_PHOTO['filepath']] = filename
+        data[SQL_PHOTO['extension']] = extension
+        data[SQL_PHOTO['width']] = width
+        data[SQL_PHOTO['height']] = height
+        data[SQL_PHOTO['area']] = area
+        data[SQL_PHOTO['ratio']] = ratio
+        data[SQL_PHOTO['bytes']] = bytes
+        data[SQL_PHOTO['created']] = created
         photo = self.tuple_to_photo(data)
 
-        self.cur.execute('INSERT INTO photos VALUES(?, ?, ?, ?, ?, ?, ?, ?)', data)
+        self.cur.execute('INSERT INTO photos VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', data)
+
+        tags = tags or []
         for tag in tags:
             try:
                 self.apply_photo_tag(photoid, tagname=tag, commit=False)
@@ -570,8 +700,11 @@ class PhotoDB:
         Register a new tag in the database and return the Tag object.
         '''
         tagname = normalize_tagname(tagname)
-        if self.get_tag_by_name(tagname) is not None:
-            raise TagExists(tagname)
+        try:
+            self.get_tag_by_name(tagname)
+            TagExists(tagname)
+        except NoSuchTag:
+            pass
         tagid = self.generate_id('tags')
         self.cur.execute('INSERT INTO tags VALUES(?, ?)', [tagid, tagname])
         self.sql.commit()
@@ -613,49 +746,8 @@ class PhotoDB:
         exe = self.cur.execute
         exe('SELECT * FROM photo_tag_rel WHERE photoid == ? AND tagid == ?', [photoid, tag.id])
         fetch = self.cur.fetchone()
-        return fetch is not None
-
-    def remove_photo(self, photoid):
-        '''
-        Delete a photo and its relation to any tags.
-        '''
-        photo = self.get_photo_by_id(photoid)
-        if photo is None:
-            raise NoSuchPhoto(photoid)
-        self.cur.execute('DELETE FROM photos WHERE id == ?', [photoid])
-        self.cur.execute('DELETE FROM photo_tag_rel WHERE photoid == ?', [photoid])
-        self.sql.commit()
-
-    def remove_tag(self, tagid=None, tagname=None):
-        '''
-        Delete a tag, its synonyms, and its relation to any photos.
-        '''
-
-        tag = self.get_tag(tagid=tagid, tagname=tagname, resolve_synonyms=False)
-
-        if tag is None:
-            message = 'Is it a synonym?'
-            raise_nosuchtag(tagid=tagid, tagname=tagname, comment=message)
-
-        self.cur.execute('DELETE FROM tags WHERE id == ?', [tag.id])
-        self.cur.execute('DELETE FROM photo_tag_rel WHERE tagid == ?', [tag.id])
-        self.cur.execute('DELETE FROM tag_synonyms WHERE mastername == ?', [tag.name])
-        self.sql.commit()
-
-    def remove_tag_synonym(self, tagname):
-        '''
-        Delete a tag synonym.
-        This will have no effect on photos or other synonyms because
-        they always resolve to the master tag before application.
-        '''
-        tagname = normalize_tagname(tagname)
-        self.cur.execute('SELECT * FROM tag_synonyms WHERE name == ?', [tagname])
-        fetch = self.cur.fetchone()
-        if fetch is None:
-            raise NoSuchSynonym(tagname)
-
-        self.cur.execute('DELETE FROM tag_synonyms WHERE name == ?', [tagname])
-        self.sql.commit()
+        has_tag = fetch is not None
+        return has_tag
 
     @not_implemented
     def rename_tag(self, tagname, newname, apply_to_synonyms):
@@ -666,19 +758,18 @@ class PhotoDB:
         Given a tuple like the ones from an sqlite query,
         create a Photo object.
         '''
-        photoid = tu[SQL_PHOTO_ID]
+        photoid = tu[SQL_PHOTO['id']]
         tags = self.get_tags_by_photo(photoid)
 
         photo = Photo(
             photodb = self,
             photoid = photoid,
-            filepath = tu[SQL_PHOTO_FILEPATH],
-            extension = tu[SQL_PHOTO_EXTENSION],
-            width = tu[SQL_PHOTO_WIDTH],
-            height = tu[SQL_PHOTO_HEIGHT],
-            area = tu[SQL_PHOTO_AREA],
-            created = tu[SQL_PHOTO_CREATED],
-            bytes = tu[SQL_PHOTO_BYTES],
+            filepath = tu[SQL_PHOTO['filepath']],
+            extension = tu[SQL_PHOTO['extension']],
+            width = tu[SQL_PHOTO['width']],
+            height = tu[SQL_PHOTO['height']],
+            created = tu[SQL_PHOTO['created']],
+            bytes = tu[SQL_PHOTO['bytes']],
             tags = tags,
             )
         return photo
@@ -690,8 +781,8 @@ class PhotoDB:
         '''
         tag = Tag(
             photodb = self,
-            tagid = tu[SQL_TAG_ID],
-            name = tu[SQL_TAG_NAME]
+            tagid = tu[SQL_TAG['id']],
+            name = tu[SQL_TAG['name']]
             )
         return tag
 
@@ -710,20 +801,23 @@ class Photo:
         extension,
         width,
         height,
-        area,
         bytes,
         created,
-        tags=[],
+        tags=None,
         ):
+        if tags is None:
+            tags = []
+
         self.photodb = photodb
         self.id = photoid
         self.filepath = filepath
         self.extension = extension
-        self.width = width
-        self.height = height
-        self.area = area
-        self.bytes = bytes
-        self.created = created
+        self.width = int(width)
+        self.height = int(height)
+        self.ratio = self.width / self.height
+        self.area = self.width * self.height
+        self.bytes = int(bytes)
+        self.created = int(created)
         self.tags = tags
 
     def __eq__(self, other):
@@ -741,8 +835,6 @@ class Photo:
             'extension={extension}, ',
             'width={width}, ',
             'height={height}, ',
-            'area={area}, ',
-            'bytes={bytes} ',
             'created={created})'
             )
         r = ''.join(r)
