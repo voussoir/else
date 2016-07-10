@@ -526,11 +526,32 @@ def get_path_casing(path):
     '''
     p = str_to_fp(path)
     path = p.path
-    path = glob.escape(path)
     (drive, subpath) = os.path.splitdrive(path)
-    pattern = ["%s[%s]" % (piece[:-1], piece[-1]) for piece in subpath.split(os.sep)[1:]]
+    subpath = subpath.lstrip(os.sep)
+
+    def patternize(piece):
+        '''
+        Create a pattern like "[u]ser" from "user", forcing glob to look up the
+        correct path name, and guaranteeing that the only result will be the correct path.
+
+        Special cases are:
+            !, because in glob syntax, [!x] tells glob to look for paths that don't contain
+                "x". [!] is invalid syntax, so we pick the first non-! character to put
+                in the brackets.
+            [, because this starts a capture group
+        '''
+        piece = glob.escape(piece)
+        for character in piece:
+            if character not in '!':
+                replacement = '[%s]' % character
+                piece = piece.replace(character, replacement, 1)
+                break
+        return piece
+
+    pattern = [patternize(piece) for piece in subpath.split(os.sep)]
     pattern = os.sep.join(pattern)
     pattern = drive.upper() + os.sep + pattern
+    print(pattern)
     try:
         return str_to_fp(glob.glob(pattern)[0])
     except IndexError:

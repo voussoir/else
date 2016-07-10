@@ -7,7 +7,7 @@
 
 <body>
     <div id="control_panel">
-        <input type="text" id="subreddit_field" placeholder="learnpython">
+        <input type="text" id="subreddit_field" placeholder="/r/learnpython">
         <button id="start_button" onclick="start()">Start</button>
         <a id="browser_link"></a>
         <button id="clear_button" onclick="clear_workspace()">Clear workspace</button>
@@ -32,14 +32,14 @@ body
     margin-right: 10%;
     padding: 5px;
 }
+
+
 #control_panel
 {
     background-color: #284142;
     padding: 5px;
 }
-#workspace
-{
-}
+
 
 a
 {
@@ -53,11 +53,26 @@ a:hover
     text-decoration: underline;
 }
 
+.delete_button
+{
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    height: 100%;
+    width: 5%;
+
+    border: 0px;
+    background-color: #b53030;
+}
+
 .submission
 {
+    position: relative;
+
     padding: 10px;
     padding-top: 20px;
     padding-bottom: 20px;
+    padding-right: 6%; /*for the delete button*/
 
     margin: 10px;
     margin-top: 20px;
@@ -76,7 +91,20 @@ a:hover
 */
 
 var CHECK_DELAY = 30 * 1000;
+var CONTROL_PANEL = document.getElementById("control_panel");
+CONTROL_PANEL.default_color = CONTROL_PANEL.style.backgroundColor;
 var WORKSPACE = document.getElementById("workspace");
+
+var id_cache = [];
+var id_cache_size = 20;
+
+var first_loop = true;
+var unread_notification_count = 0;
+var subreddit = "";
+var check_timer = null;
+
+var page_focused_cached;
+
 
 var HTTPClient = function()
 {
@@ -86,10 +114,20 @@ var HTTPClient = function()
     {
         var request = new XMLHttpRequest();
         request.onreadystatechange = function()
-        { 
-            if (request.readyState == 4 && request.status == 200)
+        {
+            // console.log(request.readyState);
+            // console.log(request.status);
+            if (request.readyState == 4)
             {
-                callback(request.responseText);
+                if (request.status == 200)
+                {
+                    CONTROL_PANEL.style.backgroundColor = CONTROL_PANEL.default_color;
+                    callback(request.responseText);
+                }
+                else
+                {
+                    CONTROL_PANEL.style.backgroundColor = "#f00";
+                }
             }
         }
         request.open("GET", url, asynchronous);
@@ -98,21 +136,21 @@ var HTTPClient = function()
     }
 }
 
-function apply_to_page(text)
+function apply_to_page(response_json)
 {
-    var j = JSON.parse(text);
+    var j = JSON.parse(response_json);
     var submissions = j["data"]["children"];
     submissions.reverse();  // newest last
     var new_items = 0;
     for (var index = 0; index < submissions.length; index += 1)
     {
         var submission = submissions[index]["data"];
-        if (done_ids.has(submission["id"]))
+        if (id_cache.includes(submission["id"]))
         {
             continue;
         }
 
-        done_ids.add(submission["id"]);
+        id_cache.push(submission["id"]);
 
         if (first_loop)
         {
@@ -128,11 +166,21 @@ function apply_to_page(text)
         anchor.href = "https://reddit.com/r/" + submission["subreddit"] + "/comments/" + submission["id"];
         anchor.target = "_blank";
 
+        var delete_button = document.createElement("button")
+        delete_button.className = "delete_button";
+        delete_button.div = div;
+        delete_button.innerHTML = "X";
+        delete_button.onclick = function()
+        {
+            this.div.parentElement.removeChild(this.div);
+        }
+
         var timestamp = document.createElement("span");
         var submission_time = new Date(submission["created_utc"])
         timestamp.innerHTML = "" + submission_time.getHours() + ":" + submission_time.getMinutes();
 
         div.appendChild(anchor);
+        div.appendChild(delete_button);
         //WORKSPACE.insertBefore(div, WORKSPACE.firstChild);
         WORKSPACE.appendChild(div);
     }
@@ -142,6 +190,12 @@ function apply_to_page(text)
         unread_notification_count += new_items;
         update_title();
     }
+
+    while (id_cache.length < id_cache_size)
+    {
+        id_cache.shift();
+    }
+
     first_loop = false;
 }
 
@@ -160,7 +214,7 @@ function check_once()
         console.log("no subreddit");
         return;
     }
-    var url = "https://api.reddit.com/r/" + subreddit + "/new.json";
+    var url = "https://api.reddit.com" + subreddit + "/new.json";
     session.get(url, apply_to_page);
 }
 
@@ -196,6 +250,18 @@ function page_focused_fresh()
     return page_focused_cached;
 }
 
+function sort_submission_comparator(submission_1, submission_2)
+{
+    created_1 = submission_1["created_utc"];
+    created_2 = submission_2["created_utc"];
+
+    if (created_1 < created_2)
+        {return -1;}
+    if (created_1 > created_2)
+        {return 1;}
+    return 0;
+}
+
 function start()
 {
     console.log("start");
@@ -203,10 +269,14 @@ function start()
     clear_workspace();
     var field = document.getElementById("subreddit_field");
     var text = field.value;
-    text = text.replace("/r/", "").replace("r/", "");
+    text = text.replace("/u/", "/user/");
+    if (text.indexOf("/") == -1)
+    {
+        text = "/r/" + text;
+    }
     subreddit = text;
     var link = document.getElementById("browser_link");
-    var url = "https://reddit.com/r/" + subreddit + "/new";
+    var url = "https://reddit.com" + subreddit + "/new";
     link.href = url;
     link.innerHTML = url;
     update_title();
@@ -242,14 +312,7 @@ function visibility_property()
     return null;
 }
 
-var done_ids = new Set();
-var first_loop = true;
 
-var unread_notification_count = 0;
-var subreddit = "";
-var check_timer = null;
-
-var page_focused_cached;
 page_focused_fresh();
 
 var my_visibility_property = visibility_property();

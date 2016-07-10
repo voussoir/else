@@ -5,12 +5,8 @@ import urllib.parse
 import random
 import sys
 
-sys.path.append('C:\\git\\else\\Bytestring')
-import bytestring
-
-sys.path.append('C:\\git\\else\\Ratelimiter')
-import ratelimiter
-
+sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
+sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
 
 f = open('favicon.png', 'rb')
 FAVI = f.read()
@@ -60,7 +56,14 @@ class Path:
         else:
             # Diamond emoji, because there's not one for files.
             icon = '\U0001F48E'
-        return '<a href="{full}">{icon} {display}</a>'.format(full=self.path, icon=icon, display=display_name)
+
+        quoted_path = urllib.parse.quote(self.path)
+        a = '<a href="{full}">{icon} {display}</a>'.format(
+            full=quoted_path,
+            icon=icon,
+            display=display_name,
+            )
+        return a
 
     @property
     def basename(self):
@@ -69,6 +72,10 @@ class Path:
     @property
     def is_dir(self):
         return os.path.isdir(self.os_path)
+
+    @property
+    def is_file(self):
+        return os.path.isfile(self.os_path)
 
     @property
     def os_path(self):
@@ -96,7 +103,11 @@ class Path:
         form = '<tr style="background-color:#{bg}"><td>{anchor}</td><td>{size}</td></tr>'
         bg = 'ddd' if shaded else 'fff';
         size = bytestring.bytestring(self.size) if self.size != -1 else ''
-        row = form.format(bg=bg, anchor=self.anchor(display_name=display_name), size=size)
+        row = form.format(
+            bg=bg,
+            anchor=self.anchor(display_name=display_name),
+            size=size,
+            )
         return row
 
 
@@ -124,12 +135,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         #print(dir(self))
-        path = self.path.lower()
-        path = urllib.parse.unquote(path).rstrip('/')
-
-        error = path_validation(path)
-        if error:
-            self.send_error(*error)
+        path = normalize_path(self.path)
+        if self.send_path_validation_error(path):
             return
 
         path = Path(path)
@@ -139,10 +146,57 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if mime is not None:
             #print(mime)
             self.send_header('Content-type', mime)
-            self.end_headers()
+
+        if path.is_file:
+            self.send_header('Content-length', path.size)
 
         d = self.read_filebytes(path)
+        #print('write')
+        self.end_headers()
         self.write(d)
+
+    def do_HEAD(self):
+        path = normalize_path(self.path)
+        if self.send_path_validation_error(path):
+            return
+
+        path = Path(path)
+        self.send_response(200)
+
+        if path.is_dir:
+            mime = 'text/html'
+        else:
+            mime = mimetypes.guess_type(path.path)[0]
+
+        if mime is not None:
+            self.send_header('Content-type', mime)
+
+        if path.is_file:
+            self.send_header('Content-length', path.size)
+
+        self.end_headers()
+
+    def path_validation(self, path):
+        path = path.lstrip('/')
+        absolute_path = os.path.join(CWD, path)
+        absolute_path = os.path.abspath(absolute_path)
+        path = absolute_path.replace(CWD, '')
+        path = path.lstrip('/')
+        path = path.replace('\\', '/')
+        #if '..' in path:
+        #    return (403, 'I\'m not going to play games with you.')
+        #print(path)
+        print(path)
+        if not any(path.startswith(okay) for okay in OKAY_PATHS):
+            self.send_error(403, 'Stop that!')
+            return
+
+    def send_path_validation_error(self, path):
+        error = self.path_validation(path)
+        if error:
+            self.send_error(*error)
+            return True
+        return False
 
     # def do_POST(self):
     #     path = self.path.lower()
@@ -181,32 +235,34 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     #     self.write('Thanks')
 
 def generate_opendir(path):
-    print('Listdir:', path)
+    #print('Listdir:', path)
     items = os.listdir(path.relative_path)
     items = [os.path.join(path.relative_path, f) for f in items]
+
+    # This places directories above files, each ordered alphabetically
+    items.sort(key=str.lower)
     directories = []
     files = []
     for item in items:
-        #item = item.lstrip('/')
         if os.path.isdir(item):
             directories.append(item)
         else:
             files.append(item)
-    directories.sort(key=str.lower)
-    files.sort(key=str.lower)
-    files = directories + files
-    #print(files)
-    files = [Path(f) for f in files]
+
+    items = directories + files
+    items = [Path(f) for f in items]
     entries = []
     if not any(okay == path.path for okay in OKAY_PATHS):
-        # If the path actually equals a okay_path, then we shouldn't
-        # let them step up because that would be outisde the okay area.
+        # If the user is on one of the OKAY_PATHS, then he can't step up
+        # because that would be outside the OKAY area.
         entries.append(path.parent.table_row(display_name='up'))
+
     shaded = True
-    for f in files:
-        entry = f.table_row(shaded=shaded)
+    for item in items:
+        entry = item.table_row(shaded=shaded)
         entries.append(entry)
         shaded = not shaded
+
     entries = '\n'.join(entries)
     text = OPENDIR_TEMPLATE.format(entries=entries)
     return text
@@ -218,12 +274,11 @@ def generate_random_filename(original_filename='', length=8):
     identifier = '{:x}'.format(bits).rjust(length, '0')
     return identifier
 
-def path_validation(path):
-    if '..' in path:
-        return (403, 'I\'m not going to play games with you.')
-    if not any(path.startswith(okay) for okay in OKAY_PATHS):
-        self.send_error(403, 'Stop that!')
-        return
+def normalize_path(path):
+    #path = path.lower()
+    path = urllib.parse.unquote(path).rstrip('/')
+    return path
+
 
 server = http.server.HTTPServer(('', 32768), RequestHandler)
 print('server starting')

@@ -80,9 +80,14 @@ measure:
 
     flags:
     -f | --fullscan:
-        When included, perform HEAD requests when a file's size is not known.
-        If this flag is not included, and some file's size is unkown, you will
-        receive a printed note.
+        When included, perform HEAD requests on all files to update their size.
+
+    -n | --new_only:
+        When included, perform HEAD requests only on files that haven't gotten one
+        yet.
+
+    If a file's size is not known by the time this operation completes, you will
+    receive a printed note.
 
 tree:
     Print the file / folder tree.
@@ -120,6 +125,7 @@ import requests
 import shutil
 import sqlite3
 ## ~tkinter
+import traceback
 import urllib.parse
 
 FILENAME_BADCHARS = '/\\:*?"<>|'
@@ -166,6 +172,7 @@ SKIPPABLE_FILETYPES = [
 '.tar',
 '.ttf',
 '.txt',
+'.wav',
 '.webm',
 '.wma',
 '.zip',
@@ -228,6 +235,11 @@ SQL_CONTENT_LENGTH = 2
 SQL_CONTENT_TYPE = 3
 SQL_DO_DOWNLOAD = 4
 
+
+UNMEASURED_WARNING = '''
+Note: %d files do not have a stored Content-Length.
+Run `measure` with `-f`|`--fullscan` or `-n`|`--new_only` to HEAD request those files.
+'''.strip()
 
 ## DOWNLOADER ######################################################################################
 ##                                                                                                ##
@@ -293,6 +305,12 @@ class Generic:
             setattr(self, kwarg, kwargs[kwarg])
 
 
+class TreeExistingChild(Exception):
+    pass
+
+class TreeInvalidIdentifier(Exception):
+    pass
+
 class TreeNode:
     def __init__(self, identifier, data, parent=None):
         assert isinstance(identifier, str)
@@ -329,9 +347,9 @@ class TreeNode:
 
     def check_child_availability(self, identifier):
         if ':' in identifier:
-            raise Exception('Only roots may have a colon')
+            raise TreeInvalidIdentifier('Only roots may have a colon')
         if identifier in self.children:
-            raise Exception('Node %s already has child %s' % (self.identifier, identifier))
+            raise TreeExistingChild('Node %s already has child %s' % (self.identifier, identifier))
 
     def detach(self):
         del self.parent.children[self.identifier]
@@ -363,8 +381,11 @@ class TreeNode:
         for node in self.walk(customsort):
             print(node.abspath())
 
-    def sorted_children(self):
-        keys = sorted(self.children.keys())
+    def sorted_children(self, customsort=None):
+        if customsort:
+            keys = sorted(self.children.keys(), key=customsort)
+        else:
+            keys = sorted(self.children.keys())
         for key in keys:
             yield (key, self.children[key])
 
@@ -388,7 +409,7 @@ class Walker:
         if databasename is None or databasename == "":
             self.domain = url_to_filepath(walkurl)['root']
             databasename = self.domain + '.db'
-            databasename = databasename.replace(':', '')
+            databasename = databasename.replace(':', '#')
         self.databasename = databasename
 
         safeprint('Opening %s' % self.databasename)
@@ -451,6 +472,10 @@ class Walker:
         else:
             url = urllib.parse.urljoin(self.walkurl, url)
 
+        if url in self.seen_directories:
+            # We already picked this up at some point
+            return
+
         if not url.startswith(self.walkurl):
             # Don't follow external links or parent directory.
             safeprint('Skipping "%s" due to external url.' % url)
@@ -480,11 +505,14 @@ class Walker:
                 return
             raise
         content_type = head.headers.get('Content-Type', '?')
-
-        if content_type.startswith('text/html') and head.url.endswith('/'):
+        #print(content_type)
+        if content_type.startswith('text/html'):# and head.url.endswith('/'):
             # This is an index page, so extract links and queue them.
             response = do_get(url)
             hrefs = self.extract_hrefs(response)
+            # Just in case the URL we used is different than the real one,
+            # such as missing a trailing slash, add both.
+            self.seen_directories.add(url)
             self.seen_directories.add(head.url)
             added = 0
             for href in hrefs:
@@ -660,6 +688,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
     if is_new:
         cur.execute('INSERT INTO urls VALUES(?, ?, ?, ?, ?)', data)
     else:
+        print(url)
         command = '''
             UPDATE urls SET
             content_length = coalesce(?, content_length),
@@ -832,34 +861,37 @@ def list_basenames_argparse(args):
         outputfile=args.outputfile,
     )
 
-def measure(databasename, fullscan=False):
+def measure(databasename, fullscan=False, new_only=False):
     '''
     Given a database, print the sum of all Content-Lengths.
-    If `fullscan`, then URLs with no Content-Length will be
-    HEAD requested, and the result will be saved back into the file.
+    URLs will be HEAD requested if:
+        `new_only` is True and the file has no stored content length, or
+        `fullscan` is True and `new_only` is False
     '''
     if isinstance(fullscan, str):
         fullscan = bool(fullscan)
 
     totalsize = 0
     sql = sqlite3.connect(databasename)
-    cur1 = sql.cursor()
-    cur2 = sql.cursor()
-    cur2.execute('SELECT * FROM urls WHERE do_download == 1')
+    cur = sql.cursor()
+
+    if new_only:
+        cur.execute('SELECT * FROM urls WHERE do_download == 1 AND content_length IS NULL')
+    else:
+        cur.execute('SELECT * FROM urls WHERE do_download == 1')
+
+    items = cur.fetchall()
+
     filecount = 0
     unmeasured_file_count = 0
     try:
-        while True:
-            fetch = cur2.fetchone()
-            if fetch is None:
-                break
-
+        for fetch in items:
             size = fetch[SQL_CONTENT_LENGTH]
 
-            if fullscan:
+            if fullscan or new_only:
                 url = fetch[SQL_URL]
                 head = do_head(url, raise_for_status=False)
-                fetch = smart_insert(sql, cur1, head=head, commit=False)
+                fetch = smart_insert(sql, cur, head=head, commit=True)
                 size = fetch[SQL_CONTENT_LENGTH]
                 if size is None:
                     safeprint('"%s" is not revealing Content-Length' % url)
@@ -881,14 +913,14 @@ def measure(databasename, fullscan=False):
     totalsize_string = '{} ({:,} bytes) in {:,} files'.format(short_string, totalsize, filecount)
     print(totalsize_string)
     if unmeasured_file_count > 0:
-        print('Note: %d files do not have a stored Content-Length.' % unmeasured_file_count)
-        print('Run `measure` with `-f` or `--fullscan` to HEAD request those files.')
+        print(UNMEASURED_WARNING % unmeasured_file_count)
     return totalsize
 
 def measure_argparse(args):
     return measure(
         databasename=args.databasename,
         fullscan=args.fullscan,
+        new_only=args.new_only,
     )
 
 def remove_pattern(args):
@@ -913,9 +945,13 @@ def tree(databasename, output_filename=None):
 
     path_parts = url_to_filepath(items[0][SQL_URL])
     root_identifier = path_parts['root']
-    #print('Root', root_identifier)
+    print('Root', root_identifier)
     root_data = {'name': root_identifier, 'item_type': 'directory'}
-    tree = TreeNode(identifier=root_identifier, data=root_data)
+    root_identifier = root_identifier.replace(':', '')
+    tree = TreeNode(
+        identifier=root_identifier,
+        data=root_data
+        )
     node_map = {}
 
     unmeasured_file_count = 0
@@ -923,20 +959,27 @@ def tree(databasename, output_filename=None):
     for item in items:
         path = url_to_filepath(item[SQL_URL])
         scheme = path['scheme']
+
+        # I join and re-split because 'folder' may contain slashes of its own
+        # and I want to break all the pieces
         path = '\\'.join([path['root'], path['folder'], path['filename']])
         parts = path.split('\\')
+        #print(path)
         for (index, part) in enumerate(parts):
-            index += 1
-            this_path = '/'.join(parts[:index])
-            parent_path = '/'.join(parts[:index-1])
+            this_path = '/'.join(parts[:index + 1])
+            parent_path = '/'.join(parts[:index])
             #safeprint('this:' + this_path)
             #safeprint('parent:' + parent_path)
+
             #input()
             data = {
                 'name': part,
                 'url': scheme + '://' + this_path,
             }
-            if index == len(parts):
+            this_identifier = this_path.replace(':', '')
+            parent_identifier = parent_path.replace(':', '')
+
+            if (index + 1) == len(parts):
                 data['item_type'] = 'file'
                 if item[SQL_CONTENT_LENGTH]:
                     data['size'] = item[SQL_CONTENT_LENGTH]
@@ -948,29 +991,29 @@ def tree(databasename, output_filename=None):
 
 
             # Ensure this comment is in a node of its own
-            this_node = node_map.get(this_path, None)
+            this_node = node_map.get(this_identifier, None)
             if this_node:
                 # This ID was detected as a parent of a previous iteration
                 # Now we're actually filling it in.
                 this_node.data = data
             else:
-                this_node = TreeNode(this_path, data)
-                node_map[this_path] = this_node
+                this_node = TreeNode(this_identifier, data)
+                node_map[this_identifier] = this_node
 
             # Attach this node to the parent.
-            if parent_path == root_identifier:
+            if parent_identifier == root_identifier:
                 try:
                     tree.add_child(this_node)
-                except:
+                except TreeExistingChild:
                     pass
             else:
-                parent_node = node_map.get(parent_path, None)
+                parent_node = node_map.get(parent_identifier, None)
                 if not parent_node:
-                    parent_node = TreeNode(parent_path, data=None)
-                    node_map[parent_path] = parent_node
+                    parent_node = TreeNode(parent_identifier, data=None)
+                    node_map[parent_identifier] = parent_node
                 try:
                     parent_node.add_child(this_node)
-                except:
+                except TreeExistingChild:
                     pass
                 this_node.parent = parent_node
             #print(this_node.data)
@@ -997,7 +1040,7 @@ def tree(databasename, output_filename=None):
             if node.data['item_type'] == 'directory':
                 div_id = hashit(node.identifier, 16)
                 line = '<button onclick="collapse(\'{div_id}\')">{name} ({size})</button>'
-                line += '<div id="{div_id}">'
+                line += '<div id="{div_id}" style="display:none">'
                 line = line.format(
                     div_id=div_id,
                     name=node.data['name'],
@@ -1020,7 +1063,8 @@ def tree(databasename, output_filename=None):
             )
         write(line, outfile)
 
-        for (key, child) in node.sorted_children():
+        customsort = lambda x: (node.children[x].data['item_type'] == 'file', node.children[x].data['url'].lower())
+        for (key, child) in node.sorted_children(customsort=customsort):
             recursive_print_node(child, depth+1, outfile=outfile)
 
         if node.data['item_type'] == 'directory':
@@ -1030,19 +1074,22 @@ def tree(databasename, output_filename=None):
                 # This helps put some space between sibling directories
                 write('|   ' * (depth), outfile)
 
-    recursive_get_size(tree)
-    use_html = output_filename.lower().endswith('.html')
 
     if output_filename is not None:
         output_file = open(output_filename, 'w', encoding='utf-8')
+        use_html = output_filename.lower().endswith('.html')
+    else:
+        output_file = None
+        use_html = False
+
 
     if use_html:
         write(HTML_TREE_HEADER, outfile=output_file)
 
+    recursive_get_size(tree)
     recursive_print_node(tree, outfile=output_file)
     if unmeasured_file_count > 0:
-        write('Note: %d files do not have a stored Content-Length.' % unmeasured_file_count, outfile=output_file)
-        write('Run `measure` with `-f` or `--fullscan` to HEAD request those files.', outfile=output_file)
+        write(UNMEASURED_WARNING % unmeasured_file_count, outfile=output_file)
 
     if output_file is not None:
         output_file.close()
@@ -1091,6 +1138,7 @@ if __name__ == '__main__':
     p_measure = subparsers.add_parser('measure')
     p_measure.add_argument('databasename')
     p_measure.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
+    p_measure.add_argument('-n', '--new_only', dest='new_only', action='store_true')
     p_measure.set_defaults(func=measure_argparse)
 
     p_remove_pattern = subparsers.add_parser('remove_pattern')
