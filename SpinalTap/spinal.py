@@ -542,8 +542,9 @@ def get_path_casing(path):
         '''
         piece = glob.escape(piece)
         for character in piece:
-            if character not in '!':
+            if character not in '![]':
                 replacement = '[%s]' % character
+                #print(piece, character, replacement)
                 piece = piece.replace(character, replacement, 1)
                 break
         return piece
@@ -551,7 +552,7 @@ def get_path_casing(path):
     pattern = [patternize(piece) for piece in subpath.split(os.sep)]
     pattern = os.sep.join(pattern)
     pattern = drive.upper() + os.sep + pattern
-    print(pattern)
+    #print(pattern)
     try:
         return str_to_fp(glob.glob(pattern)[0])
     except IndexError:

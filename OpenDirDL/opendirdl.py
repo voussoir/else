@@ -11,10 +11,10 @@ The basics:
     > opendirdl remove_pattern "folder\.jpg"
    Note the percent-encoded string.
 3. Download the enabled files with
-    > opendirdl download database.db
+    > opendirdl download website.com.db
 
-Specifics:
 
+The specifics:
 digest:
     Recursively fetch directories and build a database of file URLs.
 
@@ -61,7 +61,7 @@ remove_pattern:
     > opendirdl remove_pattern website.com.db ".*"
 
 list_basenames:
-    List enabled URLs in order of their base filename. This makes it easier to
+    List Enabled URLs in order of their base filename. This makes it easier to
     find titles of interest in a directory that is very scattered or poorly
     organized.
 
@@ -83,11 +83,11 @@ measure:
         When included, perform HEAD requests on all files to update their size.
 
     -n | --new_only:
-        When included, perform HEAD requests only on files that haven't gotten one
-        yet.
+        When included, perform HEAD requests only on files that haven't gotten
+        one yet.
 
-    If a file's size is not known by the time this operation completes, you will
-    receive a printed note.
+    If a file's size is not known by the time this operation completes, you
+    will receive a printed note.
 
 tree:
     Print the file / folder tree.
@@ -100,8 +100,8 @@ tree:
         filenames contain special characters that crash Python, or are so long
         that the console becomes unreadable.
 
-        If the filename ends with ".html", the webpage will use collapsible
-        boxes rather than plain text.
+        If the filename ends with ".html", the created page will have
+        collapsible boxes rather than a plaintext diagram.
 '''
 
 
@@ -133,6 +133,8 @@ FILENAME_BADCHARS = '/\\:*?"<>|'
 TERMINAL_WIDTH = shutil.get_terminal_size().columns
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
+
+UNKNOWN_SIZE_STRING = '???'
 
 # When doing a basic scan, we will not send HEAD requests to URLs that end in these strings,
 # because they're probably files.
@@ -203,16 +205,29 @@ function collapse(id)
 {
     font-family: Consolas;
 }
+
 button
 {
     display: block;
 }
+
 div
 {
     padding: 10px;
     padding-left: 15px;
     margin-bottom: 10px;
     border: 1px solid #000;
+    box-shadow: 1px 1px 2px 0px rgba(0,0,0,0.3);
+}
+
+.directory_even
+{
+    background-color: #fff;
+}
+
+.directory_odd
+{
+    background-color: #eee;
 }
 </style>
 '''
@@ -224,7 +239,7 @@ CREATE TABLE IF NOT EXISTS urls(
     content_length INT,
     content_type TEXT,
     do_download INT
-    );
+);
 CREATE INDEX IF NOT EXISTS urlindex on urls(url);
 CREATE INDEX IF NOT EXISTS baseindex on urls(basename);
 CREATE INDEX IF NOT EXISTS sizeindex on urls(content_length);
@@ -238,165 +253,9 @@ SQL_DO_DOWNLOAD = 4
 
 UNMEASURED_WARNING = '''
 Note: %d files do not have a stored Content-Length.
-Run `measure` with `-f`|`--fullscan` or `-n`|`--new_only` to HEAD request those files.
+Run `measure` with `-f`|`--fullscan` or `-n`|`--new_only` to HEAD request
+those files.
 '''.strip()
-
-## DOWNLOADER ######################################################################################
-##                                                                                                ##
-class Downloader:
-    def __init__(self, databasename, outputdir=None, headers=None):
-        self.databasename = databasename
-        self.sql = sqlite3.connect(databasename)
-        self.cur = self.sql.cursor()
-
-        if outputdir is None or outputdir == "":
-            # This assumes that all URLs in the database are from the same domain.
-            # If they aren't, it's the user's fault.
-            self.cur.execute('SELECT url FROM urls LIMIT 1')
-            url = self.cur.fetchone()[0]
-            outputdir = url_to_filepath(url)['root']
-        self.outputdir = outputdir
-
-    def download(self, overwrite=False, bytespersecond=None):
-        overwrite = bool(overwrite)
-
-        self.cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY url')
-        while True:
-            fetch = self.cur.fetchone()
-            if fetch is None:
-                break
-            url = fetch[SQL_URL]
-
-            ''' Creating the permanent and temporary filenames '''
-            url_filepath = url_to_filepath(url)
-            # Ignore this value of `root`, because we might have a custom outputdir.
-            root = url_filepath['root']
-            folder = os.path.join(root, url_filepath['folder'])
-            os.makedirs(folder, exist_ok=True)
-            fullname = os.path.join(folder, url_filepath['filename'])
-            temporary_basename = hashit(url, 16) + '.oddltemporary'
-            temporary_fullname = os.path.join(folder, temporary_basename)
-
-            ''' Managing overwrite '''
-            if os.path.isfile(fullname):
-                if overwrite is True:
-                    os.remove(fullname)
-                else:
-                    safeprint('Skipping "%s". Use `--overwrite`' % fullname)
-                    continue
-
-            safeprint('Downloading "%s" as "%s"' % (fullname, temporary_basename))
-            filehandle = open(temporary_fullname, 'wb')
-            try:
-                download_file(url, filehandle, hookfunction=hook1, bytespersecond=bytespersecond)
-                os.rename(temporary_fullname, fullname)
-            except:
-                filehandle.close()
-                raise
-##                                                                                                ##
-## DOWNLOADER ######################################################################################
-
-
-## GENERIC #########################################################################################
-##                                                                                                ##
-class Generic:
-    def __init__(self, **kwargs):
-        for kwarg in kwargs:
-            setattr(self, kwarg, kwargs[kwarg])
-
-
-class TreeExistingChild(Exception):
-    pass
-
-class TreeInvalidIdentifier(Exception):
-    pass
-
-class TreeNode:
-    def __init__(self, identifier, data, parent=None):
-        assert isinstance(identifier, str)
-        assert '\\' not in identifier
-        self.identifier = identifier
-        self.data = data
-        self.parent = parent
-        self.children = {}
-
-    def __getitem__(self, key):
-        return self.children[key]
-
-    def __repr__(self):
-        return 'TreeNode %s' % self.abspath()
-
-    def abspath(self):
-        node = self
-        nodes = [node]
-        while node.parent is not None:
-            node = node.parent
-            nodes.append(node)
-        nodes.reverse()
-        nodes = [node.identifier for node in nodes]
-        return '\\'.join(nodes)
-
-    def add_child(self, other_node, overwrite_parent=False):
-        self.check_child_availability(other_node.identifier)
-        if other_node.parent is not None and not overwrite_parent:
-            raise ValueError('That node already has a parent. Try `overwrite_parent=True`')
-
-        other_node.parent = self
-        self.children[other_node.identifier] = other_node
-        return other_node
-
-    def check_child_availability(self, identifier):
-        if ':' in identifier:
-            raise TreeInvalidIdentifier('Only roots may have a colon')
-        if identifier in self.children:
-            raise TreeExistingChild('Node %s already has child %s' % (self.identifier, identifier))
-
-    def detach(self):
-        del self.parent.children[self.identifier]
-        self.parent = None
-
-    def listnodes(self, customsort=None):
-        items = list(self.children.items())
-        if customsort is None:
-            items.sort(key=lambda x: x[0].lower())
-        else:
-            items.sort(key=customsort)
-        return [item[1] for item in items]
-
-    def merge_other(self, othertree, otherroot=None):
-        newroot = None
-        if ':' in othertree.identifier:
-            if otherroot is None:
-                raise Exception('Must specify a new name for the other tree\'s root')
-            else:
-                newroot = otherroot
-        else:
-            newroot = othertree.identifier
-        othertree.identifier = newroot
-        othertree.parent = self
-        self.check_child_availability(newroot)
-        self.children[newroot] = othertree
-
-    def printtree(self, customsort=None):
-        for node in self.walk(customsort):
-            print(node.abspath())
-
-    def sorted_children(self, customsort=None):
-        if customsort:
-            keys = sorted(self.children.keys(), key=customsort)
-        else:
-            keys = sorted(self.children.keys())
-        for key in keys:
-            yield (key, self.children[key])
-
-    def walk(self, customsort=None):
-        yield self
-        for child in self.listnodes(customsort=customsort):
-            #print(child)
-            #print(child.listnodes())
-            yield from child.walk(customsort=customsort)
-##                                                                                                ##
-## GENERIC #########################################################################################
 
 
 ## WALKER ##########################################################################################
@@ -542,6 +401,164 @@ class Walker:
         self.sql.commit()
 ##                                                                                                ##
 ## WALKER ##########################################################################################
+
+
+## DOWNLOADER ######################################################################################
+##                                                                                                ##
+class Downloader:
+    def __init__(self, databasename, outputdir=None, headers=None):
+        self.databasename = databasename
+        self.sql = sqlite3.connect(databasename)
+        self.cur = self.sql.cursor()
+
+        if outputdir is None or outputdir == "":
+            # This assumes that all URLs in the database are from the same domain.
+            # If they aren't, it's the user's fault.
+            self.cur.execute('SELECT url FROM urls LIMIT 1')
+            url = self.cur.fetchone()[0]
+            outputdir = url_to_filepath(url)['root']
+        self.outputdir = outputdir
+
+    def download(self, overwrite=False, bytespersecond=None):
+        overwrite = bool(overwrite)
+
+        self.cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY url')
+        while True:
+            fetch = self.cur.fetchone()
+            if fetch is None:
+                break
+            url = fetch[SQL_URL]
+
+            ''' Creating the permanent and temporary filenames '''
+            url_filepath = url_to_filepath(url)
+            # Ignore this value of `root`, because we might have a custom outputdir.
+            root = url_filepath['root']
+            folder = os.path.join(root, url_filepath['folder'])
+            os.makedirs(folder, exist_ok=True)
+            fullname = os.path.join(folder, url_filepath['filename'])
+            temporary_basename = hashit(url, 16) + '.oddltemporary'
+            temporary_fullname = os.path.join(folder, temporary_basename)
+
+            ''' Managing overwrite '''
+            if os.path.isfile(fullname):
+                if overwrite is True:
+                    os.remove(fullname)
+                else:
+                    safeprint('Skipping "%s". Use `--overwrite`' % fullname)
+                    continue
+
+            safeprint('Downloading "%s" as "%s"' % (fullname, temporary_basename))
+            filehandle = open(temporary_fullname, 'wb')
+            try:
+                download_file(url, filehandle, hookfunction=hook1, bytespersecond=bytespersecond)
+                os.rename(temporary_fullname, fullname)
+            except:
+                filehandle.close()
+                raise
+##                                                                                                ##
+## DOWNLOADER ######################################################################################
+
+
+## OTHER CLASSES ###################################################################################
+##                                                                                                ##
+class Generic:
+    def __init__(self, **kwargs):
+        for kwarg in kwargs:
+            setattr(self, kwarg, kwargs[kwarg])
+
+
+class TreeExistingChild(Exception):
+    pass
+
+class TreeInvalidIdentifier(Exception):
+    pass
+
+class TreeNode:
+    def __init__(self, identifier, data, parent=None):
+        assert isinstance(identifier, str)
+        assert '\\' not in identifier
+        self.identifier = identifier
+        self.data = data
+        self.parent = parent
+        self.children = {}
+
+    def __getitem__(self, key):
+        return self.children[key]
+
+    def __repr__(self):
+        return 'TreeNode %s' % self.abspath()
+
+    def abspath(self):
+        node = self
+        nodes = [node]
+        while node.parent is not None:
+            node = node.parent
+            nodes.append(node)
+        nodes.reverse()
+        nodes = [node.identifier for node in nodes]
+        return '\\'.join(nodes)
+
+    def add_child(self, other_node, overwrite_parent=False):
+        self.check_child_availability(other_node.identifier)
+        if other_node.parent is not None and not overwrite_parent:
+            raise ValueError('That node already has a parent. Try `overwrite_parent=True`')
+
+        other_node.parent = self
+        self.children[other_node.identifier] = other_node
+        return other_node
+
+    def check_child_availability(self, identifier):
+        if ':' in identifier:
+            raise TreeInvalidIdentifier('Only roots may have a colon')
+        if identifier in self.children:
+            raise TreeExistingChild('Node %s already has child %s' % (self.identifier, identifier))
+
+    def detach(self):
+        del self.parent.children[self.identifier]
+        self.parent = None
+
+    def listnodes(self, customsort=None):
+        items = list(self.children.items())
+        if customsort is None:
+            items.sort(key=lambda x: x[0].lower())
+        else:
+            items.sort(key=customsort)
+        return [item[1] for item in items]
+
+    def merge_other(self, othertree, otherroot=None):
+        newroot = None
+        if ':' in othertree.identifier:
+            if otherroot is None:
+                raise Exception('Must specify a new name for the other tree\'s root')
+            else:
+                newroot = otherroot
+        else:
+            newroot = othertree.identifier
+        othertree.identifier = newroot
+        othertree.parent = self
+        self.check_child_availability(newroot)
+        self.children[newroot] = othertree
+
+    def printtree(self, customsort=None):
+        for node in self.walk(customsort):
+            print(node.abspath())
+
+    def sorted_children(self, customsort=None):
+        if customsort:
+            keys = sorted(self.children.keys(), key=customsort)
+        else:
+            keys = sorted(self.children.keys())
+        for key in keys:
+            yield (key, self.children[key])
+
+    def walk(self, customsort=None):
+        yield self
+        for child in self.listnodes(customsort=customsort):
+            #print(child)
+            #print(child.listnodes())
+            yield from child.walk(customsort=customsort)
+##                                                                                                ##
+## OTHER CLASSES ###################################################################################
 
 
 ## GENERAL FUNCTIONS ###############################################################################
@@ -724,6 +741,12 @@ def url_to_filepath(text):
         'filename': filename,
     }
     return result
+
+def write(line, file_handle=None):
+    if file_handle is None:
+        safeprint(line)
+    else:
+        file_handle.write(line + '\n')
 ##                                                                                                ##
 ## GENERAL FUNCTIONS ###############################################################################
 
@@ -738,7 +761,7 @@ def digest(databasename, walkurl, fullscan=False):
         databasename=databasename,
         fullscan=fullscan,
         walkurl=walkurl,
-        )
+    )
     walker.walk()
 
 def digest_argparse(args):
@@ -755,11 +778,11 @@ def download(databasename, outputdir=None, overwrite=False, bytespersecond=None)
     downloader = Downloader(
         databasename=databasename,
         outputdir=outputdir,
-        )
+    )
     downloader.download(
         bytespersecond=bytespersecond,
         overwrite=overwrite,
-        )
+    )
 
 def download_argparse(args):
     return download(
@@ -777,8 +800,8 @@ def filter_pattern(databasename, regex, action='keep', *trash):
     When `action` is 'remove', then any URLs matching the regex will have their
     `do_download` flag set to False.
 
-    Actions will not act on each other's behalf. A 'keep' will NEVER disable a url,
-    and 'remove' will NEVER enable one.
+    Actions will not act on each other's behalf. Keep will NEVER disable a url,
+    and remove will NEVER enable one.
     '''
     import re
     if isinstance(regex, str):
@@ -810,55 +833,51 @@ def filter_pattern(databasename, regex, action='keep', *trash):
                 cur.execute('UPDATE urls SET do_download = 0 WHERE url == ?', [url])
     sql.commit()
 
-def keep_pattern(args):
+def keep_pattern_argparse(args):
     '''
     See `filter_pattern`.
     '''
-    filter_pattern(
+    return filter_pattern(
         action='keep',
         databasename=args.databasename,
         regex=args.regex,
-        )
+    )
 
-def list_basenames(databasename, outputfile=None):
+def list_basenames(databasename, output_filename=None):
     '''
-    Given a database, print the entries in order of the file basenames.
+    Print the Enabled entries in order of the file basenames.
     This makes it easier to find interesting titles without worrying about
     what directory they're in.
     '''
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
-    cur.execute('SELECT basename FROM urls WHERE do_download == 1 ORDER BY LENGTH(basename) DESC LIMIT 1')
 
-    fetch = cur.fetchone()
-    if fetch is None:
-        return
-    longest = len(fetch[0])
-    cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY LOWER(basename)')
-    form = '{bn:<%ds}  :  {url}  :  {byt}' % longest
-    if outputfile:
-        outputfile = open(outputfile, 'w', encoding='utf-8')
-    while True:
-        fetch = cur.fetchone()
-        if fetch is None:
-            break
-        byt = fetch[SQL_CONTENT_LENGTH]
-        if byt is None:
-            byt = ''
+    cur.execute('SELECT * FROM urls WHERE do_download == 1')
+    items = cur.fetchall()
+    items.sort(key=lambda x: x[SQL_BASENAME].lower())
+
+    form = '{basename:<%ds}  :  {url}  :  {size}' % longest
+    if output_filename is not None:
+        output_file = open(output_filename, 'w', encoding='utf-8')
+    for item in items:
+        size = item[SQL_CONTENT_LENGTH]
+        if size is None:
+            size = ''
         else:
-            byt = '{:,}'.format(byt)
-        line = form.format(bn=fetch[SQL_BASENAME], url=fetch[SQL_URL], byt=byt)
-        if outputfile:
-            outputfile.write(line + '\n')
-        else:
-            print(line)
-    if outputfile:
-        outputfile.close()
+            size = bytestring.bytestring(size)
+        line = form.format(
+            basename=item[SQL_BASENAME],
+            url=item[SQL_URL],
+            size=size,
+        )
+        write(line)
+    if output_file:
+        output_file.close()
 
 def list_basenames_argparse(args):
     return list_basenames(
         databasename=args.databasename,
-        outputfile=args.outputfile,
+        output_filename=args.outputfile,
     )
 
 def measure(databasename, fullscan=False, new_only=False):
@@ -923,17 +942,25 @@ def measure_argparse(args):
         new_only=args.new_only,
     )
 
-def remove_pattern(args):
+def remove_pattern_argparse(args):
     '''
     See `filter_pattern`.
     '''
-    filter_pattern(
+    return filter_pattern(
         action='remove',
         databasename=args.databasename,
         regex=args.regex,
-        )
+    )
 
 def tree(databasename, output_filename=None):
+    '''
+    Print a tree diagram of the directory-file structure.
+
+    If an .html file is given for `output_filename`, the page will have
+    collapsible boxes and clickable filenames. Otherwise the file will just
+    be a plain text drawing.
+    '''
+
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
     cur.execute('SELECT * FROM urls WHERE do_download == 1')
@@ -945,13 +972,13 @@ def tree(databasename, output_filename=None):
 
     path_parts = url_to_filepath(items[0][SQL_URL])
     root_identifier = path_parts['root']
-    print('Root', root_identifier)
+    #print('Root', root_identifier)
     root_data = {'name': root_identifier, 'item_type': 'directory'}
     root_identifier = root_identifier.replace(':', '')
     tree = TreeNode(
         identifier=root_identifier,
         data=root_data
-        )
+    )
     node_map = {}
 
     unmeasured_file_count = 0
@@ -985,7 +1012,7 @@ def tree(databasename, output_filename=None):
                     data['size'] = item[SQL_CONTENT_LENGTH]
                 else:
                     unmeasured_file_count += 1
-                    data['size'] = 0
+                    data['size'] = None
             else:
                 data['item_type'] = 'directory'
 
@@ -1018,12 +1045,6 @@ def tree(databasename, output_filename=None):
                 this_node.parent = parent_node
             #print(this_node.data)
 
-    def write(line, outfile=None):
-        if outfile is None:
-            safeprint(line)
-        else:
-            outfile.write(line + '\n')
-
     def recursive_get_size(node):
         size = node.data.get('size', 0)
         if size:
@@ -1031,27 +1052,40 @@ def tree(databasename, output_filename=None):
             return size
 
         for child in node.children.values():
-            size += recursive_get_size(child)
+            child_size = recursive_get_size(child)
+            child_size = child_size or 0
+            size += child_size
         node.data['size'] = size
         return size
 
-    def recursive_print_node(node, depth=0, outfile=None):
+    def recursive_print_node(node, depth=0, output_file=None):
+        size = node.data['size']
+        if size is None:
+            size = UNKNOWN_SIZE_STRING
+        else:
+            size = bytestring.bytestring(size)
+
         if use_html:
+            if depth % 2 == 0:
+                css_class = 'directory_even'
+            else:
+                css_class = 'directory_odd'
+
             if node.data['item_type'] == 'directory':
                 div_id = hashit(node.identifier, 16)
                 line = '<button onclick="collapse(\'{div_id}\')">{name} ({size})</button>'
-                line += '<div id="{div_id}" style="display:none">'
+                line += '<div class="%s" id="{div_id}" style="display:none">' % css_class
                 line = line.format(
                     div_id=div_id,
                     name=node.data['name'],
-                    size=bytestring.bytestring(node.data['size']),
+                    size=size,
                 )
             else:
                 line = '<a href="{url}">{name} ({size})</a><br>'
                 line = line.format(
                     url=node.data['url'],
                     name=node.data['name'],
-                    size=bytestring.bytestring(node.data['size']),
+                    size=size,
                 )
         else:
             line = '{space}{bar}{name} : ({size})'
@@ -1059,20 +1093,25 @@ def tree(databasename, output_filename=None):
                 space='|   '*(depth-1),
                 bar='|---' if depth > 0 else '',
                 name=node.data['name'],
-                size=bytestring.bytestring(node.data['size'])
+                size=size
             )
-        write(line, outfile)
+        write(line, output_file)
 
-        customsort = lambda x: (node.children[x].data['item_type'] == 'file', node.children[x].data['url'].lower())
+        # Sort by type (directories first) then subsort by lowercase path
+        customsort = lambda x: (
+            node.children[x].data['item_type'] == 'file',
+            node.children[x].data['url'].lower(),
+        )
+
         for (key, child) in node.sorted_children(customsort=customsort):
-            recursive_print_node(child, depth+1, outfile=outfile)
+            recursive_print_node(child, depth=depth+1, output_file=output_file)
 
         if node.data['item_type'] == 'directory':
             if use_html:
-                write('</div>', outfile)
+                write('</div>', output_file)
             else:
                 # This helps put some space between sibling directories
-                write('|   ' * (depth), outfile)
+                write('|   ' * (depth), output_file)
 
 
     if output_filename is not None:
@@ -1084,12 +1123,12 @@ def tree(databasename, output_filename=None):
 
 
     if use_html:
-        write(HTML_TREE_HEADER, outfile=output_file)
+        write(HTML_TREE_HEADER, file_handle=output_file)
 
     recursive_get_size(tree)
-    recursive_print_node(tree, outfile=output_file)
+    recursive_print_node(tree, output_file=output_file)
     if unmeasured_file_count > 0:
-        write(UNMEASURED_WARNING % unmeasured_file_count, outfile=output_file)
+        write(UNMEASURED_WARNING % unmeasured_file_count, file_handle=output_file)
 
     if output_file is not None:
         output_file.close()
@@ -1104,11 +1143,10 @@ def tree_argparse(args):
 ##                                                                                                ##
 ## COMMANDLINE FUNCTIONS ###########################################################################
 
-
-if __name__ == '__main__':
-    if listget(sys.argv, 1, '').lower() in ('help', '-h', '--help'):
+def main(argv):
+    if listget(argv, 1, '').lower() in ('help', '-h', '--help', ''):
         print(DOCSTRING)
-        quit()
+        return
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
@@ -1128,7 +1166,7 @@ if __name__ == '__main__':
     p_keep_pattern = subparsers.add_parser('keep_pattern')
     p_keep_pattern.add_argument('databasename')
     p_keep_pattern.add_argument('regex')
-    p_keep_pattern.set_defaults(func=keep_pattern)
+    p_keep_pattern.set_defaults(func=keep_pattern_argparse)
 
     p_list_basenames = subparsers.add_parser('list_basenames')
     p_list_basenames.add_argument('databasename')
@@ -1144,12 +1182,15 @@ if __name__ == '__main__':
     p_remove_pattern = subparsers.add_parser('remove_pattern')
     p_remove_pattern.add_argument('databasename')
     p_remove_pattern.add_argument('regex')
-    p_remove_pattern.set_defaults(func=remove_pattern)
+    p_remove_pattern.set_defaults(func=remove_pattern_argparse)
 
     p_tree = subparsers.add_parser('tree')
     p_tree.add_argument('databasename')
     p_tree.add_argument('-o', '--outputfile', dest='outputfile', default=None)
     p_tree.set_defaults(func=tree_argparse)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     args.func(args)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
