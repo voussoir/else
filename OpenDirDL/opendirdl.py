@@ -854,11 +854,16 @@ def list_basenames(databasename, output_filename=None):
 
     cur.execute('SELECT * FROM urls WHERE do_download == 1')
     items = cur.fetchall()
+    longest = max(items, key=lambda x: len(x[SQL_BASENAME]))
+    longest = len(longest[SQL_BASENAME])
     items.sort(key=lambda x: x[SQL_BASENAME].lower())
 
-    form = '{basename:<%ds}  :  {url}  :  {size}' % longest
     if output_filename is not None:
         output_file = open(output_filename, 'w', encoding='utf-8')
+    else:
+        output_file = None
+
+    form = '{basename:<%ds}  :  {url}  :  {size}' % longest
     for item in items:
         size = item[SQL_CONTENT_LENGTH]
         if size is None:
@@ -870,7 +875,8 @@ def list_basenames(databasename, output_filename=None):
             url=item[SQL_URL],
             size=size,
         )
-        write(line)
+        write(line, output_file)
+
     if output_file:
         output_file.close()
 
