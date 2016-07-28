@@ -2,12 +2,13 @@ import collections
 import glob
 import json
 import os
-import ratelimiter
 import shutil
 import stat
 import string
 import sys
 import time
+
+sys.path.append('C:\\git\\else\\ratelimiter'); import ratelimiter
 
 BYTE = 1
 KIBIBYTE = BYTE * 1024

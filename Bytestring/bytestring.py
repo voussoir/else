@@ -1,3 +1,5 @@
+import re
+
 BYTE = 1
 KIBIBYTE = 1024 * BYTE
 MIBIBYTE = 1024 * KIBIBYTE
@@ -19,25 +21,38 @@ UNIT_STRINGS = {
     ZEBIBYTE: 'ZiB',
     YOBIBYTE: 'YiB',
 }
+UNITS_SORTED = sorted(UNIT_STRINGS.keys(), reverse=True)
 
-def bytestring(bytes):
-    possible_units = sorted(UNIT_STRINGS.keys(), reverse=True)
+def bytestring(size, force_unit=None):
+    '''
+    Convert a number into a binary-standard string.
+
+    force_unit:
+        If None, an appropriate size unit is chosen automatically.
+        Otherwise, you can provide one of the size constants to force that divisor.
+    '''
 
     # choose which magnitutde to use as the divisor
-    if bytes < 1:
-        appropriate_unit = 1
+    if force_unit is None:
+        divisor = get_appropriate_divisor(size)
     else:
-        for unit in possible_units:
-            if bytes >= unit:
-                appropriate_unit = unit
-                break
+        divisor = force_unit
 
-    size_unit_string = UNIT_STRINGS[appropriate_unit]
-    size_string = '%.3f %s' % ((bytes / appropriate_unit), size_unit_string)
+    size_unit_string = UNIT_STRINGS[divisor]
+    size_string = '%.3f %s' % ((size / divisor), size_unit_string)
     return size_string
 
+def get_appropriate_divisor(size):
+    size = abs(size)
+    for unit in UNITS_SORTED:
+        if size >= unit:
+            appropriate_unit = unit
+            break
+    else:
+        appropriate_unit = 1
+    return appropriate_unit
+
 def parsebytes(string):
-    import re
     string = string.lower().replace(' ', '')
 
     matches = re.findall('((\\.|\\d)+)', string)

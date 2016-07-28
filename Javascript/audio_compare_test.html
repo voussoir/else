@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<!--
+    This page lets you compare multiple audio tracks simultaneously,
+    to see whether you can spot the difference in audio quality.
+
+    The audio elements are scrambled when loaded, you can hover over the
+    "spoiler" tag to see the file.
+-->
+<head>
+    <title>Fear your ears</title>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <p>Drag files onto the page</p>
+    <button onclick="cycle();">Cycle</button>
+    <button onclick="pause_all();">Pause</button>
+    <button onclick="play_all();">Play</button>
+    <p>
+        Please use this slider as the seekbar. Dragging the audio elements directly causes syncing problems.
+        <br>
+        <input id="seekbar" type="range">
+    </p>
+    <div id="workspace">
+    </div>
+
+</body>
+
+</html>
+
+<style>
+html, body
+{
+    height: 100%;
+}
+
+audio
+{
+    vertical-align: middle;
+    width: 600px;
+}
+div button
+{
+    height: 100%;
+    vertical-align: middle;
+}
+div
+{
+    display: block;
+}
+input
+{
+    width: 600px;
+}
+#workspace
+{
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+<script type="text/javascript">
+var WORKSPACE = document.getElementById("workspace");
+var SEEKBAR = document.getElementById("seekbar");
+var audios = [];
+var current = 0;
+var duration = 0;
+var seek_lock = false;
+SEEKBAR.min = 0;
+SEEKBAR.max = 0;
+SEEKBAR.value = 0;
+
+function cycle()
+{
+    if (audios == undefined)
+    {
+        return
+    }
+    if (audios.length == 0)
+    {
+        return;
+    }
+    current = (current + 1) % audios.length;
+    switch_to(current)
+}
+
+function drop_event(e)
+{
+    e = e || window.event;
+    e.preventDefault();
+
+    var files = Array.from(e.dataTransfer.files);
+    shuffle(files);
+    while (WORKSPACE.lastChild)
+    {
+        WORKSPACE.removeChild(WORKSPACE.lastChild);
+    }
+    for (var index = 0; index < files.length; index += 1)
+    {
+        var mediadiv = document.createElement("div");
+        var anchor = document.createElement("a");
+        var audio = document.createElement("audio");
+        var source = document.createElement("source");
+        var choosebutton = document.createElement("button");
+
+        audio.preload = true;
+        audio.controls = true;
+        audio.volume = 0
+
+        anchor.innerHTML = "spoiler";
+        anchor.title = files[index]["name"];
+        anchor.href = "#";
+        source.src = URL.createObjectURL(files[index]);
+
+        choosebutton.innerHTML = "play";
+        choosebutton.index = index;
+        choosebutton.onclick = function()
+        {
+            current = this.index;
+            switch_to(current);
+        }
+        audio.appendChild(source);
+        mediadiv.appendChild(anchor);
+        mediadiv.appendChild(audio);
+        mediadiv.appendChild(choosebutton);
+        WORKSPACE.appendChild(mediadiv);
+        audios.push(audio);
+    }
+
+    load();
+}
+
+function load()
+{
+    audios = Array.from(document.getElementsByTagName("audio"));
+    current = -1;
+    if (audios.length == 0)
+    {
+        return;
+    }
+    audios[0].oncanplay = function()
+    {
+        duration = this.duration;
+        SEEKBAR.max = duration;
+    }
+    SEEKBAR.value = 0;
+}
+
+function pause_all()
+{
+    for (var index = 0; index < audios.length; index += 1)
+    {
+        audios[index].pause();
+    }
+}
+
+function play_all()
+{
+    for (var index = 0; index < audios.length; index += 1)
+    {
+        audios[index].play();
+    }
+}
+
+function seek_event()
+{
+    if (seek_lock)
+    {
+        console.log("locked");
+        return;
+    }
+    pause_all();
+    seek_lock = true;
+    var timestamp = this.value;
+    for (var index = 0; index < audios.length; index += 1)
+    {
+        audios[index].currentTime = timestamp;
+    }
+    setTimeout(function(){seek_lock = false; play_all();}, 500);
+}
+
+function shuffle(a)
+{
+    var target_index;
+    var temp;
+    for (var index = a.length; index > 0; index -= 1)
+    {
+        target_index = Math.floor(Math.random() * index);
+        temp = a[index - 1];
+        a[index - 1] = a[target_index];
+        a[target_index] = temp;
+    }
+}
+
+function switch_to(audio_index)
+{
+    play_all();
+    for (var index = 0; index < audios.length; index += 1)
+    {
+        audios[index].volume = 0;
+    }
+    audios[audio_index].volume = 1;
+}
+
+SEEKBAR.onchange = seek_event;
+document.body.addEventListener('drop', drop_event);
+document.body.addEventListener('dragover', function(e){e.preventDefault();});
+
+</script>

@@ -181,6 +181,12 @@ SKIPPABLE_FILETYPES = [
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)
 
+# Will be ignored completely. Are case-sensitive
+BLACKLISTED_FILENAMES = [
+'desktop.ini',
+'thumbs.db',
+]
+
 # oh shit
 HTML_TREE_HEADER = '''
 <meta charset="UTF-8">
@@ -262,12 +268,13 @@ those files.
 ##                                                                                                ##
 class Walker:
     def __init__(self, walkurl, databasename=None, fullscan=False):
-        if walkurl[-1] != '/':
+        if not walkurl.endswith('/'):
             walkurl += '/'
         self.walkurl = walkurl
-        if databasename is None or databasename == "":
-            self.domain = url_to_filepath(walkurl)['root']
-            databasename = self.domain + '.db'
+
+        if databasename in (None, ''):
+            domain = url_to_filepath(self.walkurl)['root']
+            databasename = domain + '.db'
             databasename = databasename.replace(':', '#')
         self.databasename = databasename
 
@@ -289,27 +296,29 @@ class Walker:
     def extract_hrefs(self, response, tag='a', attribute='href'):
         '''
         Given a Response object, extract href urls.
-        External links, index sort links, and desktop.ini are discarded.
+        External links, index sort links, and blacklisted files are discarded.
         '''
         import bs4
         soup = bs4.BeautifulSoup(response.text, 'html.parser')
-        elements = soup.findAll(tag)
+        elements = soup.find_all(tag)
         for element in elements:
             try:
                 href = element[attribute]
             except KeyError:
                 continue
             href = urllib.parse.urljoin(response.url, href)
+
             if not href.startswith(self.walkurl):
                 # Don't go to other sites or parent directories.
                 continue
-            #if 'C=' in href and 'O=' in href:
+
             if any(sorter in href for sorter in ('?C=', '?O=', '?M=', '?D=', '?N=', '?S=')):
                 # Alternative sort modes for index pages.
                 continue
-            if href.endswith('desktop.ini'):
-                # I hate these things.
+
+            if any(href.endswith(blacklisted) for blacklisted in BLACKLISTED_FILENAMES):
                 continue
+
             yield href
 
     def process_url(self, url=None):
@@ -389,8 +398,6 @@ class Walker:
         self.queue.appendleft(url)
         try:
             while len(self.queue) > 0:
-                # Popping from right helps keep the queue short because it handles the files
-                # early.
                 url = self.queue.popleft()
                 self.process_url(url)
                 line = '{:,} Remaining'.format(len(self.queue))
@@ -401,62 +408,6 @@ class Walker:
         self.sql.commit()
 ##                                                                                                ##
 ## WALKER ##########################################################################################
-
-
-## DOWNLOADER ######################################################################################
-##                                                                                                ##
-class Downloader:
-    def __init__(self, databasename, outputdir=None, headers=None):
-        self.databasename = databasename
-        self.sql = sqlite3.connect(databasename)
-        self.cur = self.sql.cursor()
-
-        if outputdir is None or outputdir == "":
-            # This assumes that all URLs in the database are from the same domain.
-            # If they aren't, it's the user's fault.
-            self.cur.execute('SELECT url FROM urls LIMIT 1')
-            url = self.cur.fetchone()[0]
-            outputdir = url_to_filepath(url)['root']
-        self.outputdir = outputdir
-
-    def download(self, overwrite=False, bytespersecond=None):
-        overwrite = bool(overwrite)
-
-        self.cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY url')
-        while True:
-            fetch = self.cur.fetchone()
-            if fetch is None:
-                break
-            url = fetch[SQL_URL]
-
-            ''' Creating the permanent and temporary filenames '''
-            url_filepath = url_to_filepath(url)
-            # Ignore this value of `root`, because we might have a custom outputdir.
-            root = url_filepath['root']
-            folder = os.path.join(root, url_filepath['folder'])
-            os.makedirs(folder, exist_ok=True)
-            fullname = os.path.join(folder, url_filepath['filename'])
-            temporary_basename = hashit(url, 16) + '.oddltemporary'
-            temporary_fullname = os.path.join(folder, temporary_basename)
-
-            ''' Managing overwrite '''
-            if os.path.isfile(fullname):
-                if overwrite is True:
-                    os.remove(fullname)
-                else:
-                    safeprint('Skipping "%s". Use `--overwrite`' % fullname)
-                    continue
-
-            safeprint('Downloading "%s" as "%s"' % (fullname, temporary_basename))
-            filehandle = open(temporary_fullname, 'wb')
-            try:
-                download_file(url, filehandle, hookfunction=hook1, bytespersecond=bytespersecond)
-                os.rename(temporary_fullname, fullname)
-            except:
-                filehandle.close()
-                raise
-##                                                                                                ##
-## DOWNLOADER ######################################################################################
 
 
 ## OTHER CLASSES ###################################################################################
@@ -539,15 +490,8 @@ class TreeNode:
         self.check_child_availability(newroot)
         self.children[newroot] = othertree
 
-    def printtree(self, customsort=None):
-        for node in self.walk(customsort):
-            print(node.abspath())
-
     def sorted_children(self, customsort=None):
-        if customsort:
-            keys = sorted(self.children.keys(), key=customsort)
-        else:
-            keys = sorted(self.children.keys())
+        keys = sorted(self.children.keys(), key=customsort)
         for key in keys:
             yield (key, self.children[key])
 
@@ -569,13 +513,6 @@ def db_init(sql, cur):
         cur.execute(line)
     sql.commit()
     return True
-
-def dict_to_file(jdict, filename):
-    text = dict_to_string(jdict)
-    text = text.encode('utf-8')
-    filehandle = open(filename, 'wb')
-    filehandle.write(text)
-    filehandle.close()
 
 def do_get(url, raise_for_status=True):
     return do_request('GET', requests.get, url)
@@ -617,10 +554,17 @@ def download_file(url, filehandle, hookfunction=None, headers={}, bytespersecond
         raise Exception('Did not receive expected total size. %d / %d' % (size, totalsize))
     return True
 
+def fetch_generator(cur):
+    while True:
+        fetch = cur.fetchone()
+        if fetch is None:
+            break
+        yield fetch
+
 def filepath_sanitize(text, allowed=''):
-    bet = FILENAME_BADCHARS.replace(allowed, '')
-    for char in bet:
-        text = text.replace(char, '')
+    badchars = FILENAME_BADCHARS
+    badchars = ''.join(char for char in FILENAME_BADCHARS if char not in allowed)
+    text = ''.join(char for char in text if char not in badchars)
     return text
 
 def get_clipboard():
@@ -771,18 +715,72 @@ def digest_argparse(args):
         fullscan=args.fullscan,
     )
 
-def download(databasename, outputdir=None, overwrite=False, bytespersecond=None):
-    if isinstance(bytespersecond, str):
-        bytespersecond = eval(bytespersecond)
+def download(
+        databasename,
+        outputdir=None,
+        bytespersecond=None,
+        headers=None,
+        overwrite=False,
+    ):
+    '''
+    Download all of the Enabled files. The filepaths will match that of the
+    website, using `outputdir` as the root directory.
 
-    downloader = Downloader(
-        databasename=databasename,
-        outputdir=outputdir,
-    )
-    downloader.download(
-        bytespersecond=bytespersecond,
-        overwrite=overwrite,
-    )
+    Parameters:
+        outputdir:
+            The directory to mirror the files into. If not provided, the domain
+            name is used.
+
+        bytespersecond:
+            The speed to ratelimit the downloads. Can be an integer, or a string like
+            '500k', according to the capabilities of `bytestring.parsebytes`
+
+            Note that this is bytes, not bits.
+
+        headers:
+            Additional headers to pass to each `download_file` call.
+
+        overwrite:
+            If True, delete local copies of existing files and rewrite them.
+            Otherwise, completed files are skipped.
+    '''
+    sql = sqlite3.connect(databasename)
+    cur = sql.cursor()
+
+    if outputdir in (None, ''):
+        # This assumes that all URLs in the database are from the same domain.
+        # If they aren't, it's the user's fault because Walkers don't leave the given site.
+        cur.execute('SELECT url FROM urls LIMIT 1')
+        url = cur.fetchone()[0]
+        outputdir = url_to_filepath(url)['root']
+
+    if isinstance(bytespersecond, str):
+        bytespersecond = bytestring.parsebytes(bytespersecond)
+
+    cur.execute('SELECT * FROM urls WHERE do_download == 1 ORDER BY url')
+    for fetch in fetch_generator(cur):
+        url = fetch[SQL_URL]
+
+        url_filepath = url_to_filepath(url)
+        folder = os.path.join(outputdir, url_filepath['folder'])
+        os.makedirs(folder, exist_ok=True)
+
+        fullname = os.path.join(folder, url_filepath['filename'])
+        temporary_basename = hashit(url, 16) + '.oddltemporary'
+        temporary_fullname = os.path.join(folder, temporary_basename)
+
+        if os.path.isfile(fullname):
+            if overwrite:
+                os.remove(fullname)
+            else:
+                safeprint('Skipping "%s". Use `--overwrite`' % fullname)
+                continue
+
+        safeprint('Downloading "%s" as "%s"' % (fullname, temporary_basename))
+        filehandle = open(temporary_fullname, 'wb')
+        with filehandle:
+            download_file(url, filehandle, hookfunction=hook1, bytespersecond=bytespersecond)
+            os.rename(temporary_fullname, fullname)
 
 def download_argparse(args):
     return download(
@@ -812,15 +810,12 @@ def filter_pattern(databasename, regex, action='keep', *trash):
 
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
-    cur2 = sql.cursor()
 
-    cur2.execute('SELECT * FROM urls')
-    while True:
-        fetch = cur2.fetchone()
-        if fetch is None:
-            break
-        url = fetch[SQL_URL]
-        current_do_dl = fetch[SQL_DO_DOWNLOAD]
+    cur.execute('SELECT * FROM urls')
+    items = cur.fetchall()
+    for item in items:
+        url = item[SQL_URL]
+        current_do_dl = item[SQL_DO_DOWNLOAD]
         for pattern in regex:
             contains = re.search(pattern, url) is not None
 
@@ -1145,7 +1140,6 @@ def tree_argparse(args):
         databasename=args.databasename,
         output_filename=args.outputfile,
     )
-
 ##                                                                                                ##
 ## COMMANDLINE FUNCTIONS ###########################################################################
 
