@@ -23,67 +23,30 @@ CHUNKSIZE = 16 * bytestring.KIBIBYTE
 STOP = False
 TIMEOUT = 600
 
-def download_file(
-        url,
-        localname=None,
-        auth=None,
-        bytespersecond=None,
-        callback_progress=None,
-        headers=None,
-        overwrite=None
+def basename_from_url(url):
+    '''
+    Determine the local filename appropriate for a URL.
+    '''
+    localname = urllib.parse.unquote(url)
+    localname = localname.split('?')[0]
+    localname = localname.split('/')[-1]
+    return localname
+
+def determine_seek_and_range(
+        file_handle,
+        localname,
+        local_exists,
+        overwrite,
+        remote_total_bytes,
+        server_respects_range,
+        user_provided_range,
+        user_range_min,
+        user_range_max,
     ):
-    if headers is None:
-        headers = {}
-    ''' Determine local filename '''
-    url = url.replace('%3A//', '://')
-    if localname in [None, '']:
-        localname = localize(url)
-
-    localname = filepath_sanitize(localname)
-
-    directory = os.path.split(localname)[0]
-    if directory != '':
-        os.makedirs(directory, exist_ok=True)
-    
-    if bytespersecond is None:
-        limiter = None
-    else:
-        limiter = ratelimiter.Ratelimiter(bytespersecond, period=1)
-
-    ''' Prepare condition variables '''
-    local_exists = os.path.exists(localname)
-    if local_exists and overwrite is False:
-        print('Overwrite off. Nothing to do.')
-        return
-
-    user_provided_range = 'range' in headers
-    if user_provided_range:
-        user_range_min = int(headers['range'].split('bytes=')[1].split('-')[0])
-        user_range_max = headers['range'].split('-')[1]
-        if user_range_max != '':
-            user_range_max = int(user_range_max)
-    else:
-        # Included to determine whether the server supports this
-        headers['range'] = 'bytes=0-'
-
-    # I'm using a GET instead of an actual HEAD here because some servers respond
-    # differently, even though they're not supposed to.
-    head = request('get', url, stream=True, headers=headers, auth=auth)
-    remote_total_bytes = int(head.headers.get('content-length', 1))
-    server_respects_range = (head.status_code == 206 and 'content-range' in head.headers)
+    ''' THINGS THAT CAN HAPPEN '''
     seek_to = 0
     header_range_min = None
     header_range_max = None
-    head.connection.close()
-
-    if not user_provided_range:
-        del headers['range']
-
-    touch(localname)
-    file_handle = open(localname, 'r+b')
-    file_handle.seek(0)
-
-    ''' THINGS THAT CAN HAPPEN '''
     if local_exists:
         local_existing_bytes = os.path.getsize(localname)
         if overwrite is True:
@@ -110,7 +73,7 @@ def download_file(
 
             elif not user_provided_range:
                 if server_respects_range:
-                    print('Resuming from %d' % local_existing_bytes)
+                    print('Resuming from byte %d' % local_existing_bytes)
                     header_range_min = local_existing_bytes
                     header_range_max = ''
                     seek_to = local_existing_bytes
@@ -142,7 +105,82 @@ def download_file(
 
         elif not user_provided_range:
             pass
+    return (seek_to, header_range_min, header_range_max)
 
+def download_file(
+        url,
+        localname=None,
+        auth=None,
+        bytespersecond=None,
+        callback_progress=None,
+        headers=None,
+        overwrite=None
+    ):
+    if headers is None:
+        headers = {}
+    ''' Determine local filename '''
+    url = url.replace('%3A//', '://')
+    if localname in [None, '']:
+        localname = basename_from_url(url)
+
+    localname = filepath_sanitize(localname)
+
+    directory = os.path.split(localname)[0]
+    if directory != '':
+        os.makedirs(directory, exist_ok=True)
+
+    if bytespersecond is None:
+        limiter = None
+    else:
+        limiter = ratelimiter.Ratelimiter(bytespersecond, period=1)
+
+    ''' Prepare plan variables '''
+    local_exists = os.path.exists(localname)
+    if local_exists and overwrite is False:
+        print('Overwrite off. Nothing to do.')
+        return
+
+    user_provided_range = 'range' in headers
+    if user_provided_range:
+        user_range_min = int(headers['range'].split('bytes=')[1].split('-')[0])
+        user_range_max = headers['range'].split('-')[1]
+        if user_range_max != '':
+            user_range_max = int(user_range_max)
+    else:
+        # Included to determine whether the server supports this
+        headers['range'] = 'bytes=0-'
+        user_range_min = None
+        user_range_max = None
+
+    # I'm using a GET instead of an actual HEAD here because some servers respond
+    # differently, even though they're not supposed to.
+    head = request('get', url, stream=True, headers=headers, auth=auth)
+    remote_total_bytes = int(head.headers.get('content-length', 1))
+    server_respects_range = (head.status_code == 206 and 'content-range' in head.headers)
+    head.connection.close()
+
+    if not user_provided_range:
+        del headers['range']
+
+    touch(localname)
+    file_handle = open(localname, 'r+b')
+    file_handle.seek(0)
+
+    plan = determine_seek_and_range(
+        file_handle=file_handle,
+        localname=localname,
+        local_exists=local_exists,
+        overwrite=overwrite,
+        remote_total_bytes=remote_total_bytes,
+        server_respects_range=server_respects_range,
+        user_provided_range=user_provided_range,
+        user_range_min=user_range_min,
+        user_range_max=user_range_max,
+    )
+    if plan is None:
+        return
+
+    (seek_to, header_range_min, header_range_max) = plan
     if header_range_min is not None:
         headers['range'] = 'bytes={0}-{1}'.format(header_range_min, header_range_max)
 
@@ -176,15 +214,6 @@ def get_permission(prompt='y/n\n>', affirmative=['y', 'yes']):
 def is_clipboard(s):
     return s.lower() in ['!c', '!clip', '!clipboard']
 
-def localize(url):
-    '''
-    Determine the local filename appropriate for a URL.
-    '''
-    localname = urllib.parse.unquote(url)
-    localname = localname.split('?')[0]
-    localname = localname.split('/')[-1]
-    return localname
-
 def progress(bytes_downloaded, bytes_total, prefix=''):
     divisor = bytestring.get_appropriate_divisor(bytes_total)
     bytes_total_string = bytestring.bytestring(bytes_total, force_unit=divisor)
@@ -216,7 +245,7 @@ def progress(bytes_downloaded, bytes_total, prefix=''):
 def progress2(bytes_downloaded, bytes_total, prefix=''):
     percent = (bytes_downloaded*100)/bytes_total
     percent = min(100, percent)
-    percent = '%08.4f' % percent
+    percent_string = '%08.4f' % percent
     bytes_downloaded_string = '{0:,}'.format(bytes_downloaded)
     bytes_total_string = '{0:,}'.format(bytes_total)
     bytes_downloaded_string = bytes_downloaded_string.rjust(len(bytes_total_string), ' ')
@@ -227,7 +256,7 @@ def progress2(bytes_downloaded, bytes_total, prefix=''):
         prefix=prefix,
         bytes_downloaded=bytes_downloaded_string,
         bytes_total=bytes_total_string,
-        percent=percent,
+        percent=percent_string,
     )
     print(message, end=end, flush=True)
 
