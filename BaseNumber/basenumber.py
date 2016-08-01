@@ -37,7 +37,6 @@ def from_base(number, base, alphabet=None):
     except ValueError:
         decimal_pos = len(number)
 
-
     result = 0
     for (index, character) in enumerate(number):
         if index == decimal_pos:

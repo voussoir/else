@@ -274,6 +274,8 @@ class Walker:
     def __init__(self, walkurl, databasename=None, fullscan=False):
         if not walkurl.endswith('/'):
             walkurl += '/'
+        if '://' not in walkurl.split('.')[0]:
+            walkurl = 'http://' + walkurl
         self.walkurl = walkurl
 
         if databasename in (None, ''):
@@ -761,7 +763,6 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
     if is_new:
         cur.execute('INSERT INTO urls VALUES(?, ?, ?, ?, ?)', data)
     else:
-        print(url)
         command = '''
             UPDATE urls SET
             content_length = coalesce(?, content_length),
@@ -777,6 +778,8 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
 def url_to_filepath(text):
     text = urllib.parse.unquote(text)
     parts = urllib.parse.urlsplit(text)
+    if any(part == '' for part in [parts.scheme, parts.netloc]):
+        raise ValueError('Not a valid URL')
     scheme = parts.scheme
     root = parts.netloc
     (folder, filename) = os.path.split(parts.path)
@@ -861,7 +864,8 @@ def download(
 
     if outputdir in (None, ''):
         # This assumes that all URLs in the database are from the same domain.
-        # If they aren't, it's the user's fault because Walkers don't leave the given site.
+        # If they aren't, it's the user's fault because Walkers don't leave the given site
+        # on their own.
         cur.execute('SELECT url FROM urls LIMIT 1')
         url = cur.fetchone()[0]
         outputdir = url_to_filepath(url)['root']
@@ -877,19 +881,24 @@ def download(
         folder = os.path.join(outputdir, url_filepath['folder'])
         os.makedirs(folder, exist_ok=True)
 
-        fullname = os.path.join(folder, url_filepath['filename'])
+        final_fullname = os.path.join(folder, url_filepath['filename'])
         temporary_basename = hashit(url, 16) + '.oddltemporary'
         temporary_fullname = os.path.join(folder, temporary_basename)
 
-        if os.path.isfile(fullname):
+        # Because we use .oddltemporary files, the behavior of `overwrite` here
+        # is different than the behavior of `overwrite` in downloady.
+        # The overwrite used in the following block refers to the finalized file.
+        # The overwrite passed to downloady refers to the oddltemporary which
+        # may be resumed.
+        if os.path.isfile(final_fullname):
             if overwrite:
-                os.remove(fullname)
+                os.remove(final_fullname)
             else:
-                write('Skipping "%s". Use `--overwrite`' % fullname)
+                write('Skipping "%s". Use `--overwrite`' % final_fullname)
                 continue
 
         overwrite = overwrite or None
-        write('Downloading "%s" as "%s"' % (fullname, temporary_basename))
+        write('Downloading "%s" as "%s"' % (final_fullname, temporary_basename))
         downloady.download_file(
             url,
             localname=temporary_fullname,
@@ -897,7 +906,7 @@ def download(
             callback_progress=downloady.progress2,
             overwrite=overwrite
         )
-        os.rename(temporary_fullname, fullname)
+        os.rename(temporary_fullname, final_fullname)
 
 def download_argparse(args):
     return download(

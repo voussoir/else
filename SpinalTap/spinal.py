@@ -718,7 +718,7 @@ def walk_generator(
                     callback_exclusion(absolute_name, 'file')
                     continue
                 if normalize(absolute_name) in exclude_filenames:
-                    callback_exclusion(absolute_filename, 'file')
+                    callback_exclusion(absolute_name, 'file')
                     continue
 
                 yield(str_to_fp(absolute_name))

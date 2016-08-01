@@ -5,7 +5,6 @@ the page, and displays them in a nice gallery. Designed for use on open
 directory listings, but works in many places.
 */
 var seen_urls = new Set();
-var all_urls = [];
 var image_height = 200;
 var video_height = 300;
 var audio_width = 1000;
@@ -18,20 +17,24 @@ VIDEO_TYPES = new RegExp(VIDEO_TYPES, "i");
 
 var has_started = false;
 
-var CSS = "";
-CSS += "audio, video { display: block; }";
-CSS += "audio { width: $audio_width$px; }";
-CSS += "video { height: $video_height$px; }";
-CSS += "img { display: block; max-width: 100% }";
-
-CSS += ".control_panel { background-color: #aaa; min-height: 10px; width: 100%; }";
-CSS += ".workspace { background-color: #ddd; min-height: 10px; float: left; }";
-CSS += ".arealabel { position:absolute; right: 0; bottom: 0; opacity: 0.8; background-color: #000; color: #fff; }";
-CSS += ".delete_button { color: #d00; font-family: Arial; font-size: 11px; left: 0; position: absolute; top: 0; width: 25px; }";
-CSS += ".load_button { position: absolute; top: 10%; width: 100%; height: 80%; word-wrap: break-word; }";
-CSS += ".odi_anchor { display: block; }";
-CSS += ".odi_image_div, .odi_media_div { display: inline-block; margin: 5px; float: left; position: relative; background-color: #aaa; }";
-CSS += ".odi_image_div { min-width: $image_height$px; }";
+var CSS = ""
++ "body { background-color: #fff; }"
++ "audio, video { display: block; }"
++ "audio { width: $audio_width$px; }"
++ "video { height: $video_height$px; }"
++ "img { display: block; height: $image_height$px; max-width: 100% }"
++ ".control_panel { position: relative; background-color: #aaa; min-height: 10px; width: 100%; }"
++ ".workspace { background-color: #ddd; min-height: 10px; float: left; }"
++ ".arealabel { position:absolute; right: 0; bottom: 0; opacity: 0.8; background-color: #000; color: #fff; }"
++ ".delete_button { color: #d00; font-family: Arial; font-size: 11px; left: 0; position: absolute; top: 0; width: 25px; }"
++ ".ingest { position:absolute; right: 5px; top: 5px; height: 100%; width: 30% }"
++ ".ingestbox { position:relative; height: 75%; width:100%; box-sizing: border-box; }"
++ ".urldumpbox { overflow-y: scroll; height: 300px; width: 90% }"
++ ".load_button { position: absolute; top: 10%; width: 100%; height: 80%; word-wrap: break-word; }"
++ ".odi_anchor { display: block; }"
++ ".odi_image_div, .odi_media_div { display: inline-block; margin: 5px; float: left; position: relative; background-color: #aaa; }"
++ ".odi_image_div { min-width: $image_height$px; }"
+;
 
 function apply_css()
 {
@@ -64,7 +67,7 @@ function array_remove(a, item)
 
 function clear_page()
 {
-    /* Remove EVERYTHING, insert own css */
+    /* Remove EVERYTHING */
     console.log("clearing page");
     document.removeChild(document.documentElement);
 
@@ -122,145 +125,160 @@ function create_command_box_button(boxname, label, operation)
     var div = document.createElement("div");
     div.appendChild(box);
     div.appendChild(button);
+    div.box = box;
+    div.button = button;
     return div;
 }
 
+function create_odi_div(url)
+{
+    var div = null;
+    var paramless_url = url.split("?")[0];
+    var basename = get_basename(url);
+
+    if (paramless_url.match(IMAGE_TYPES))
+    {
+        var div = document.createElement("div");
+        div.id = generate_id(32);
+        div.className = "odi_image_div";
+        div.odi_type = "image";
+
+        var a = document.createElement("a");
+        a.className = "odi_anchor";
+        a.odi_div = div;
+        a.href = url;
+        a.target = "_blank";
+
+        var img = document.createElement("img");
+        img.odi_div = div;
+        img.anchor = a;
+        img.border = 0;
+
+        img.lazy_src = url;
+        img.src = "";
+
+        var arealabel = document.createElement("span");
+        arealabel.className = "arealabel";
+        arealabel.odi_div = div;
+        arealabel.innerHTML = "0x0";
+        img.arealabel = arealabel;
+
+        var load_button = document.createElement("button");
+        load_button.className = "load_button";
+        load_button.odi_div = div;
+        load_button.innerHTML = basename;
+        load_button.onclick = function()
+        {
+            this.parentElement.removeChild(this);
+            lazy_load_one(this.odi_div);
+        };
+
+        div.image = img;
+        div.anchor = a;
+        a.appendChild(img);
+        a.appendChild(arealabel);
+        div.appendChild(a);
+        div.appendChild(load_button);
+    }
+    else
+    {
+        if (paramless_url.match(AUDIO_TYPES))
+        {
+            var mediatype = "audio";
+        }
+        else if (paramless_url.match(VIDEO_TYPES))
+        {
+            var mediatype = "video";
+        }
+        else
+        {
+            return null;
+        }
+
+        var div = document.createElement("div");
+        div.id = generate_id(32);
+        div.className = "odi_media_div";
+        div.odi_type = "media";
+        div.mediatype = mediatype;
+
+        var center = document.createElement("center");
+        center.odi_div = div;
+
+        var a = document.createElement("a");
+        a.odi_div = div;
+        a.innerHTML = get_basename(url);
+        a.target = "_blank";
+        a.style.display = "block";
+        a.href = url;
+
+        var media = document.createElement(mediatype);
+        media.odi_div = div;
+        media.controls = true;
+        media.preload = "none";
+
+        sources = get_alternate_sources(url);
+        for (var sourceindex = 0; sourceindex < sources.length; sourceindex += 1)
+        {
+            source = document.createElement("source");
+            source.src = sources[sourceindex];
+            source.odi_div = div;
+            media.appendChild(source);
+        }
+
+        div.media = media;
+        div.anchor = a;
+        center.appendChild(a);
+        div.appendChild(center);
+        div.appendChild(media);
+    }
+
+    if (div == null)
+    {
+        return null;
+    }
+
+    div.url = url;
+    div.basename = basename;
+
+    button = document.createElement("button");
+    button.className = "delete_button";
+    button.odi_div = div;
+    button.innerHTML = "X";
+    button.onclick = function()
+    {
+        delete_odi_div(this);
+    };
+    div.appendChild(button);
+    return div;
+}
 function create_odi_divs(urls)
 {
     image_divs = [];
     media_divs = [];
+    odi_divs = [];
     for (var index = 0; index < urls.length; index += 1)
     {
         url = urls[index];
+        var paramless_url = url.split("?")[0];
         if (!url)
         {
             continue;
         }
-        /*console.log("Building for " + url);*/
-        var div = null;
-        var paramless_url = url.split("?")[0];
-        var basename = get_basename(url);
-
-        if (paramless_url.match(IMAGE_TYPES))
-        {
-            var div = document.createElement("div");
-            div.id = generate_id(32);
-            div.className = "odi_image_div";
-            div.odi_type = "image";
-
-            var a = document.createElement("a");
-            a.className = "odi_anchor";
-            a.odi_div = div;
-            a.href = url;
-            a.target = "_blank";
-
-            var img = document.createElement("img");
-            img.odi_div = div;
-            img.anchor = a;
-            img.border = 0;
-            img.height = image_height;
-
-            img.lazy_src = url;
-            img.src = "";
-
-            var arealabel = document.createElement("span");
-            arealabel.className = "arealabel";
-            arealabel.odi_div = div;
-            arealabel.innerHTML = "0x0";
-            img.arealabel = arealabel;
-
-            var load_button = document.createElement("button");
-            load_button.className = "load_button";
-            load_button.odi_div = div;
-            load_button.innerHTML = basename;
-            load_button.onclick = function()
-            {
-                this.parentElement.removeChild(this);
-                lazy_load_one(this.odi_div);
-            };
-
-            div.image = img;
-            div.anchor = a;
-            a.appendChild(img);
-            a.appendChild(arealabel);
-            div.appendChild(a);
-            div.appendChild(load_button);
-            image_divs.push(div);
-        }
-        else
-        {
-            if (paramless_url.match(AUDIO_TYPES))
-            {
-                var mediatype = "audio";
-            }
-            else if (paramless_url.match(VIDEO_TYPES))
-            {
-                var mediatype = "video";
-            }
-            else
-            {
-                continue;
-            }
-
-            var div = document.createElement("div");
-            div.id = generate_id(32);
-            div.className = "odi_media_div";
-            div.odi_type = "media";
-
-            var center = document.createElement("center");
-            center.odi_div = div;
-
-            var a = document.createElement("a");
-            a.odi_div = div;
-            a.innerHTML = get_basename(url);
-            a.target = "_blank";
-            a.style.display = "block";
-            a.href = url;
-
-            var media = document.createElement(mediatype);
-            media.odi_div = div;
-            media.controls = true;
-            media.preload = "none";
-
-            sources = get_alternate_sources(url);
-            for (var sourceindex = 0; sourceindex < sources.length; sourceindex += 1)
-            {
-                source = document.createElement("source");
-                source.src = sources[sourceindex];
-                source.odi_div = div;
-                media.appendChild(source);
-            }
-
-            div.media = media;
-            div.anchor = a;
-            center.appendChild(a);
-            div.appendChild(center);
-            div.appendChild(media);
-            media_divs.push(div);
-        }
-
-        if (div == null)
+        var odi_div = create_odi_div(url);
+        if (odi_div == null)
         {
             continue;
         }
-
-        div.url = url;
-        div.basename = basename;
-
-        button = document.createElement("button");
-        button.className = "delete_button";
-        button.odi_div = div;
-        button.innerHTML = "X";
-        button.onclick = function()
+        if (odi_div.odi_type == "image")
         {
-            delete_odi_div(this);
-        };
-        div.appendChild(button);
-        /*console.log("built " + div);*/
+            image_divs.push(odi_div);
+        }
+        else
+        {
+            media_divs.push(odi_div);
+        }
     }
-    odi_divs = [];
     array_extend(odi_divs, image_divs);
-    odi_divs.push(document.createElement("br"));
     array_extend(odi_divs, media_divs);
     return odi_divs;
 }
@@ -281,16 +299,27 @@ function create_workspace()
     var widthfilter = create_command_box_button("widthfilter", "min width", filter_width);
     var sorter = create_command_button("sort size", sort_size);
     var dumper = create_command_button("dump urls", dump_urls);
+    var ingest_box = document.createElement("textarea");
+    var ingest_button = create_command_button("ingest", ingest);
     var start_button = create_command_button("load all", function(){start(); this.parentElement.removeChild(this);});
 
     start_button.style.display = "block";
-
 
     control_panel.id = "CONTROL_PANEL";
     control_panel.className = "control_panel";
 
     workspace.id = "WORKSPACE";
     workspace.className = "workspace";
+
+    var ingest_div = document.createElement("div");
+    ingest_div.id = "INGEST";
+    ingest_div.className = "ingest";
+    ingest_box.id = "ingestbox";
+    ingest_box.className = "ingestbox";
+    ingest_div.appendChild(ingest_box);
+    ingest_div.appendChild(ingest_button);
+    ingest_div.appendChild(ingest_box);
+    ingest_div.appendChild(ingest_button);
 
     document.body.appendChild(control_panel);
     control_panel.appendChild(resizer);
@@ -300,6 +329,7 @@ function create_workspace()
     control_panel.appendChild(widthfilter);
     control_panel.appendChild(sorter);
     control_panel.appendChild(dumper);
+    control_panel.appendChild(ingest_div);
     control_panel.appendChild(start_button);
     document.body.appendChild(workspace);
 }
@@ -328,10 +358,7 @@ function dump_urls()
     if (textbox == null)
     {
         textbox = document.createElement("textarea");
-        textbox.id = "urldumpbox";
-        textbox.style.overflowY = "scroll";
-        textbox.style.height = "300px";
-        textbox.style.width = "90%";
+        textbox.className = "urldumpbox";
         workspace = document.getElementById("WORKSPACE");
         workspace.appendChild(textbox);
     }
@@ -344,7 +371,6 @@ function dump_urls()
 
 function fill_workspace(divs)
 {
-    clear_workspace();
     console.log("filling workspace");
 
     workspace = document.getElementById("WORKSPACE");
@@ -394,7 +420,7 @@ function filter_re(pattern, do_delete)
     for (var index = 0; index < odi_divs.length; index += 1)
     {
         div = odi_divs[index];
-        match = div.basename.match(pattern);
+        match = div.url.match(pattern);
         if ((match && do_delete) || (!match && do_keep))
         {
             delete_odi_div(div);
@@ -444,8 +470,8 @@ function get_all_urls()
                 {console.log("Rejecting reddit thumb"); continue;}
             if (url.indexOf("pixel.reddit") != -1 || url.indexOf("reddit.com/static/pixel") != -1)
                 {console.log("Rejecting reddit pixel"); continue}
-            if (url.indexOf("/thumb/") != -1)
-                {console.log("Rejecting /thumb/"); continue;}
+            /*if (url.indexOf("/thumb/") != -1)
+                {console.log("Rejecting /thumb/"); continue;}*/
             if (url.indexOf("/loaders/") != -1)
                 {console.log("Rejecting loader"); continue;}
             if (url.indexOf("memegen") != -1)
@@ -465,7 +491,6 @@ function get_all_urls()
 
                 urls.push(sub_url);
                 seen_urls.add(sub_url);
-                all_urls.push(sub_url);
             }
             seen_urls.add(url);
         }
@@ -567,6 +592,34 @@ function generate_id(length)
     return "odi_" + text.join("");
 }
 
+function ingest()
+{
+    /* Take the text from the INGEST box, and make odi divs from it */
+    var odi_divs = get_odi_divs();
+    var ingestbox = document.getElementById("ingestbox");
+    var text = ingestbox.value;
+    var urls = text.split("\n");
+    for (var index = 0; index < urls.length; index += 1)
+    {
+        url = urls[index].trim();
+        sub_urls = normalize_url(url);
+        if (sub_urls == null)
+            {continue;}
+
+        for (var url_index = 0; url_index < sub_urls.length; url_index += 1)
+        {
+            sub_url = sub_urls[url_index];
+            var odi_div = create_odi_div(sub_url);
+            if (odi_div == null)
+                {continue;}
+            odi_divs.push(odi_div);
+        }
+    }
+    ingestbox.value = "";
+    clear_workspace();
+    fill_workspace(odi_divs);
+}
+
 function lazy_load_all()
 {
     lazies = get_lazy_divs();
@@ -611,7 +664,6 @@ function lazy_load_one(element, comeback)
     };
     image.onerror = function()
     {
-        array_remove(all_urls, this.odi_div);
         delete_odi_div(this);
         if (comeback){lazy_load_all()};
     };
@@ -711,15 +763,18 @@ function normalize_url(url)
 function resize_images(height)
 {
     odi_divs = get_odi_divs();
-    image_height = height;
+    height = height.toString() + "px";
     for (var index = 0; index < odi_divs.length; index += 1)
     {
         var div = odi_divs[index];
-        if (div.image == undefined)
+        if (div.image)
         {
-            continue;
+            div.image.style.height = height;
         }
-        div.image.height = height;
+        else if (div.media && div.mediatype == "video")
+        {
+            div.media.style.height = height;
+        }
     }
 }
 
@@ -761,7 +816,7 @@ function start()
 
 function main()
 {
-    all_urls = get_all_urls();
+    var all_urls = get_all_urls();
     var divs = create_odi_divs(all_urls);
     create_workspace();
     fill_workspace(divs);

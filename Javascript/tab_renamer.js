@@ -1,7 +1,11 @@
 javascript:
 function rename()
 {
-    document.title = prompt("New page title:");
+    var new_title = prompt("New page title:");
+    if (new_title !== null)
+    {
+        document.title = new_title;
+    }
 }
 
 rename();

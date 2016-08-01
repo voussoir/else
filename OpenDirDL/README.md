@@ -7,6 +7,9 @@ Requires `pip install beautifulsoup4`
 
 See inside opendirdl.py for usage instructions.
 
+- 2016 08 01
+    - Made the digest work even if you forget the http://
+    
 - 2016 07 29
     - Moved some nested function definitions out to the top level, and made the construction of the file tree its own function. These functions really don't need to be used on their own, but they were cluttering the logic of the `tree` command.
     - Renamed `Tree.listnodes` to `Tree.list_children` and the `customsort` now expects to operate on Node objects rather than `(identifier, Node)` tuples. Nodes already have their identifier so the tuple was unecessary.
