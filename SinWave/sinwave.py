@@ -157,14 +157,14 @@ def create_line(degree_offset, **kwargs):
 def create_line_frame(offset=None, line=None):
     if line is None:
         if offset is None:
-            offset = entry_add.get()
+            offset = t.entry_add.get()
             offset = offset.replace(' ', '')
             offset = offset.split(',')
             try:
                 offset = [int(o) for o in offset]
             except ValueError:
                 return
-            entry_add.delete(0, 'end')
+            t.entry_add.delete(0, 'end')
 
         lines = []
         for x in offset:
@@ -253,10 +253,12 @@ def unregister_line(line):
     variables['lines'].remove(line)
 
 def main():
+    global t
     t = tkinter.Tk()
 
     frame_add = tkinter.Frame(t)
     entry_add = tkinter.Entry(frame_add)
+    t.entry_add = entry_add
     entry_add.grid(row=0, column=0)
     tkinter.Button(frame_add, text='+', command=create_line_frame).grid(row=0, column=1)
     frame_add.grid(row=0, column=0)

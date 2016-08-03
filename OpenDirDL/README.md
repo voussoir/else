@@ -7,6 +7,11 @@ Requires `pip install beautifulsoup4`
 
 See inside opendirdl.py for usage instructions.
 
+- 2016 08 02
+    - Removed the usage of div IDs on the Tree pages by making the collapse button use `this.nextSibling`.
+    - Rewrote `build_file_tree` with a way simpler algorithm.
+    - Removed the ability to set a Node's parent during `__init__` because it wasn't fully fleshed out and doesn't need to be used anyway.
+
 - 2016 08 01
     - Made the digest work even if you forget the http://
     

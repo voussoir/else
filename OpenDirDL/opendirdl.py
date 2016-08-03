@@ -196,9 +196,9 @@ HTML_TREE_HEADER = '''
 <meta charset="UTF-8">
 
 <script type="text/javascript">
-function collapse(id)
+function collapse(div)
 {
-    div = document.getElementById(id);
+    //div = document.getElementById(id);
     if (div.style.display != "none")
     {
         div.style.display = "none";
@@ -330,7 +330,7 @@ class Walker:
     def process_url(self, url=None):
         '''
         Given a URL, check whether it is an index page or an actual file.
-        If it is an index page, it's links are extracted and queued.
+        If it is an index page, its links are extracted and queued.
         If it is a file, its information is saved to the database.
 
         We perform a 
@@ -372,10 +372,10 @@ class Walker:
             head = do_head(url)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403:
-                print('403 FORBIDDEN!')
+                write('403 FORBIDDEN!')
                 return
             if e.response.status_code == 404:
-                print('404 NOT FOUND!')
+                write('404 NOT FOUND!')
                 return
             raise
         content_type = head.headers.get('Content-Type', '?')
@@ -395,7 +395,7 @@ class Walker:
                 else:
                     self.queue.append(href)
                     added += 1
-            print('Queued %d urls' % added)
+            write('Queued %d urls' % added)
         else:
             # This is not an index page, so save it.
             self.smart_insert(head=head, commit=False)
@@ -407,7 +407,7 @@ class Walker:
                 url = self.queue.popleft()
                 self.process_url(url)
                 line = '{:,} Remaining'.format(len(self.queue))
-                print(line)
+                write(line)
         except:
             self.sql.commit()
             raise
@@ -420,8 +420,8 @@ class Walker:
 ##                                                                                                ##
 class Generic:
     def __init__(self, **kwargs):
-        for kwarg in kwargs:
-            setattr(self, kwarg, kwargs[kwarg])
+        for (key, value) in kwargs.items():
+            setattr(self, key, value)
 
 
 class TreeExistingChild(Exception):
@@ -431,16 +431,21 @@ class TreeInvalidIdentifier(Exception):
     pass
 
 class TreeNode:
-    def __init__(self, identifier, data, parent=None):
+    def __init__(self, identifier, data=None):
         assert isinstance(identifier, str)
         assert '\\' not in identifier
         self.identifier = identifier
         self.data = data
-        self.parent = parent
         self.children = {}
+
+    def __eq__(self, other):
+        return isinstance(other, Treenode) and self.abspath() == other.abspath()
 
     def __getitem__(self, key):
         return self.children[key]
+
+    def __hash__(self):
+        return hash(self.abspath())
 
     def __repr__(self):
         return 'TreeNode %s' % self.abspath()
@@ -498,7 +503,7 @@ class TreeNode:
 
     def walk(self, customsort=None):
         yield self
-        for child in self.listnodes(customsort=customsort):
+        for child in self.list_children(customsort=customsort):
             yield from child.walk(customsort=customsort)
 ##                                                                                                ##
 ## OTHER CLASSES ###################################################################################
@@ -510,82 +515,61 @@ def build_file_tree(databasename):
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
     cur.execute('SELECT * FROM urls WHERE do_download == 1')
-    items = cur.fetchall()
+    all_items = cur.fetchall()
     sql.close()
-    if len(items) == 0:
+
+    if len(all_items) == 0:
         return
 
-    items.sort(key=lambda x: x[SQL_URL])
+    path_form = '{root}\\{folder}\\{filename}'
+    all_items = [
+        {
+            'url': item[SQL_URL],
+            'size': item[SQL_CONTENT_LENGTH],
+            'path': path_form.format(**url_to_filepath(item[SQL_URL])).split('\\'),
+        }
+        for item in all_items
+    ]
+    all_items.sort(key=lambda x: x['url'])
 
-    path_parts = url_to_filepath(items[0][SQL_URL])
-    root_identifier = path_parts['root']
-    #print('Root', root_identifier)
-    root_data = {'name': root_identifier, 'item_type': 'directory'}
-    root_identifier = root_identifier.replace(':', '')
-    tree = TreeNode(
-        identifier=root_identifier,
-        data=root_data
-    )
-    node_map = {}
+    root_data = {
+        'item_type': 'directory',
+        'name': databasename,
+    }
+    tree = TreeNode(databasename, data=root_data)
+    tree.unsorted_children = all_items
+    node_queue = set()
+    node_queue.add(tree)
 
-    for item in items:
-        path = url_to_filepath(item[SQL_URL])
-        scheme = path['scheme']
+    # In this process, URLs are divided up into their nodes one directory layer at a time.
+    # The root receives all URLs, and creates nodes for each of the top-level
+    # directories. Those nodes receive all subdirectories, and repeat.
+    while len(node_queue) > 0:
+        node = node_queue.pop()
+        for to_sort in node.unsorted_children:
+            path = to_sort['path']
+            # Create a new node for the directory, path[0]
+            # path[1:] is assigned to that node to be divided next.
+            child_identifier = path.pop(0)
 
-        # I join and re-split because 'folder' may contain slashes of its own
-        # and I want to break all the pieces
-        path = '\\'.join([path['root'], path['folder'], path['filename']])
-        parts = path.split('\\')
-        #print(path)
-        for (index, part) in enumerate(parts):
-            this_path = '/'.join(parts[:index + 1])
-            parent_path = '/'.join(parts[:index])
+            child = node.children.get(child_identifier, None)
+            if not child:
+                child = TreeNode(child_identifier, data={})
+                child.unsorted_children = []
+                node.add_child(child)
 
-            #input()
-            data = {
-                'name': part,
-                'url': scheme + '://' + this_path,
-            }
-            this_identifier = this_path.replace(':', '')
-            parent_identifier = parent_path.replace(':', '')
-
-            if (index + 1) == len(parts):
-                data['item_type'] = 'file'
-                if item[SQL_CONTENT_LENGTH]:
-                    data['size'] = item[SQL_CONTENT_LENGTH]
-                else:
-                    data['size'] = None
+            child.data['url'] = to_sort['url']
+            child.data['name'] = child_identifier
+            if len(path) > 0:
+                child.data['item_type'] = 'directory'
+                child.unsorted_children.append(to_sort)
+                node_queue.add(child)
             else:
-                data['item_type'] = 'directory'
+                child.data['item_type'] = 'file'
+                child.data['size'] = to_sort['size']
 
+        del node.unsorted_children
 
-            # Ensure this comment is in a node of its own
-            this_node = node_map.get(this_identifier, None)
-            if this_node:
-                # This ID was detected as a parent of a previous iteration
-                # Now we're actually filling it in.
-                this_node.data = data
-            else:
-                this_node = TreeNode(this_identifier, data)
-                node_map[this_identifier] = this_node
-
-            # Attach this node to the parent.
-            if parent_identifier == root_identifier:
-                try:
-                    tree.add_child(this_node)
-                except TreeExistingChild:
-                    pass
-            else:
-                parent_node = node_map.get(parent_identifier, None)
-                if not parent_node:
-                    parent_node = TreeNode(parent_identifier, data=None)
-                    node_map[parent_identifier] = parent_node
-                try:
-                    parent_node.add_child(this_node)
-                except TreeExistingChild:
-                    pass
-                this_node.parent = parent_node
-            #print(this_node.data)
     return tree
 
 def db_init(sql, cur):
@@ -596,10 +580,10 @@ def db_init(sql, cur):
     return True
 
 def do_get(url, raise_for_status=True):
-    return do_request('GET', requests.get, url)
+    return do_request('GET', requests.get, url, raise_for_status=raise_for_status)
 
 def do_head(url, raise_for_status=True):
-    return do_request('HEAD', requests.head, url)
+    return do_request('HEAD', requests.head, url, raise_for_status=raise_for_status)
 
 def do_request(message, method, url, raise_for_status=True):
     message = '{message:>4s}: {url} : '.format(message=message, url=url)
@@ -685,10 +669,9 @@ def recursive_print_node(node, depth=0, use_html=False, output_file=None):
     if use_html:
         css_class = 'directory_even' if depth % 2 == 0 else 'directory_odd'
         if node.data['item_type'] == 'directory':
-            div_id = hashit(node.identifier, 16)
-            line = '<button onclick="collapse(\'{div_id}\')">{name} ({size})</button>'
-            line += '<div class="{css}" id="{div_id}" style="display:none">'
-            line = line.format(div_id=div_id, name=node.data['name'], size=size, css=css_class)
+            line = '<button onclick="collapse(this.nextSibling)">{name} ({size})</button>'
+            line += '<div class="{css}" style="display:none">'
+            line = line.format(name=node.data['name'], size=size, css=css_class)
         else:
             line = '<a href="{url}">{name} ({size})</a><br>'
             line = line.format(url=node.data['url'], name=node.data['name'], size=size)
@@ -1057,9 +1040,9 @@ def measure(databasename, fullscan=False, new_only=False):
     sql.commit()
     short_string = bytestring.bytestring(totalsize)
     totalsize_string = '{} ({:,} bytes) in {:,} files'.format(short_string, totalsize, filecount)
-    print(totalsize_string)
+    write(totalsize_string)
     if unmeasured_file_count > 0:
-        print(UNMEASURED_WARNING % unmeasured_file_count)
+        write(UNMEASURED_WARNING % unmeasured_file_count)
     return totalsize
 
 def measure_argparse(args):
@@ -1118,7 +1101,7 @@ def tree_argparse(args):
 
 def main(argv):
     if listget(argv, 1, '').lower() in ('help', '-h', '--help', ''):
-        print(DOCSTRING)
+        write(DOCSTRING)
         return
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
