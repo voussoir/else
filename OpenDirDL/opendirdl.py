@@ -436,6 +436,7 @@ class TreeNode:
         assert '\\' not in identifier
         self.identifier = identifier
         self.data = data
+        self.parent = None
         self.children = {}
 
     def __eq__(self, other):
@@ -551,6 +552,7 @@ def build_file_tree(databasename):
             # Create a new node for the directory, path[0]
             # path[1:] is assigned to that node to be divided next.
             child_identifier = path.pop(0)
+            child_identifier = child_identifier.replace(':', '#')
 
             child = node.children.get(child_identifier, None)
             if not child:

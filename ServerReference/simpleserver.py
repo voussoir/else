@@ -253,6 +253,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             return
 
         status_code = 200
+        self.send_response(status_code)
 
         if path.is_dir:
             mime = 'text/html'
@@ -263,7 +264,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if mime is not None:
             self.send_header('Content-type', mime)
 
-        self.send_response(status_code)
         self.end_headers()
 
     def send_path_validation_error(self, path):
