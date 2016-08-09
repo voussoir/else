@@ -147,20 +147,20 @@ def download_file(
         if user_range_max != '':
             user_range_max = int(user_range_max)
     else:
-        # Included to determine whether the server supports this
-        headers['range'] = 'bytes=0-'
         user_range_min = None
         user_range_max = None
 
+    # Always include a range on the first request to figure out whether the
+    # server supports it. Use 0- so we get the right `remote_total_bytes`.
+    temp_headers = headers
+    temp_headers.update({'range': 'bytes=0-'})
+
     # I'm using a GET instead of an actual HEAD here because some servers respond
     # differently, even though they're not supposed to.
-    head = request('get', url, stream=True, headers=headers, auth=auth)
+    head = request('get', url, stream=True, headers=temp_headers, auth=auth)
     remote_total_bytes = int(head.headers.get('content-length', 1))
     server_respects_range = (head.status_code == 206 and 'content-range' in head.headers)
     head.connection.close()
-
-    if not user_provided_range:
-        del headers['range']
 
     touch(localname)
     file_handle = open(localname, 'r+b')

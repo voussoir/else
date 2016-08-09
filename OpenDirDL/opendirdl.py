@@ -198,7 +198,6 @@ HTML_TREE_HEADER = '''
 <script type="text/javascript">
 function collapse(div)
 {
-    //div = document.getElementById(id);
     if (div.style.display != "none")
     {
         div.style.display = "none";
@@ -339,7 +338,7 @@ class Walker:
             when `self.fullscan` is False but the url is not a SKIPPABLE_FILETYPE.
             when the url is an index page.
         GET:
-            when the url is a index page.
+            when the url is an index page.
         '''
         if url is None:
             url = self.walkurl
@@ -797,7 +796,7 @@ def write(line, file_handle=None, **kwargs):
 
 ## COMMANDLINE FUNCTIONS ###########################################################################
 ##                                                                                                ##
-def digest(databasename, walkurl, fullscan=False):
+def digest(walkurl, databasename=None, fullscan=False):
     if walkurl in ('!clipboard', '!c'):
         walkurl = get_clipboard()
         write('From clipboard: %s' % walkurl)
@@ -811,8 +810,8 @@ def digest(databasename, walkurl, fullscan=False):
 def digest_argparse(args):
     return digest(
         databasename=args.databasename,
-        walkurl=args.walkurl,
         fullscan=args.fullscan,
+        walkurl=args.walkurl,
     )
 
 def download(
@@ -1015,29 +1014,26 @@ def measure(databasename, fullscan=False, new_only=False):
 
     filecount = 0
     unmeasured_file_count = 0
-    try:
-        for fetch in items:
+
+    for fetch in items:
+        size = fetch[SQL_CONTENT_LENGTH]
+
+        if fullscan or new_only:
+            url = fetch[SQL_URL]
+            head = do_head(url, raise_for_status=False)
+            fetch = smart_insert(sql, cur, head=head, commit=True)
             size = fetch[SQL_CONTENT_LENGTH]
-
-            if fullscan or new_only:
-                url = fetch[SQL_URL]
-                head = do_head(url, raise_for_status=False)
-                fetch = smart_insert(sql, cur, head=head, commit=True)
-                size = fetch[SQL_CONTENT_LENGTH]
-                if size is None:
-                    write('"%s" is not revealing Content-Length' % url)
-                    size = 0
-
-
-            elif fetch[SQL_CONTENT_LENGTH] is None:
-                unmeasured_file_count += 1
+            if size is None:
+                write('"%s" is not revealing Content-Length' % url)
                 size = 0
 
-            totalsize += size
-            filecount += 1
-    except:
-        sql.commit()
-        raise
+
+        elif fetch[SQL_CONTENT_LENGTH] is None:
+            unmeasured_file_count += 1
+            size = 0
+
+        totalsize += size
+        filecount += 1
 
     sql.commit()
     short_string = bytestring.bytestring(totalsize)

@@ -9,15 +9,11 @@ import sys
 import types
 
 sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
+sys.path.append('C:\\git\\else\\Pathclass'); import pathclass
 sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
 sys.path.append('C:\\git\\else\\SpinalTap'); import spinal
 
 FILE_READ_CHUNK = bytestring.MIBIBYTE
-
-#f = open('favicon.png', 'rb')
-#FAVI = f.read()
-#f.close()
-CWD = os.getcwd()
 
 # The paths which the user may access.
 # Attempting to access anything outside will 403.
@@ -37,22 +33,14 @@ OPENDIR_TEMPLATE = '''
 </html>
 '''
 
-class Path:
+class Path(pathclass.Path):
     '''
-    I started to use pathlib.Path, but it was too much of a pain.
+    Add some server-specific abilities to the Pathclass
     '''
     def __init__(self, path):
         path = urllib.parse.unquote(path)
         path = path.strip('/')
-        path = os.path.normpath(path)
-        path = spinal.get_path_casing(path).path
-        self.absolute_path = path
-
-    def __contains__(self, other):
-        return other.absolute_path.startswith(self.absolute_path)
-
-    def __hash__(self):
-        return hash(self.absolute_path)
+        pathclass.Path.__init__(self, path)
 
     @property
     def allowed(self):
@@ -76,38 +64,6 @@ class Path:
             display=display_name,
             )
         return a
-
-    @property
-    def basename(self):
-        return os.path.basename(self.absolute_path)
-
-    @property
-    def is_dir(self):
-        return os.path.isdir(self.absolute_path)
-
-    @property
-    def is_file(self):
-        return os.path.isfile(self.absolute_path)
-
-    @property
-    def parent(self):
-        parent = os.path.dirname(self.absolute_path)
-        parent = Path(parent)
-        return parent
-
-    @property
-    def relative_path(self):
-        relative = self.absolute_path
-        relative = relative.replace(CWD, '')
-        relative = relative.lstrip(os.sep)
-        return relative
-
-    @property
-    def size(self):
-        if self.is_file:
-            return os.path.getsize(self.absolute_path)
-        else:
-            return None
 
     def table_row(self, display_name=None, shaded=False):
         form = '<tr style="background-color:#{bg}"><td style="width:90%">{anchor}</td><td>{size}</td></tr>'

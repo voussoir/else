@@ -31,8 +31,6 @@ def bytestring(size, force_unit=None):
         If None, an appropriate size unit is chosen automatically.
         Otherwise, you can provide one of the size constants to force that divisor.
     '''
-
-    # choose which magnitutde to use as the divisor
     if force_unit is None:
         divisor = get_appropriate_divisor(size)
     else:
@@ -53,9 +51,12 @@ def get_appropriate_divisor(size):
     return appropriate_unit
 
 def parsebytes(string):
-    string = string.lower().replace(' ', '')
+    '''
+    Given a string like "100 kib", return the appropriate integer value.
+    '''
+    string = string.lower().strip().replace(' ', '')
 
-    matches = re.findall('((\\.|\\d)+)', string)
+    matches = re.findall('((\\.|-|\\d)+)', string)
     if len(matches) == 0:
         raise ValueError('No numbers found')
     if len(matches) > 1:
@@ -65,16 +66,19 @@ def parsebytes(string):
     if not string.startswith(byte_value):
         raise ValueError('Number is not at start of string')
 
+
+    # if the string has no text besides the number, just return that int.
     string = string.replace(byte_value, '')
     byte_value = float(byte_value)
     if string == '':
-        return byte_value
+        return int(byte_value)
 
     reversed_units = {value.lower():key for (key, value) in UNIT_STRINGS.items()}
     for (unit_string, multiplier) in reversed_units.items():
+        # accept kib, k, kb
         if string in (unit_string, unit_string[0], unit_string.replace('i', '')):
             break
     else:
         raise ValueError('Could not determine byte value of %s' % string)
 
-    return byte_value * multiplier
+    return int(byte_value * multiplier)

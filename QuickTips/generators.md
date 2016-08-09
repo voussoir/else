@@ -133,7 +133,22 @@ Suppose you're getting data from an imaginary website which sends you items in g
 
 &nbsp;
 
+#### Sqlite3 fetch generator
 
+This is one that I almost always include in my program when I'm doing lots of sqlite work. Sqlite cursors don't allow you to simply do a for-loop over the results of a SELECT, so this generator is very handy:
+
+    def fetch_generator(cur):
+        while True:
+            item = cur.fetchone()
+            if item is None:
+                break
+            yield item
+
+    cur.execute('SELECT * FROM table')
+    for item in fetch_generator(cur):
+        print(item)
+
+&nbsp;
 
 # Further reading
 
