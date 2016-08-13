@@ -7,6 +7,11 @@ Requires `pip install beautifulsoup4`
 
 See inside opendirdl.py for usage instructions.
 
+- 2016 08 10
+    - Fixed bug in smart_insert caused by 404's being considered falsey, triggering the 'one and only one' exception.
+    - Fixed bug in smart_insert where 404'd URLs were not being deleted from the database.
+    - Added clickable links to each directory on HTML tree pages.
+
 - 2016 08 02
     - Removed the usage of div IDs on the Tree pages by making the collapse button use `this.nextSibling`.
     - Rewrote `build_file_tree` with a way simpler algorithm.

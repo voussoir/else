@@ -13,6 +13,9 @@ class Path:
     def __contains__(self, other):
         return other.absolute_path.startswith(self.absolute_path)
 
+    def __eq__(self, other):
+        return hasattr(other, 'absolute_path') and self.absolute_path == other.absolute_path
+
     def __hash__(self):
         return hash(self.absolute_path)
 
@@ -75,27 +78,7 @@ def get_path_casing(path):
     (drive, subpath) = os.path.splitdrive(path)
     subpath = subpath.lstrip(os.sep)
 
-    def patternize(piece):
-        '''
-        Create a pattern like "[u]ser" from "user", forcing glob to look up the
-        correct path name, and guaranteeing that the only result will be the correct path.
-
-        Special cases are:
-            !, because in glob syntax, [!x] tells glob to look for paths that don't contain
-                "x". [!] is invalid syntax, so we pick the first non-! character to put
-                in the brackets.
-            [, because this starts a capture group
-        '''
-        piece = glob.escape(piece)
-        for character in piece:
-            if character not in '![]':
-                replacement = '[%s]' % character
-                #print(piece, character, replacement)
-                piece = piece.replace(character, replacement, 1)
-                break
-        return piece
-
-    pattern = [patternize(piece) for piece in subpath.split(os.sep)]
+    pattern = [glob_patternize(piece) for piece in subpath.split(os.sep)]
     pattern = os.sep.join(pattern)
     pattern = drive.upper() + os.sep + pattern
     #print(pattern)
@@ -103,3 +86,23 @@ def get_path_casing(path):
         return glob.glob(pattern)[0]
     except IndexError:
         return path
+
+def glob_patternize(piece):
+    '''
+    Create a pattern like "[u]ser" from "user", forcing glob to look up the
+    correct path name, while guaranteeing that the only result will be the correct path.
+
+    Special cases are:
+        !, because in glob syntax, [!x] tells glob to look for paths that don't contain
+            "x". [!] is invalid syntax, so we pick the first non-! character to put
+            in the brackets.
+        [, because this starts a capture group
+    '''
+    piece = glob.escape(piece)
+    for character in piece:
+        if character not in '![]':
+            replacement = '[%s]' % character
+            #print(piece, character, replacement)
+            piece = piece.replace(character, replacement, 1)
+            break
+    return piece

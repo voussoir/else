@@ -140,10 +140,10 @@ DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 
 UNKNOWN_SIZE_STRING = '???'
 
-# When doing a basic scan, we will not send HEAD requests to URLs that end in these strings,
-# because they're probably files.
-# This isn't meant to be a comprehensive filetype library, but it covers enough of the
-# typical opendir to speed things up.
+# When doing a basic scan, we will not send HEAD requests to URLs that end in
+# these strings, because they're probably files.
+# This isn't meant to be a comprehensive filetype library, but it covers
+# enough of the typical opendir to speed things up.
 SKIPPABLE_FILETYPES = [
 '.aac',
 '.avi',
@@ -192,7 +192,8 @@ BLACKLISTED_FILENAMES = [
 ]
 
 # oh shit
-HTML_TREE_HEADER = '''
+HTML_TREE_HEAD = '''
+<head>
 <meta charset="UTF-8">
 
 <script type="text/javascript">
@@ -215,12 +216,7 @@ function collapse(div)
     font-family: Consolas;
 }
 
-button
-{
-    display: block;
-}
-
-div
+.directory_even, .directory_odd
 {
     padding: 10px;
     padding-left: 15px;
@@ -239,7 +235,17 @@ div
     background-color: #eee;
 }
 </style>
+</head>
 '''
+
+HTML_FORMAT_DIRECTORY = '''
+<div class="buttonbox">
+<button onclick="collapse(this.parentElement.nextElementSibling)">{name} ({size})</button>
+{directory_anchor}
+</div>
+<div class="{css}" style="display:none">
+'''.replace('\n', '')
+HTML_FORMAT_FILE = '<a href="{url}">{name} ({size})</a><br>'
 
 DB_INIT = '''
 CREATE TABLE IF NOT EXISTS urls(
@@ -259,7 +265,6 @@ SQL_CONTENT_LENGTH = 2
 SQL_CONTENT_TYPE = 3
 SQL_DO_DOWNLOAD = 4
 
-
 UNMEASURED_WARNING = '''
 Note: %d files do not have a stored Content-Length.
 Run `measure` with `-f`|`--fullscan` or `-n`|`--new_only` to HEAD request
@@ -278,7 +283,7 @@ class Walker:
         self.walkurl = walkurl
 
         if databasename in (None, ''):
-            domain = url_to_filepath(self.walkurl)['root']
+            domain = url_split(self.walkurl)['root']
             databasename = domain + '.db'
             databasename = databasename.replace(':', '#')
         self.databasename = databasename
@@ -439,7 +444,7 @@ class TreeNode:
         self.children = {}
 
     def __eq__(self, other):
-        return isinstance(other, Treenode) and self.abspath() == other.abspath()
+        return isinstance(other, TreeNode) and self.abspath() == other.abspath()
 
     def __getitem__(self, key):
         return self.children[key]
@@ -470,8 +475,6 @@ class TreeNode:
         return other_node
 
     def check_child_availability(self, identifier):
-        if ':' in identifier:
-            raise TreeInvalidIdentifier('Only roots may have a colon')
         if identifier in self.children:
             raise TreeExistingChild('Node %s already has child %s' % (self.identifier, identifier))
 
@@ -526,7 +529,7 @@ def build_file_tree(databasename):
         {
             'url': item[SQL_URL],
             'size': item[SQL_CONTENT_LENGTH],
-            'path': path_form.format(**url_to_filepath(item[SQL_URL])).split('\\'),
+            'path_parts': path_form.format(**url_split(item[SQL_URL])).split('\\'),
         }
         for item in all_items
     ]
@@ -536,6 +539,7 @@ def build_file_tree(databasename):
         'item_type': 'directory',
         'name': databasename,
     }
+    scheme = url_split(all_items[0]['url'])['scheme']
     tree = TreeNode(databasename, data=root_data)
     tree.unsorted_children = all_items
     node_queue = set()
@@ -546,12 +550,12 @@ def build_file_tree(databasename):
     # directories. Those nodes receive all subdirectories, and repeat.
     while len(node_queue) > 0:
         node = node_queue.pop()
-        for to_sort in node.unsorted_children:
-            path = to_sort['path']
-            # Create a new node for the directory, path[0]
-            # path[1:] is assigned to that node to be divided next.
-            child_identifier = path.pop(0)
-            child_identifier = child_identifier.replace(':', '#')
+        for new_child_data in node.unsorted_children:
+            path_parts = new_child_data['path_parts']
+            # Create a new node for the directory, path_parts[0]
+            # path_parts[1:] is assigned to that node to be divided next.
+            child_identifier = path_parts.pop(0)
+            #child_identifier = child_identifier.replace(':', '#')
 
             child = node.children.get(child_identifier, None)
             if not child:
@@ -559,15 +563,21 @@ def build_file_tree(databasename):
                 child.unsorted_children = []
                 node.add_child(child)
 
-            child.data['url'] = to_sort['url']
             child.data['name'] = child_identifier
-            if len(path) > 0:
+            if len(path_parts) > 0:
                 child.data['item_type'] = 'directory'
-                child.unsorted_children.append(to_sort)
+                child.unsorted_children.append(new_child_data)
                 node_queue.add(child)
             else:
                 child.data['item_type'] = 'file'
-                child.data['size'] = to_sort['size']
+                child.data['size'] = new_child_data['size']
+                child.data['url'] = new_child_data['url']
+        if node.parent is None:
+            continue
+        elif node.parent == tree:
+            node.data['url'] = scheme + '://' + node.identifier
+        else:
+            node.data['url'] = node.parent.data['url'] + '/' + node.identifier
 
         del node.unsorted_children
 
@@ -670,12 +680,21 @@ def recursive_print_node(node, depth=0, use_html=False, output_file=None):
     if use_html:
         css_class = 'directory_even' if depth % 2 == 0 else 'directory_odd'
         if node.data['item_type'] == 'directory':
-            line = '<button onclick="collapse(this.nextSibling)">{name} ({size})</button>'
-            line += '<div class="{css}" style="display:none">'
-            line = line.format(name=node.data['name'], size=size, css=css_class)
+            directory_url = node.data.get('url')
+            directory_anchor = '<a href="{url}">►</a>' if directory_url else ''
+            directory_anchor = directory_anchor.format(url=directory_url)
+            line = HTML_FORMAT_DIRECTORY.format(
+                css=css_class,
+                directory_anchor=directory_anchor,
+                name=node.data['name'],
+                size=size,
+            )
         else:
-            line = '<a href="{url}">{name} ({size})</a><br>'
-            line = line.format(url=node.data['url'], name=node.data['name'], size=size)
+            line = HTML_FORMAT_FILE.format(
+                name=node.data['name'],
+                size=size,
+                url=node.data['url'],
+            )
     else:
         line = '{space}{bar}{name} : ({size})'
         line = line.format(
@@ -697,6 +716,7 @@ def recursive_print_node(node, depth=0, use_html=False, output_file=None):
 
     if node.data['item_type'] == 'directory':
         if use_html:
+            # Close the directory div
             write('</div>', output_file)
         else:
             # This helps put some space between sibling directories
@@ -713,7 +733,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
     INSERT or UPDATE the appropriate entry, or DELETE if the head
     shows a 403 / 404.
     '''
-    if bool(url) is bool(head):
+    if bool(url) is bool(head) and not isinstance(head, requests.Response):
         raise ValueError('One and only one of `url` or `head` is necessary.')
 
     if url is not None:
@@ -722,6 +742,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
         content_type = None
 
     elif head is not None:
+        url = head.url
         # When doing a full scan, we get a Response object.
         if head.status_code in [403, 404]:
             cur.execute('DELETE FROM urls WHERE url == ?', [url])
@@ -735,7 +756,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
                 content_length = int(content_length)
             content_type = head.headers.get('Content-Type', None)
 
-    basename = url_to_filepath(url)['filename']
+    basename = url_split(url)['filename']
     basename = urllib.parse.unquote(basename)
     do_download = True
 
@@ -759,7 +780,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
         sql.commit()
     return data
 
-def url_to_filepath(text):
+def url_split(text):
     text = urllib.parse.unquote(text)
     parts = urllib.parse.urlsplit(text)
     if any(part == '' for part in [parts.scheme, parts.netloc]):
@@ -852,7 +873,7 @@ def download(
         # on their own.
         cur.execute('SELECT url FROM urls LIMIT 1')
         url = cur.fetchone()[0]
-        outputdir = url_to_filepath(url)['root']
+        outputdir = url_split(url)['root']
 
     if isinstance(bytespersecond, str):
         bytespersecond = bytestring.parsebytes(bytespersecond)
@@ -861,7 +882,7 @@ def download(
     for fetch in fetch_generator(cur):
         url = fetch[SQL_URL]
 
-        url_filepath = url_to_filepath(url)
+        url_filepath = url_split(url)
         folder = os.path.join(outputdir, url_filepath['folder'])
         os.makedirs(folder, exist_ok=True)
 
@@ -1012,7 +1033,7 @@ def measure(databasename, fullscan=False, new_only=False):
 
     items = cur.fetchall()
 
-    filecount = 0
+    filecount = len(items)
     unmeasured_file_count = 0
 
     for fetch in items:
@@ -1023,21 +1044,27 @@ def measure(databasename, fullscan=False, new_only=False):
             head = do_head(url, raise_for_status=False)
             fetch = smart_insert(sql, cur, head=head, commit=True)
             size = fetch[SQL_CONTENT_LENGTH]
-            if size is None:
-                write('"%s" is not revealing Content-Length' % url)
-                size = 0
 
-
-        elif fetch[SQL_CONTENT_LENGTH] is None:
+        elif size is None:
+            # Unmeasured and no intention to measure.
             unmeasured_file_count += 1
             size = 0
 
+        if size is None:
+            # Unmeasured even though we tried the head request.
+            write('"%s" is not revealing Content-Length' % url)
+            size = 0
+
         totalsize += size
-        filecount += 1
 
     sql.commit()
-    short_string = bytestring.bytestring(totalsize)
-    totalsize_string = '{} ({:,} bytes) in {:,} files'.format(short_string, totalsize, filecount)
+    size_string = bytestring.bytestring(totalsize)
+    totalsize_string = '{size_short} ({size_exact:,} bytes) in {filecount:,} files'
+    totalsize_string = totalsize_string.format(
+        size_short=size_string,
+        size_exact=totalsize,
+        filecount=filecount,
+    )
     write(totalsize_string)
     if unmeasured_file_count > 0:
         write(UNMEASURED_WARNING % unmeasured_file_count)
@@ -1078,7 +1105,9 @@ def tree(databasename, output_filename=None):
         use_html = False
 
     if use_html:
-        write(HTML_TREE_HEADER, output_file)
+        write('<!DOCTYPE html>\n<html>', output_file)
+        write(HTML_TREE_HEAD, output_file)
+        write('<body>', output_file)
 
     size_details = recursive_get_size(tree)
     recursive_print_node(tree, use_html=use_html, output_file=output_file)
@@ -1086,6 +1115,8 @@ def tree(databasename, output_filename=None):
         write(UNMEASURED_WARNING % size_details['unmeasured'], output_file)
 
     if output_file is not None:
+        if use_html:
+            write('</body>\n</html>', output_file)
         output_file.close()
     return tree
 

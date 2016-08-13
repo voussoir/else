@@ -52,7 +52,7 @@ def callback_v1(fpobj, written_bytes, total_bytes):
         ends = '\n'
     else:
         ends = ''
-    percent = (100 * written_bytes) / total_bytes
+    percent = (100 * written_bytes) / max(total_bytes, 1)
     percent = '%07.3f' % percent
     written = '{:,}'.format(written_bytes)
     total = '{:,}'.format(total_bytes)
@@ -196,17 +196,13 @@ def copy_dir(
         m += '`destination_new_root` can be passed.'
         raise ValueError(m)
 
-    source = pathclass.get_path_casing(source)
     source = str_to_fp(source)
 
     if destination_new_root is not None:
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
 
-    callback_directory = callback_directory or do_nothing
-    callback_verbose = callback_verbose or do_nothing
-
-    if is_subfolder(source, destination):
+    if destination in source:
         raise RecursiveDirectory(source, destination)
 
     if not source.is_dir:
@@ -220,6 +216,8 @@ def copy_dir(
     else:
         total_bytes = 0
 
+    callback_directory = callback_directory or do_nothing
+    callback_verbose = callback_verbose or do_nothing
     bytes_per_second = limiter_or_none(bytes_per_second)
     files_per_second = limiter_or_none(files_per_second)
 
@@ -350,7 +348,6 @@ def copy_file(
         m += '`destination_new_root` can be passed'
         raise ValueError(m)
 
-    source = pathclass.get_path_casing(source)
     source = str_to_fp(source)
 
     if destination_new_root is not None:
@@ -370,13 +367,11 @@ def copy_file(
 
     # Determine overwrite
     if destination.exists:
-        destination_modtime = destination.stat.st_mtime
-
         if overwrite_old is False:
             return [destination, 0]
 
         source_modtime = source.stat.st_mtime
-        if source_modtime == destination_modtime:
+        if source_modtime == destination.stat.st_mtime:
             return [destination, 0]
 
     # Copy
@@ -460,6 +455,8 @@ def is_xor(*args):
     return [bool(a) for a in args].count(True) == 1
 
 def limiter_or_none(value):
+    if isinstance(value, str):
+        value = bytestring.parsebytes(value)
     if isinstance(value, ratelimiter.Ratelimiter):
         limiter = value
     elif value is not None:
@@ -506,7 +503,7 @@ def walk_generator(
         exclude_filenames=None,
     ):
     '''
-    Yield Path objects from the file tree similar to os.walk.
+    Yield Path objects for files in the file tree, similar to os.walk.
 
     callback_exclusion:
         This function will be called when a file or directory is excluded with
@@ -563,31 +560,28 @@ def walk_generator(
     # This is a recursion-free workplace.
     # Thank you for your cooperation.
     while len(directory_queue) > 0:
-        location = directory_queue.popleft()
-        callback_verbose('listdir: %s' % location)
-        contents = os.listdir(location)
+        current_location = directory_queue.popleft()
+        callback_verbose('listdir: %s' % current_location)
+        contents = os.listdir(current_location)
         callback_verbose('received %d items' % len(contents))
 
         directories = []
         for base_name in contents:
-            absolute_name = os.path.join(location, base_name)
+            absolute_name = os.path.join(current_location, base_name)
 
             if os.path.isdir(absolute_name):
-                if normalize(absolute_name) in exclude_directories:
-                    callback_exclusion(absolute_name, 'directory')
-                    continue
-
-                if normalize(base_name) in exclude_directories:
+                exclude = normalize(absolute_name) in exclude_directories
+                exclude |= normalize(base_name) in exclude_directories
+                if exclude:
                     callback_exclusion(absolute_name, 'directory')
                     continue
 
                 directories.append(absolute_name)
 
             else:
-                if normalize(base_name) in exclude_filenames:
-                    callback_exclusion(absolute_name, 'file')
-                    continue
-                if normalize(absolute_name) in exclude_filenames:
+                exclude = normalize(absolute_name) in exclude_filenames
+                exclude |= normalize(base_name) in exclude_filenames
+                if exclude:
                     callback_exclusion(absolute_name, 'file')
                     continue
 
