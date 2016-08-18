@@ -91,8 +91,8 @@ function swap_source(player, source_list)
 
 function main()
 {
-    var WIDTH = 3;
-    var HEIGHT = 3;
+    var WIDTH = 2;
+    var HEIGHT = 2;
     var MEDIAS = get_media_links();
 
     clear_page();

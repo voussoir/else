@@ -138,6 +138,7 @@ function create_odi_div(url)
 
     if (paramless_url.match(IMAGE_TYPES))
     {
+        console.log("Creating image div for " + paramless_url);
         var div = document.createElement("div");
         div.id = generate_id(32);
         div.className = "odi_image_div";
@@ -194,6 +195,7 @@ function create_odi_div(url)
         {
             return null;
         }
+        console.log("Creating " + mediatype + " div for " + paramless_url);
 
         var div = document.createElement("div");
         div.id = generate_id(32);
@@ -253,6 +255,7 @@ function create_odi_div(url)
 }
 function create_odi_divs(urls)
 {
+    console.log("Creating odi divs");
     image_divs = [];
     media_divs = [];
     odi_divs = [];
@@ -332,6 +335,7 @@ function create_workspace()
     control_panel.appendChild(ingest_div);
     control_panel.appendChild(start_button);
     document.body.appendChild(workspace);
+    console.log("finished workspace");
 }
 
 function delete_odi_div(element)
@@ -430,6 +434,7 @@ function filter_re(pattern, do_delete)
 
 function format_css()
 {
+    console.log("Formatting CSS variables");
     var css = CSS;
     while (true)
     {
@@ -438,22 +443,24 @@ function format_css()
         {
             break;
         }
-
-        matches = Array.from(new Set(matches));
-        for (var index = 0; index < matches.length; index += 1)
-        {
-            var injector = matches[index];
-            var injected = injector.replace(new RegExp("\\$", 'g'), "");
-            /*console.log(injector);*/
-            /*console.log(injected);*/
-            css = css.replace(injector, this[injected]);
-        }
+        console.log(matches);
+        matches = new Set(matches);
+        /* Originally used Array.from(set) and did regular iteration, but I found
+        that sites can override and break that conversion. */
+        matches.forEach(
+            function(injector)
+            {
+                var injected = injector.replace(new RegExp("\\$", 'g'), "");
+                css = css.replace(injector, this[injected]);
+            }
+        );
     }
     return css;
 }
 
 function get_all_urls()
 {
+    console.log("Collecting urls");
     var urls = [];
     function include(source, attr)
     {
@@ -529,6 +536,7 @@ function get_basename(url)
 
 function get_gfycat_video(id)
 {
+    console.log("Resolving gfycat " + id);
     var url = "https://gfycat.com/cajax/get/" + id;
     var request = new XMLHttpRequest();
     request.answer = null;
@@ -595,6 +603,7 @@ function generate_id(length)
 function ingest()
 {
     /* Take the text from the INGEST box, and make odi divs from it */
+    console.log("Ingesting");
     var odi_divs = get_odi_divs();
     var ingestbox = document.getElementById("ingestbox");
     var text = ingestbox.value;
@@ -622,6 +631,7 @@ function ingest()
 
 function lazy_load_all()
 {
+    console.log("Starting lazyload");
     lazies = get_lazy_divs();
     lazies.reverse();
     lazy_buttons = document.getElementsByClassName("load_button");

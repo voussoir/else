@@ -7,7 +7,6 @@ class Path:
     def __init__(self, path):
         path = os.path.normpath(path)
         path = os.path.abspath(path)
-        path = get_path_casing(path)
         self.absolute_path = path
 
     def __contains__(self, other):
@@ -22,6 +21,10 @@ class Path:
     @property
     def basename(self):
         return os.path.basename(self.absolute_path)
+
+    def correct_case(self):
+        self.absolute_path = get_path_casing(self.absolute_path)
+        return self.absolute_path
 
     @property
     def exists(self):

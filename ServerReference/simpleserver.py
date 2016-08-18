@@ -14,6 +14,7 @@ sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
 sys.path.append('C:\\git\\else\\SpinalTap'); import spinal
 
 FILE_READ_CHUNK = bytestring.MIBIBYTE
+RATELIMITER = ratelimiter.Ratelimiter(16 * bytestring.MIBIBYTE)
 
 # The paths which the user may access.
 # Attempting to access anything outside will 403.
@@ -98,6 +99,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if isinstance(data, types.GeneratorType):
             for chunk in data:
                 self.wfile.write(chunk)
+                RATELIMITER.limit(len(chunk))
         else:
             self.wfile.write(data)
 

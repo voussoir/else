@@ -614,7 +614,7 @@ def fetch_generator(cur):
 
 def filepath_sanitize(text, allowed=''):
     badchars = FILENAME_BADCHARS
-    badchars = ''.join(char for char in FILENAME_BADCHARS if char not in allowed)
+    badchars = set(char for char in FILENAME_BADCHARS if char not in allowed)
     text = ''.join(char for char in text if char not in badchars)
     return text
 
@@ -886,32 +886,16 @@ def download(
         folder = os.path.join(outputdir, url_filepath['folder'])
         os.makedirs(folder, exist_ok=True)
 
-        final_fullname = os.path.join(folder, url_filepath['filename'])
-        temporary_basename = hashit(url, 16) + '.oddltemporary'
-        temporary_fullname = os.path.join(folder, temporary_basename)
+        fullname = os.path.join(folder, url_filepath['filename'])
 
-        # Because we use .oddltemporary files, the behavior of `overwrite` here
-        # is different than the behavior of `overwrite` in downloady.
-        # The overwrite used in the following block refers to the finalized file.
-        # The overwrite passed to downloady refers to the oddltemporary which
-        # may be resumed.
-        if os.path.isfile(final_fullname):
-            if overwrite:
-                os.remove(final_fullname)
-            else:
-                write('Skipping "%s". Use `--overwrite`' % final_fullname)
-                continue
-
-        overwrite = overwrite or None
-        write('Downloading "%s" as "%s"' % (final_fullname, temporary_basename))
+        write('Downloading "%s"' % fullname)
         downloady.download_file(
             url,
-            localname=temporary_fullname,
+            localname=fullname,
             bytespersecond=bytespersecond,
             callback_progress=downloady.progress2,
             overwrite=overwrite
         )
-        os.rename(temporary_fullname, final_fullname)
 
 def download_argparse(args):
     return download(

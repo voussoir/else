@@ -350,15 +350,16 @@ def copy_file(
 
     source = str_to_fp(source)
 
+    if not source.is_file:
+        raise SourceNotFile(source)
+
     if destination_new_root is not None:
+        source.correct_case()
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
 
     callback = callback or do_nothing
     callback_verbose = callback_verbose or do_nothing
-
-    if not source.is_file:
-        raise SourceNotFile(source)
 
     if destination.is_dir:
         raise DestinationIsDirectory(destination)
