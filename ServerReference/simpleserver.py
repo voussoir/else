@@ -48,6 +48,7 @@ class Path(pathclass.Path):
         return any(self in okay for okay in OKAY_PATHS)
 
     def anchor(self, display_name=None):
+        self.correct_case()
         if display_name is None:
             display_name = self.basename
 
@@ -59,11 +60,15 @@ class Path(pathclass.Path):
             icon = '\U0001F48E'
 
         #print('anchor', path)
-        a = '<a href="{full}">{icon} {display}</a>'.format(
+        if display_name.endswith('.placeholder'):
+            a = '<a>{icon} {display}</a>'
+        else:
+            a = '<a href="{full}">{icon} {display}</a>'
+        a = a.format(
             full=self.url_path,
             icon=icon,
             display=display_name,
-            )
+        )
         return a
 
     def table_row(self, display_name=None, shaded=False):

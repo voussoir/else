@@ -189,7 +189,6 @@ def copy_dir(
     Returns: [destination path, number of bytes written to destination]
     (Written bytes is 0 if all files already existed.)
     '''
-
     # Prepare parameters
     if not is_xor(destination, destination_new_root):
         m = 'One and only one of `destination` and '
@@ -199,6 +198,7 @@ def copy_dir(
     source = str_to_fp(source)
 
     if destination_new_root is not None:
+        source.correct_case()
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
 
@@ -279,10 +279,10 @@ def copy_file(
         destination_new_root=None,
         bytes_per_second=None,
         callback=None,
+        callback_permission_denied=None,
         callback_verbose=None,
         dry_run=False,
         overwrite_old=True,
-        callback_permission_denied=None,
     ):
     '''
     Copy a file from one place to another.
@@ -412,8 +412,9 @@ def copy_file(
         callback(destination, written_bytes, source_bytes)
 
     # Fin
-    callback_verbose('Closing handles.')
+    callback_verbose('Closing source handle.')
     source_file.close()
+    callback_verbose('Closing dest handle.')
     destination_file.close()
     callback_verbose('Copying metadata')
     shutil.copystat(source.absolute_path, destination.absolute_path)
@@ -461,7 +462,7 @@ def limiter_or_none(value):
     if isinstance(value, ratelimiter.Ratelimiter):
         limiter = value
     elif value is not None:
-        limiter = ratelimiter.Ratelimiter(allowance_per_period=value, period=1)
+        limiter = ratelimiter.Ratelimiter(allowance=value, period=1)
     else:
         limiter = None
     return limiter

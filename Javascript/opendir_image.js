@@ -363,6 +363,7 @@ function dump_urls()
     {
         textbox = document.createElement("textarea");
         textbox.className = "urldumpbox";
+        textbox.id = "url_dump_box";
         workspace = document.getElementById("WORKSPACE");
         workspace.appendChild(textbox);
     }

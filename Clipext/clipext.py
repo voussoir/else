@@ -12,8 +12,8 @@ def multi_line_input():
         except EOFError:
             # If you enter nothing but ctrl-z
             additional = EOF
-
-        userinput.append(additional)
+        else:
+            userinput.append(additional)
 
         if EOF in additional:
             break

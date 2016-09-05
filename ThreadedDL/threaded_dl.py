@@ -30,16 +30,18 @@ def listget(li, index, fallback):
     except IndexError:
         return fallback
 
-def threaded_dl(urls, thread_count=4):
+def threaded_dl(urls, thread_count, prefix=None):
     threads = []
     prefix_digits = len(str(len(urls)))
-    prefix_text = '%0{digits}d_'.format(digits=prefix_digits)
+    if prefix is None:
+        prefix = now = int(time.time())
+    prefix_text = '{prefix}_{{index:0{digits}d}}_'.format(prefix=prefix, digits=prefix_digits)
     for (index, url) in enumerate(urls):
         while len(threads) == thread_count:
             threads = remove_finished(threads)
             time.sleep(0.1)
 
-        prefix = prefix_text % index
+        prefix = prefix_text.format(index=index)
         t = threading.Thread(target=download_thread, args=[url, prefix])
         t.daemon = True
         threads.append(t)
@@ -47,6 +49,7 @@ def threaded_dl(urls, thread_count=4):
 
     while len(threads) > 0:
         threads = remove_finished(threads)
+        print('%d threads remaining\r' % len(threads), end='', flush=True)
         time.sleep(0.1)
 
 def main():
@@ -55,11 +58,13 @@ def main():
         f = open(filename, 'r')
         with f:
             urls = f.read()
-        urls = urls.split()
+        urls = urls.split('\n')
     else:
         urls = clipext.resolve(filename)
-        urls = urls.split()
-    threaded_dl(urls)
+        urls = urls.split('\n')
+    thread_count = int(listget(sys.argv, 2, 4))
+    prefix = listget(sys.argv, 3, None)
+    threaded_dl(urls, thread_count=thread_count, prefix=prefix)
 
 if __name__ == '__main__':
     main()

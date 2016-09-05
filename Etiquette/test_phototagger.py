@@ -12,7 +12,6 @@ class PhotoDBTest(unittest.TestCase):
         pass
 
     def test_add_and_remove_photo(self):
-        self.setUp()
         photo1 = self.p.new_photo('samples\\train.jpg')
         self.assertEqual(len(photo1.id), self.p.id_length)
 
@@ -42,8 +41,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertEqual(tag.name, 'one_two')
 
     def test_add_and_remove_synonym(self):
-        self.setUp()
-
         # Add synonym
         giraffe = self.p.new_tag('giraffe')
         horse = self.p.new_tag_synonym('long horse', 'giraffe')
@@ -65,7 +62,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertRaises(phototagger.NoSuchSynonym, self.p.remove_tag_synonym, 'blanc')
 
     def test_apply_photo_tag(self):
-        self.setUp()
         photo = self.p.new_photo('samples\\train.jpg')
         self.p.new_tag('vehicles')
 
@@ -77,8 +73,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertFalse(status)
 
     def test_convert_tag_synonym(self):
-        self.setUp()
-
         # Install tags and a synonym
         photo = self.p.new_photo('samples\\train.jpg')
         trains = self.p.new_tag('trains')
@@ -115,7 +109,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertEqual(tags[0].id, trains_id)
 
     def test_generate_id(self):
-        self.setUp()
         i_photo = self.p.generate_id('photos')
         i_tag = self.p.generate_id('tags')
         self.assertRaises(ValueError, self.p.generate_id, 'other')
@@ -127,21 +120,18 @@ class PhotoDBTest(unittest.TestCase):
         self.assertLess(int(i_photo), int(self.p.generate_id('photos')))
 
     def test_get_photo_by_id(self):
-        self.setUp()
         photo = self.p.new_photo('samples\\train.jpg')
 
         photo2 = self.p.get_photo_by_id(photo.id)
         self.assertEqual(photo, photo2)
 
     def test_get_photo_by_path(self):
-        self.setUp()
         photo = self.p.new_photo('samples\\train.jpg')
 
         photo2 = self.p.get_photo_by_path(photo.filepath)
         self.assertEqual(photo, photo2)
 
     def test_get_photos_by_recent(self):
-        self.setUp()
         paths = ['train.jpg', 'bolts.jpg', 'reddit.png']
         paths = ['samples\\' + path for path in paths]
         paths = [os.path.abspath(path) for path in paths]
@@ -176,7 +166,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertEqual(tag1, tag2)
 
     def test_get_tags_by_photo(self):
-        self.setUp()
         photo = self.p.new_photo('samples\\train.jpg')
         tag = self.p.new_tag('vehicles')
         stat = self.p.apply_photo_tag(photo.id, tagname='vehicles')
@@ -192,7 +181,6 @@ class PhotoDBTest(unittest.TestCase):
         self.assertRaises(phototagger.TagTooShort, self.p.new_tag, '!!??&&*')
 
     def test_photo_has_tag(self):
-        self.setUp()
         photo = self.p.new_photo('samples\\train.jpg')
         tag = self.p.new_tag('vehicles')
         self.p.apply_photo_tag(photo.id, tag.id)

@@ -2,13 +2,13 @@ import time
 
 
 class Ratelimiter:
-    def __init__(self, allowance_per_period, period=1, operation_cost=1, mode='sleep'):
+    def __init__(self, allowance, period=1, operation_cost=1, mode='sleep'):
         '''
-        allowance_per_period:
+        allowance:
             Our spending balance per `period` seconds.
 
         period:
-            The number of seconds over which we can perform `allowance_per_period` operations.
+            The number of seconds over which we can perform `allowance` operations.
 
         operation_cost:
             The default amount to remove from our balance after each operation.
@@ -26,7 +26,7 @@ class Ratelimiter:
         if mode not in ('sleep', 'reject'):
             raise ValueError('Invalid mode %s' % repr(mode))
 
-        self.allowance_per_period = allowance_per_period
+        self.allowance = allowance
         self.period = period
         self.operation_cost = operation_cost
         self.mode = mode
@@ -36,7 +36,7 @@ class Ratelimiter:
 
     @property
     def gain_rate(self):
-        return self.allowance_per_period / self.period
+        return self.allowance / self.period
 
     def limit(self, cost=None):
         '''
@@ -47,7 +47,7 @@ class Ratelimiter:
 
         time_diff = time.time() - self.last_operation
         self.balance += time_diff * self.gain_rate
-        self.balance = min(self.balance, self.allowance_per_period)
+        self.balance = min(self.balance, self.allowance)
 
         if self.balance >= cost:
             self.balance -= cost

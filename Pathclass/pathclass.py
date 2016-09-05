@@ -18,6 +18,9 @@ class Path:
     def __hash__(self):
         return hash(self.absolute_path)
 
+    def __repr__(self):
+        return '{c}({path})'.format(c=self.__class__, path=self.absolute_path)
+
     @property
     def basename(self):
         return os.path.basename(self.absolute_path)
@@ -79,11 +82,12 @@ def get_path_casing(path):
         path = path.absolute_path
 
     (drive, subpath) = os.path.splitdrive(path)
+    drive = drive.upper()
     subpath = subpath.lstrip(os.sep)
 
     pattern = [glob_patternize(piece) for piece in subpath.split(os.sep)]
     pattern = os.sep.join(pattern)
-    pattern = drive.upper() + os.sep + pattern
+    pattern = drive + os.sep + pattern
     #print(pattern)
     try:
         return glob.glob(pattern)[0]
