@@ -1,6 +1,8 @@
 import collections
 import glob
+import hashlib
 import json
+import logging
 import os
 import shutil
 import stat
@@ -12,10 +14,13 @@ sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
 sys.path.append('C:\\git\\else\\Pathclass'); import pathclass
 sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
 
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 128 * bytestring.KIBIBYTE
 # Number of bytes to read and write at a time
 
+HASH_CLASS = hashlib.md5
 
 class DestinationIsDirectory(Exception):
     pass
@@ -33,6 +38,9 @@ class SourceNotFile(Exception):
     pass
 
 class SpinalError(Exception):
+    pass
+
+class ValidationError(Exception):
     pass
 
 def callback_exclusion(name, path_type):
@@ -86,13 +94,13 @@ def copy_dir(
         callback_exclusion=None,
         callback_file=None,
         callback_permission_denied=None,
-        callback_verbose=None,
         dry_run=False,
         exclude_directories=None,
         exclude_filenames=None,
         files_per_second=None,
         overwrite_old=True,
         precalcsize=False,
+        validate_hash=False,
     ):
     '''
     Copy all of the contents from source to destination,
@@ -145,11 +153,6 @@ def copy_dir(
 
         Default = None
 
-    callback_verbose:
-        If provided, this function will be called with some operation notes.
-
-        Default = None
-
     dry_run:
         Do everything except the actual file copying.
 
@@ -186,6 +189,9 @@ def copy_dir(
 
         Default = False
 
+    validate_hash:
+        Passed directly into each `copy_file`.
+
     Returns: [destination path, number of bytes written to destination]
     (Written bytes is 0 if all files already existed.)
     '''
@@ -217,7 +223,6 @@ def copy_dir(
         total_bytes = 0
 
     callback_directory = callback_directory or do_nothing
-    callback_verbose = callback_verbose or do_nothing
     bytes_per_second = limiter_or_none(bytes_per_second)
     files_per_second = limiter_or_none(files_per_second)
 
@@ -226,7 +231,6 @@ def copy_dir(
     walker = walk_generator(
         source,
         callback_exclusion=callback_exclusion,
-        callback_verbose=callback_verbose,
         exclude_directories=exclude_directories,
         exclude_filenames=exclude_filenames,
     )
@@ -255,9 +259,9 @@ def copy_dir(
             bytes_per_second=bytes_per_second,
             callback=callback_file,
             callback_permission_denied=callback_permission_denied,
-            callback_verbose=callback_verbose,
             dry_run=dry_run,
             overwrite_old=overwrite_old,
+            validate_hash=validate_hash,
         )
 
         copiedname = copied[0]
@@ -280,9 +284,10 @@ def copy_file(
         bytes_per_second=None,
         callback=None,
         callback_permission_denied=None,
-        callback_verbose=None,
+        callback_validate_hash=None,
         dry_run=False,
         overwrite_old=True,
+        validate_hash=False,
     ):
     '''
     Copy a file from one place to another.
@@ -323,8 +328,8 @@ def copy_file(
 
         Default = None
 
-    callback_verbose:
-        If provided, this function will be called with some operation notes.
+    callback_validate_hash:
+        Passed directly into `verify_hash`
 
         Default = None
 
@@ -338,6 +343,12 @@ def copy_file(
         has a more recent "last modified" timestamp.
 
         Default = True
+
+    validate_hash:
+        If True, verify the file hash of the resulting file, using the
+        `HASH_CLASS` global.
+
+        Default = False
 
     Returns: [destination filename, number of bytes written to destination]
     (Written bytes is 0 if the file already existed.)
@@ -359,7 +370,6 @@ def copy_file(
     destination = str_to_fp(destination)
 
     callback = callback or do_nothing
-    callback_verbose = callback_verbose or do_nothing
 
     if destination.is_dir:
         raise DestinationIsDirectory(destination)
@@ -387,9 +397,9 @@ def copy_file(
     written_bytes = 0
 
     try:
-        callback_verbose('Opening handles.')
-        source_file = open(source.absolute_path, 'rb')
-        destination_file = open(destination.absolute_path, 'wb')
+        log.debug('Opening handles.')
+        source_handle = open(source.absolute_path, 'rb')
+        destination_handle = open(destination.absolute_path, 'wb')
     except PermissionError as exception:
         if callback_permission_denied is not None:
             callback_permission_denied(source, exception)
@@ -397,13 +407,19 @@ def copy_file(
         else:
             raise
 
+    if validate_hash:
+        hasher = HASH_CLASS()
+
     while True:
-        data_chunk = source_file.read(CHUNK_SIZE)
+        data_chunk = source_handle.read(CHUNK_SIZE)
         data_bytes = len(data_chunk)
         if data_bytes == 0:
             break
 
-        destination_file.write(data_chunk)
+        if validate_hash:
+            hasher.update(data_chunk)
+
+        destination_handle.write(data_chunk)
         written_bytes += data_bytes
 
         if bytes_per_second is not None:
@@ -412,12 +428,21 @@ def copy_file(
         callback(destination, written_bytes, source_bytes)
 
     # Fin
-    callback_verbose('Closing source handle.')
-    source_file.close()
-    callback_verbose('Closing dest handle.')
-    destination_file.close()
-    callback_verbose('Copying metadata')
+    log.debug('Closing source handle.')
+    source_handle.close()
+    log.debug('Closing dest handle.')
+    destination_handle.close()
+    log.debug('Copying metadata')
     shutil.copystat(source.absolute_path, destination.absolute_path)
+
+    if validate_hash:
+        verify_hash(
+            destination,
+            callback=callback_validate_hash,
+            known_size=source_bytes,
+            known_hash=hasher.hexdigest(),
+        )
+
     return [destination, written_bytes]
 
 def do_nothing(*args):
@@ -497,12 +522,43 @@ def str_to_fp(path):
         path = pathclass.Path(path)
     return path
 
+def verify_hash(path, known_size, known_hash, callback=None):
+    '''
+    callback:
+        A function that takes three parameters:
+        path object, bytes ingested so far, bytes total
+    '''
+    path = str_to_fp(path)
+    log.debug('Validating hash for "%s" against %s' % (path.absolute_path, known_hash))
+    file_size = os.path.getsize(path.absolute_path)
+    if file_size != known_size:
+        raise ValidationError('File size %d != known size %d' % (file_size, known_size))
+    handle = open(path.absolute_path, 'rb')
+    hasher = HASH_CLASS()
+    checked_bytes = 0
+    with handle:
+        while True:
+            chunk = handle.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            hasher.update(chunk)
+            checked_bytes += len(chunk)
+            if callback is not None:
+                callback(path, checked_bytes, file_size)
+
+    file_hash = hasher.hexdigest()
+    if file_hash != known_hash:
+        raise ValidationError('File hash "%s" != known hash "%s"' % (file_hash, known_hash))
+    log.debug('Hash validation passed.')
+
+
 def walk_generator(
         path='.',
         callback_exclusion=None,
-        callback_verbose=None,
         exclude_directories=None,
         exclude_filenames=None,
+        recurse=True,
+        yield_style='flat'
     ):
     '''
     Yield Path objects for files in the file tree, similar to os.walk.
@@ -510,11 +566,6 @@ def walk_generator(
     callback_exclusion:
         This function will be called when a file or directory is excluded with
         two parameters: the path, and 'file' or 'directory'.
-
-        Default = None
-
-    callback_verbose:
-        If provided, this function will be called with some operation notes.
 
         Default = None
 
@@ -533,7 +584,18 @@ def walk_generator(
         {'C:\\folder', 'thumbnails'}
 
         Default = None
+
+    recurse:
+        Yield from subdirectories. If False, only immediate files are returned.
+
+    yield_style:
+        If 'flat', yield individual files one by one in a constant stream.
+        If 'nested', yield tuple(root, directories, files) like os.walk does,
+            except I use Path objects with absolute paths for everything.
     '''
+    if yield_style not in ['flat', 'nested']:
+        raise ValueError('Invalid yield_style %s. Either "flat" or "nested".' % repr(yield_style))
+
     if exclude_directories is None:
         exclude_directories = set()
 
@@ -541,19 +603,20 @@ def walk_generator(
         exclude_filenames = set()
 
     callback_exclusion = callback_exclusion or do_nothing
-    callback_verbose = callback_verbose or do_nothing
 
     exclude_filenames = {normalize(f) for f in exclude_filenames}
     exclude_directories = {normalize(f) for f in exclude_directories}
 
-    path = str_to_fp(path).absolute_path
+    path = str_to_fp(path)
 
-    if normalize(path) in exclude_directories:
-        callback_exclusion(path, 'directory')
+    # Considering full paths
+    if normalize(path.absolute_path) in exclude_directories:
+        callback_exclusion(path.absolute_path, 'directory')
         return
 
-    if normalize(os.path.split(path)[1]) in exclude_directories:
-        callback_exclusion(path, 'directory')
+    # Considering folder names
+    if normalize(path.basename) in exclude_directories:
+        callback_exclusion(path.absolute_path, 'directory')
         return
 
     directory_queue = collections.deque()
@@ -563,13 +626,14 @@ def walk_generator(
     # Thank you for your cooperation.
     while len(directory_queue) > 0:
         current_location = directory_queue.popleft()
-        callback_verbose('listdir: %s' % current_location)
-        contents = os.listdir(current_location)
-        callback_verbose('received %d items' % len(contents))
+        log.debug('listdir: %s' % current_location.absolute_path)
+        contents = os.listdir(current_location.absolute_path)
+        log.debug('received %d items' % len(contents))
 
         directories = []
+        files = []
         for base_name in contents:
-            absolute_name = os.path.join(current_location, base_name)
+            absolute_name = os.path.join(current_location.absolute_path, base_name)
 
             if os.path.isdir(absolute_name):
                 exclude = normalize(absolute_name) in exclude_directories
@@ -578,7 +642,7 @@ def walk_generator(
                     callback_exclusion(absolute_name, 'directory')
                     continue
 
-                directories.append(absolute_name)
+                directories.append(str_to_fp(absolute_name))
 
             else:
                 exclude = normalize(absolute_name) in exclude_filenames
@@ -587,7 +651,17 @@ def walk_generator(
                     callback_exclusion(absolute_name, 'file')
                     continue
 
-                yield(str_to_fp(absolute_name))
+                fp = str_to_fp(absolute_name)
+                if yield_style == 'flat':
+                    yield fp
+                else:
+                    files.append(fp)
+
+        if yield_style == 'nested':
+            yield (current_location, directories, files)
+
+        if not recurse:
+            break
 
         # Extendleft causes them to get reversed, so flip it first.
         directories.reverse()

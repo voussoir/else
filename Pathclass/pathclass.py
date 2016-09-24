@@ -19,7 +19,7 @@ class Path:
         return hash(self.absolute_path)
 
     def __repr__(self):
-        return '{c}({path})'.format(c=self.__class__, path=self.absolute_path)
+        return '{c}({path})'.format(c=self.__class__.__name__, path=repr(self.absolute_path))
 
     @property
     def basename(self):

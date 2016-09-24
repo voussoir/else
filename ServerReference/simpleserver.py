@@ -11,7 +11,6 @@ import types
 sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
 sys.path.append('C:\\git\\else\\Pathclass'); import pathclass
 sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
-sys.path.append('C:\\git\\else\\SpinalTap'); import spinal
 
 FILE_READ_CHUNK = bytestring.MIBIBYTE
 RATELIMITER = ratelimiter.Ratelimiter(16 * bytestring.MIBIBYTE)

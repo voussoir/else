@@ -76,6 +76,8 @@ def download_file(
 
     if plan['plan_type'] == 'resume':
         bytes_downloaded = plan['seek_to']
+    elif plan['plan_type'] == 'partial':
+        bytes_downloaded = plan['seek_to']
     else:
         bytes_downloaded = 0
 

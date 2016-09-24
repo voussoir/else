@@ -2,6 +2,9 @@ AwfulCrateBox/
 Classifieds/
 Toddo/toddo.db
 Meal/meal.db
+*.key
+*.csr
+*.crt
 
 # Windows image file caches
 Thumbs.db
