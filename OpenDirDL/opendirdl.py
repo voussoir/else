@@ -519,7 +519,7 @@ def build_file_tree(databasename):
     if len(all_items) == 0:
         return
 
-    path_form = '{root}\\{folder}\\{filename}'
+    path_form = '{domain}\\{folder}\\{filename}'
     all_items = [
         {
             'url': item[SQL_URL],

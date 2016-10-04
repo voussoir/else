@@ -7,6 +7,9 @@ Requires `pip install beautifulsoup4`.
 
 See inside opendirdl.py for usage instructions.
 
+- 2016 10 03
+    - **[bugfix]** Fix KeyError caused by the 'root' -> 'domain' rename.
+
 - 2016 10 01
     - **[bugfix]** Fixed the download function so it actually passes `headers` into downloady.
     - **[change]** `url_split` key 'root' has been renamed to 'domain'.
