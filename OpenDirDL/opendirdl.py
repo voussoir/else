@@ -1,6 +1,5 @@
 # voussoir
-
-DOCSTRING='''
+'''
 OpenDirDL
 downloads open directories
 
@@ -108,36 +107,31 @@ tree:
 '''
 
 
-# Module names preceeded by `## ~` indicate modules that are imported during
+# Module names preceeded by `## ` indicate modules that are imported during
 # a function, because they are not used anywhere else and we don't need to waste
-# time importing them usually.
+# time importing them usually, but I still want them listed here for clarity.
+import argparse
+## import bs4
+import collections
+## import hashlib
+import os
+## import re
+import requests
+import shutil
+import sqlite3
 import sys
+## import tkinter
+import urllib.parse
 
 # Please consult my github repo for these files
 # https://github.com/voussoir/else
 sys.path.append('C:\\git\\else\\Downloady'); import downloady
 sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
-sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
 
-import argparse
-## ~import bs4
-import collections
-## ~import hashlib
-import os
-## ~import re
-import requests
-import shutil
-import sqlite3
-## ~tkinter
-import traceback
-import urllib.parse
-
-FILENAME_BADCHARS = '/\\:*?"<>|'
-
-TERMINAL_WIDTH = shutil.get_terminal_size().columns
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
-
+FILENAME_BADCHARS = '/\\:*?"<>|'
+TERMINAL_WIDTH = shutil.get_terminal_size().columns
 UNKNOWN_SIZE_STRING = '???'
 
 # When doing a basic scan, we will not send HEAD requests to URLs that end in
@@ -145,50 +139,50 @@ UNKNOWN_SIZE_STRING = '???'
 # This isn't meant to be a comprehensive filetype library, but it covers
 # enough of the typical opendir to speed things up.
 SKIPPABLE_FILETYPES = [
-'.aac',
-'.avi',
-'.bin',
-'.bmp',
-'.bz2',
-'.epub',
-'.exe',
-'.db',
-'.flac',
-'.gif',
-'.gz',
-'.ico',
-'.iso',
-'.jpeg',
-'.jpg',
-'.m3u',
-'.m4a',
-'.m4v',
-'.mka',
-'.mkv',
-'.mov',
-'.mp3',
-'.mp4',
-'.nfo',
-'.ogg',
-'.ott',
-'.pdf',
-'.png',
-'.rar',
-'.srt',
-'.tar',
-'.ttf',
-'.txt',
-'.wav',
-'.webm',
-'.wma',
-'.zip',
+    '.aac',
+    '.avi',
+    '.bin',
+    '.bmp',
+    '.bz2',
+    '.epub',
+    '.exe',
+    '.db',
+    '.flac',
+    '.gif',
+    '.gz',
+    '.ico',
+    '.iso',
+    '.jpeg',
+    '.jpg',
+    '.m3u',
+    '.m4a',
+    '.m4v',
+    '.mka',
+    '.mkv',
+    '.mov',
+    '.mp3',
+    '.mp4',
+    '.nfo',
+    '.ogg',
+    '.ott',
+    '.pdf',
+    '.png',
+    '.rar',
+    '.srt',
+    '.tar',
+    '.ttf',
+    '.txt',
+    '.wav',
+    '.webm',
+    '.wma',
+    '.zip',
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)
 
 # Will be ignored completely. Are case-sensitive
 BLACKLISTED_FILENAMES = [
-'desktop.ini',
-'thumbs.db',
+    'desktop.ini',
+    'thumbs.db',
 ]
 
 # oh shit
@@ -275,15 +269,18 @@ those files.
 ## WALKER ##########################################################################################
 ##                                                                                                ##
 class Walker:
-    def __init__(self, walkurl, databasename=None, fullscan=False):
-        if not walkurl.endswith('/'):
-            walkurl += '/'
-        if '://' not in walkurl.split('.')[0]:
-            walkurl = 'http://' + walkurl
-        self.walkurl = walkurl
+    '''
+    This class manages the extraction and saving of URLs, given a starting root url.
+    '''
+    def __init__(self, root_url, databasename=None, fullscan=False):
+        if not root_url.endswith('/'):
+            root_url += '/'
+        if '://' not in root_url.split('.')[0]:
+            root_url = 'http://' + root_url
+        self.root_url = root_url
 
         if databasename in (None, ''):
-            domain = url_split(self.walkurl)['root']
+            domain = url_split(self.root_url)['domain']
             databasename = domain + '.db'
             databasename = databasename.replace(':', '#')
         self.databasename = databasename
@@ -318,7 +315,7 @@ class Walker:
                 continue
             href = urllib.parse.urljoin(response.url, href)
 
-            if not href.startswith(self.walkurl):
+            if not href.startswith(self.root_url):
                 # Don't go to other sites or parent directories.
                 continue
 
@@ -337,7 +334,7 @@ class Walker:
         If it is an index page, its links are extracted and queued.
         If it is a file, its information is saved to the database.
 
-        We perform a 
+        We perform a
         HEAD:
             when `self.fullscan` is True.
             when `self.fullscan` is False but the url is not a SKIPPABLE_FILETYPE.
@@ -346,15 +343,15 @@ class Walker:
             when the url is an index page.
         '''
         if url is None:
-            url = self.walkurl
+            url = self.root_url
         else:
-            url = urllib.parse.urljoin(self.walkurl, url)
+            url = urllib.parse.urljoin(self.root_url, url)
 
         if url in self.seen_directories:
             # We already picked this up at some point
             return
 
-        if not url.startswith(self.walkurl):
+        if not url.startswith(self.root_url):
             # Don't follow external links or parent directory.
             write('Skipping "%s" due to external url.' % url)
             return
@@ -374,11 +371,11 @@ class Walker:
 
         try:
             head = do_head(url)
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 403:
+        except requests.exceptions.HTTPError as exception:
+            if exception.response.status_code == 403:
                 write('403 FORBIDDEN!')
                 return
-            if e.response.status_code == 404:
+            if exception.response.status_code == 404:
                 write('404 NOT FOUND!')
                 return
             raise
@@ -405,6 +402,10 @@ class Walker:
             self.smart_insert(head=head, commit=False)
 
     def walk(self, url=None):
+        '''
+        Given a starting URL (defaults to self.root_url), continually extract
+        links from the page and repeat.
+        '''
         self.queue.appendleft(url)
         try:
             while len(self.queue) > 0:
@@ -422,12 +423,6 @@ class Walker:
 
 ## OTHER CLASSES ###################################################################################
 ##                                                                                                ##
-class Generic:
-    def __init__(self, **kwargs):
-        for (key, value) in kwargs.items():
-            setattr(self, key, value)
-
-
 class TreeExistingChild(Exception):
     pass
 
@@ -540,10 +535,10 @@ def build_file_tree(databasename):
         'name': databasename,
     }
     scheme = url_split(all_items[0]['url'])['scheme']
-    tree = TreeNode(databasename, data=root_data)
-    tree.unsorted_children = all_items
+    tree_root = TreeNode(databasename, data=root_data)
+    tree_root.unsorted_children = all_items
     node_queue = set()
-    node_queue.add(tree)
+    node_queue.add(tree_root)
 
     # In this process, URLs are divided up into their nodes one directory layer at a time.
     # The root receives all URLs, and creates nodes for each of the top-level
@@ -574,14 +569,14 @@ def build_file_tree(databasename):
                 child.data['url'] = new_child_data['url']
         if node.parent is None:
             continue
-        elif node.parent == tree:
+        elif node.parent == tree_root:
             node.data['url'] = scheme + '://' + node.identifier
         else:
             node.data['url'] = node.parent.data['url'] + '/' + node.identifier
 
         del node.unsorted_children
 
-    return tree
+    return tree_root
 
 def db_init(sql, cur):
     lines = DB_INIT.split(';')
@@ -604,7 +599,7 @@ def do_request(message, method, url, raise_for_status=True):
     if raise_for_status:
         response.raise_for_status()
     return response
-    
+
 def fetch_generator(cur):
     while True:
         fetch = cur.fetchone()
@@ -613,6 +608,9 @@ def fetch_generator(cur):
         yield fetch
 
 def filepath_sanitize(text, allowed=''):
+    '''
+    Remove forbidden characters from the text, unless specifically sanctioned.
+    '''
     badchars = FILENAME_BADCHARS
     badchars = set(char for char in FILENAME_BADCHARS if char not in allowed)
     text = ''.join(char for char in text if char not in badchars)
@@ -627,22 +625,10 @@ def get_clipboard():
 
 def hashit(text, length=None):
     import hashlib
-    h = hashlib.sha512(text.encode('utf-8')).hexdigest()
+    sha = hashlib.sha512(text.encode('utf-8')).hexdigest()
     if length is not None:
-        h = h[:length]
-    return h
-
-def listget(l, index, default=None):
-    try:
-        return l[index]
-    except IndexError:
-        return default
-
-def longest_length(li):
-    longest = 0
-    for item in li:
-        longest = max(longest, len(item))
-    return longest
+        sha = sha[:length]
+    return sha
 
 def recursive_get_size(node):
     '''
@@ -722,10 +708,15 @@ def recursive_print_node(node, depth=0, use_html=False, output_file=None):
             # This helps put some space between sibling directories
             write('|   ' * (depth), output_file)
 
+def safeindex(sequence, index, fallback=None):
+    try:
+        return sequence[index]
+    except IndexError:
+        return fallback
+
 def safeprint(text, **kwargs):
     text = str(text)
     text = text.encode('ascii', 'replace').decode()
-    #text = text.replace('?', '_')
     print(text, **kwargs)
 
 def smart_insert(sql, cur, url=None, head=None, commit=True):
@@ -780,9 +771,12 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
         sql.commit()
     return data
 
-def url_split(text):
-    text = urllib.parse.unquote(text)
-    parts = urllib.parse.urlsplit(text)
+def url_split(url):
+    '''
+    Given a url, return a dictionary of its components.
+    '''
+    url = urllib.parse.unquote(url)
+    parts = urllib.parse.urlsplit(url)
     if any(part == '' for part in [parts.scheme, parts.netloc]):
         raise ValueError('Not a valid URL')
     scheme = parts.scheme
@@ -800,7 +794,7 @@ def url_split(text):
 
     result = {
         'scheme': scheme,
-        'root': root,
+        'domain': root,
         'folder': folder,
         'filename': filename,
     }
@@ -817,14 +811,14 @@ def write(line, file_handle=None, **kwargs):
 
 ## COMMANDLINE FUNCTIONS ###########################################################################
 ##                                                                                                ##
-def digest(walkurl, databasename=None, fullscan=False):
-    if walkurl in ('!clipboard', '!c'):
-        walkurl = get_clipboard()
-        write('From clipboard: %s' % walkurl)
+def digest(root_url, databasename=None, fullscan=False):
+    if root_url in ('!clipboard', '!c'):
+        root_url = get_clipboard()
+        write('From clipboard: %s' % root_url)
     walker = Walker(
         databasename=databasename,
         fullscan=fullscan,
-        walkurl=walkurl,
+        root_url=root_url,
     )
     walker.walk()
 
@@ -832,7 +826,7 @@ def digest_argparse(args):
     return digest(
         databasename=args.databasename,
         fullscan=args.fullscan,
-        walkurl=args.walkurl,
+        root_url=args.root_url,
     )
 
 def download(
@@ -873,7 +867,7 @@ def download(
         # on their own.
         cur.execute('SELECT url FROM urls LIMIT 1')
         url = cur.fetchone()[0]
-        outputdir = url_split(url)['root']
+        outputdir = url_split(url)['domain']
 
     if isinstance(bytespersecond, str):
         bytespersecond = bytestring.parsebytes(bytespersecond)
@@ -894,7 +888,8 @@ def download(
             localname=fullname,
             bytespersecond=bytespersecond,
             callback_progress=downloady.progress2,
-            overwrite=overwrite
+            headers=headers,
+            overwrite=overwrite,
         )
 
 def download_argparse(args):
@@ -905,7 +900,7 @@ def download_argparse(args):
         bytespersecond=args.bytespersecond,
     )
 
-def filter_pattern(databasename, regex, action='keep', *trash):
+def filter_pattern(databasename, regex, action='keep'):
     '''
     When `action` is 'keep', then any URLs matching the regex will have their
     `do_download` flag set to True.
@@ -930,15 +925,13 @@ def filter_pattern(databasename, regex, action='keep', *trash):
     items = cur.fetchall()
     for item in items:
         url = item[SQL_URL]
-        current_do_dl = item[SQL_DO_DOWNLOAD]
         for pattern in regex:
             contains = re.search(pattern, url) is not None
 
-            should_keep = (keep and contains)
-            if keep and contains and not current_do_dl:
+            if keep and contains and not item[SQL_DO_DOWNLOAD]:
                 write('Enabling "%s"' % url)
                 cur.execute('UPDATE urls SET do_download = 1 WHERE url == ?', [url])
-            if remove and contains and current_do_dl:
+            if remove and contains and item[SQL_DO_DOWNLOAD]:
                 write('Disabling "%s"' % url)
                 cur.execute('UPDATE urls SET do_download = 0 WHERE url == ?', [url])
     sql.commit()
@@ -1079,7 +1072,7 @@ def tree(databasename, output_filename=None):
     collapsible boxes and clickable filenames. Otherwise the file will just
     be a plain text drawing.
     '''
-    tree = build_file_tree(databasename)
+    tree_root = build_file_tree(databasename)
 
     if output_filename is not None:
         output_file = open(output_filename, 'w', encoding='utf-8')
@@ -1093,8 +1086,8 @@ def tree(databasename, output_filename=None):
         write(HTML_TREE_HEAD, output_file)
         write('<body>', output_file)
 
-    size_details = recursive_get_size(tree)
-    recursive_print_node(tree, use_html=use_html, output_file=output_file)
+    size_details = recursive_get_size(tree_root)
+    recursive_print_node(tree_root, use_html=use_html, output_file=output_file)
     if size_details['unmeasured'] > 0:
         write(UNMEASURED_WARNING % size_details['unmeasured'], output_file)
 
@@ -1102,7 +1095,7 @@ def tree(databasename, output_filename=None):
         if use_html:
             write('</body>\n</html>', output_file)
         output_file.close()
-    return tree
+    return tree_root
 
 def tree_argparse(args):
     return tree(
@@ -1113,14 +1106,14 @@ def tree_argparse(args):
 ## COMMANDLINE FUNCTIONS ###########################################################################
 
 def main(argv):
-    if listget(argv, 1, '').lower() in ('help', '-h', '--help', ''):
-        write(DOCSTRING)
+    if safeindex(argv, 1, '').lower() in ('help', '-h', '--help', ''):
+        write(__doc__)
         return
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
     p_digest = subparsers.add_parser('digest')
-    p_digest.add_argument('walkurl')
+    p_digest.add_argument('root_url')
     p_digest.add_argument('-db', '--database', dest='databasename', default=None)
     p_digest.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
     p_digest.set_defaults(func=digest_argparse)

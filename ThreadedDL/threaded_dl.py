@@ -10,19 +10,17 @@ def remove_finished(threads):
     threads = [t for t in threads if t.is_alive()]
     return threads
 
-def download_thread(url, filename_prefix=''):
+def download_thread(url, filename):
     url = url.strip()
     if url == '':
         return
 
-    basename = downloady.basename_from_url(url)
-    basename = filename_prefix + basename
-    if os.path.exists(basename):
-        print('Skipping existing file "%s"' % basename)
+    if os.path.exists(filename):
+        print('Skipping existing file "%s"' % filename)
         return
-    print('Starting "%s"' % basename)
-    downloady.download_file(url, basename)
-    print('Finished "%s"' % basename)
+    print(' Starting "%s"' % filename)
+    downloady.download_file(url, filename)
+    print('+Finished "%s"' % filename)
 
 def listget(li, index, fallback):
     try:
@@ -30,19 +28,21 @@ def listget(li, index, fallback):
     except IndexError:
         return fallback
 
-def threaded_dl(urls, thread_count, prefix=None):
+def threaded_dl(urls, thread_count, filename_format=None):
     threads = []
-    prefix_digits = len(str(len(urls)))
-    if prefix is None:
-        prefix = now = int(time.time())
-    prefix_text = '{prefix}_{{index:0{digits}d}}_'.format(prefix=prefix, digits=prefix_digits)
+    index_digits = len(str(len(urls)))
+    if filename_format is None:
+        filename_format = '{now}_{index}_{basename}'
+    filename_format = filename_format.replace('{index}', '{index:0%0dd}' % index_digits)
+    now = int(time.time())
     for (index, url) in enumerate(urls):
         while len(threads) == thread_count:
             threads = remove_finished(threads)
             time.sleep(0.1)
 
-        prefix = prefix_text.format(index=index)
-        t = threading.Thread(target=download_thread, args=[url, prefix])
+        basename = downloady.basename_from_url(url)
+        filename = filename_format.format(now=now, index=index, basename=basename)
+        t = threading.Thread(target=download_thread, args=[url, filename])
         t.daemon = True
         threads.append(t)
         t.start()
@@ -58,13 +58,12 @@ def main():
         f = open(filename, 'r')
         with f:
             urls = f.read()
-        urls = urls.split('\n')
     else:
         urls = clipext.resolve(filename)
-        urls = urls.split('\n')
+    urls = urls.split('\n')
     thread_count = int(listget(sys.argv, 2, 4))
-    prefix = listget(sys.argv, 3, None)
-    threaded_dl(urls, thread_count=thread_count, prefix=prefix)
+    filename_format = listget(sys.argv, 3, None)
+    threaded_dl(urls, thread_count=thread_count, filename_format=filename_format)
 
 if __name__ == '__main__':
     main()

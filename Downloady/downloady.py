@@ -229,7 +229,7 @@ def prepare_plan(
 
 class Progress1:
     def __init__(self, total_bytes):
-        self.limiter = ratelimiter.Ratelimiter(allowance=5, mode='reject')
+        self.limiter = ratelimiter.Ratelimiter(allowance=8, mode='reject')
         self.limiter.balance = 1
         self.total_bytes = max(1, total_bytes)
         self.divisor = bytestring.get_appropriate_divisor(total_bytes)
@@ -265,7 +265,7 @@ class Progress1:
 class Progress2:
     def __init__(self, total_bytes):
         self.total_bytes = max(1, total_bytes)
-        self.limiter = ratelimiter.Ratelimiter(allowance=5, mode='reject')
+        self.limiter = ratelimiter.Ratelimiter(allowance=8, mode='reject')
         self.limiter.balance = 1
         self.total_bytes_string = '{:,}'.format(self.total_bytes)
         self.bytes_downloaded_string = '{:%d,}' % len(self.total_bytes_string)

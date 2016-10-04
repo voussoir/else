@@ -7,6 +7,12 @@ Requires `pip install beautifulsoup4`.
 
 See inside opendirdl.py for usage instructions.
 
+- 2016 10 01
+    - **[bugfix]** Fixed the download function so it actually passes `headers` into downloady.
+    - **[change]** `url_split` key 'root' has been renamed to 'domain'.
+    - **[cleanup]** Removed import for Ratelimiter since downloady handles all of that now.
+    - **[cleanup]** Improved some variable names, including `walkurl -> root_url`.
+
 - 2016 08 16
     - **[cleanup]** Now that Downloady uses temp files for incomplete downloads, that logic can be removed from opendirdl.
 
