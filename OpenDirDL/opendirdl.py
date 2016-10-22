@@ -714,10 +714,9 @@ def safeindex(sequence, index, fallback=None):
     except IndexError:
         return fallback
 
-def safeprint(text, **kwargs):
-    text = str(text)
-    text = text.encode('ascii', 'replace').decode()
-    print(text, **kwargs)
+def safeprint(*texts, **kwargs):
+    texts = [str(text).encode('ascii', 'replace').decode() for text in texts]
+    print(*texts, **kwargs)
 
 def smart_insert(sql, cur, url=None, head=None, commit=True):
     '''
@@ -887,7 +886,7 @@ def download(
             url,
             localname=fullname,
             bytespersecond=bytespersecond,
-            callback_progress=downloady.progress2,
+            callback_progress=downloady.Progress2,
             headers=headers,
             overwrite=overwrite,
         )

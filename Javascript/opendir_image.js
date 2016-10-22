@@ -304,7 +304,7 @@ function create_workspace()
     var dumper = create_command_button("dump urls", dump_urls);
     var ingest_box = document.createElement("textarea");
     var ingest_button = create_command_button("ingest", ingest);
-    var start_button = create_command_button("load all", function(){start(); this.parentElement.removeChild(this);});
+    var start_button = create_command_button("load all", function(){start();});
 
     start_button.style.display = "block";
 

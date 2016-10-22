@@ -3,9 +3,15 @@ Open Dir DL
 
 The open directory downloader.
 
-Requires `pip install beautifulsoup4`.
-
 See inside opendirdl.py for usage instructions.
+
+- **[addition]** A new feature was added.
+- **[bugfix]** Incorrect behavior was fixed.
+- **[change]** An existing feature was slightly modified or parameters were renamed.
+- **[cleanup]** Code was improved, comments were added, or other changes with minor impact on the interface.
+- **[removal]** An old feature was removed.
+
+&nbsp;
 
 - 2016 10 03
     - **[bugfix]** Fix KeyError caused by the 'root' -> 'domain' rename.
@@ -13,8 +19,8 @@ See inside opendirdl.py for usage instructions.
 - 2016 10 01
     - **[bugfix]** Fixed the download function so it actually passes `headers` into downloady.
     - **[change]** `url_split` key 'root' has been renamed to 'domain'.
+    - **[change]** Improved some variable names, including `walkurl -> root_url`.
     - **[cleanup]** Removed import for Ratelimiter since downloady handles all of that now.
-    - **[cleanup]** Improved some variable names, including `walkurl -> root_url`.
 
 - 2016 08 16
     - **[cleanup]** Now that Downloady uses temp files for incomplete downloads, that logic can be removed from opendirdl.
@@ -22,7 +28,7 @@ See inside opendirdl.py for usage instructions.
 - 2016 08 10
     - **[addition]** Added clickable links to each directory on HTML tree pages.
     - **[bugfix]** Fixed bug in smart_insert caused by 404's being considered falsey, triggering the 'one and only one' exception.
-    - **[bugfix]** Fixed bug in smart_insert where 404'd URLs were not being deleted from the database.
+    - **[bugfix]** Fixed bug in smart_insert where 404'd URLs were not being dele`ted from the database.
 
 - 2016 08 02
     - **[cleanup]** Removed the need for div IDs on the Tree pages by making the collapse button use `this.nextSibling`.

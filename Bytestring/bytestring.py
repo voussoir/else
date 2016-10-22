@@ -1,4 +1,7 @@
 import re
+import sys
+
+__VERSION__ = '0.0.1'
 
 BYTE = 1
 KIBIBYTE = 1024 * BYTE
@@ -10,22 +13,34 @@ EXIBYTE = 1024 * PEBIBYTE
 ZEBIBYTE = 1024 * EXIBYTE
 YOBIBYTE = 1024 * ZEBIBYTE
 
-UNIT_STRINGS = {
-    BYTE: 'b',
-    KIBIBYTE: 'KiB',
-    MIBIBYTE: 'MiB',
-    GIBIBYTE: 'GiB',
-    TEBIBYTE: 'TiB',
-    PEBIBYTE: 'PiB',
-    EXIBYTE: 'EiB',
-    ZEBIBYTE: 'ZiB',
-    YOBIBYTE: 'YiB',
-}
-UNITS_SORTED = sorted(UNIT_STRINGS.keys(), reverse=True)
+BYTE_STRING = 'b'
+KIBIBYTE_STRING = 'KiB'
+MIBIBYTE_STRING = 'MiB'
+GIBIBYTE_STRING = 'GiB'
+TEBIBYTE_STRING = 'TiB'
+PEBIBYTE_STRING = 'PiB'
+EXIBYTE_STRING = 'EiB'
+ZEBIBYTE_STRING = 'ZiB'
+YOBIBYTE_STRING = 'YiB'
 
-def bytestring(size, force_unit=None):
+UNIT_STRINGS = {
+    BYTE: BYTE_STRING,
+    KIBIBYTE: KIBIBYTE_STRING,
+    MIBIBYTE: MIBIBYTE_STRING,
+    GIBIBYTE: GIBIBYTE_STRING,
+    TEBIBYTE: TEBIBYTE_STRING,
+    PEBIBYTE: PEBIBYTE_STRING,
+    EXIBYTE: EXIBYTE_STRING,
+    ZEBIBYTE: ZEBIBYTE_STRING,
+    YOBIBYTE: YOBIBYTE_STRING,
+}
+REVERSED_UNIT_STRINGS = {value: key for (key, value) in UNIT_STRINGS.items()}
+UNIT_SIZES = sorted(UNIT_STRINGS.keys(), reverse=True)
+
+
+def bytestring(size, decimal_places=3, force_unit=None):
     '''
-    Convert a number into a binary-standard string.
+    Convert a number into  string.
 
     force_unit:
         If None, an appropriate size unit is chosen automatically.
@@ -34,15 +49,31 @@ def bytestring(size, force_unit=None):
     if force_unit is None:
         divisor = get_appropriate_divisor(size)
     else:
+        if isinstance(force_unit, str):
+            force_unit = normalize_unit_string(force_unit)
+            force_unit = REVERSED_UNIT_STRINGS[force_unit]
         divisor = force_unit
 
     size_unit_string = UNIT_STRINGS[divisor]
-    size_string = '%.3f %s' % ((size / divisor), size_unit_string)
+
+    size_string = '{number:.0{decimal_places}f} {unit}'
+    size_string = size_string.format(
+        decimal_places=decimal_places,
+        number=size/divisor,
+        unit=size_unit_string,
+    )
     return size_string
 
 def get_appropriate_divisor(size):
+    '''
+    Return the divisor that would be appropriate for displaying this byte size.
+    For example:
+        1000 => 1 to display 1,000 b
+        1024 => 1024 to display 1 KiB
+        123456789 => 1048576 to display 117.738 MiB
+    '''
     size = abs(size)
-    for unit in UNITS_SORTED:
+    for unit in UNIT_SIZES:
         if size >= unit:
             appropriate_unit = unit
             break
@@ -50,11 +81,24 @@ def get_appropriate_divisor(size):
         appropriate_unit = 1
     return appropriate_unit
 
+def normalize_unit_string(string):
+    '''
+    Given a string "k" or "kb" or "kib" in any case, return "KiB", etc.
+    '''
+    string = string.lower()
+    for (size, unit_string) in UNIT_STRINGS.items():
+        unit_string_l = unit_string.lower()
+        if string in (unit_string_l, unit_string_l[0], unit_string_l.replace('i', '')):
+            return unit_string
+    raise ValueError('Unrecognized unit string "%s"' % string)
+
 def parsebytes(string):
     '''
     Given a string like "100 kib", return the appropriate integer value.
+    Accepts "k", "kb", "kib" in any casing.
     '''
-    string = string.lower().strip().replace(' ', '')
+    string = string.lower().strip()
+    string = string.replace(' ', '').replace(',', '')
 
     matches = re.findall('((\\.|-|\\d)+)', string)
     if len(matches) == 0:
@@ -73,12 +117,21 @@ def parsebytes(string):
     if string == '':
         return int(byte_value)
 
-    reversed_units = {value.lower():key for (key, value) in UNIT_STRINGS.items()}
-    for (unit_string, multiplier) in reversed_units.items():
-        # accept kib, k, kb
-        if string in (unit_string, unit_string[0], unit_string.replace('i', '')):
-            break
-    else:
-        raise ValueError('Could not determine byte value of %s' % string)
+    unit_string = normalize_unit_string(string)
+    multiplier = REVERSED_UNIT_STRINGS[unit_string]
 
     return int(byte_value * multiplier)
+
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
+    if len(args) != 1:
+        print('Usage: bytestring.py <number>')
+        return 1
+    n = int(sys.argv[1])
+    print(bytestring(n))
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

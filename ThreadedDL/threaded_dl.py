@@ -19,7 +19,7 @@ def download_thread(url, filename):
         print('Skipping existing file "%s"' % filename)
         return
     print(' Starting "%s"' % filename)
-    downloady.download_file(url, filename)
+    downloady.download_file(url, filename, timeout=15)
     print('+Finished "%s"' % filename)
 
 def listget(li, index, fallback):
@@ -41,7 +41,13 @@ def threaded_dl(urls, thread_count, filename_format=None):
             time.sleep(0.1)
 
         basename = downloady.basename_from_url(url)
-        filename = filename_format.format(now=now, index=index, basename=basename)
+        extension = os.path.splitext(basename)[1]
+        filename = filename_format.format(
+            basename=basename,
+            extension=extension,
+            index=index,
+            now=now,
+        )
         t = threading.Thread(target=download_thread, args=[url, filename])
         t.daemon = True
         threads.append(t)
@@ -60,7 +66,7 @@ def main():
             urls = f.read()
     else:
         urls = clipext.resolve(filename)
-    urls = urls.split('\n')
+    urls = urls.replace('\r', '').split('\n')
     thread_count = int(listget(sys.argv, 2, 4))
     filename_format = listget(sys.argv, 3, None)
     threaded_dl(urls, thread_count=thread_count, filename_format=filename_format)

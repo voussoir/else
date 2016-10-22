@@ -17,7 +17,7 @@ HEADERS = {
 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.152 Safari/537.36'
 }
 
-FILENAME_BADCHARS = '*?"<>|'
+FILENAME_BADCHARS = '*?"<>|\r'
 
 last_request = 0
 CHUNKSIZE = 4 * bytestring.KIBIBYTE
@@ -37,16 +37,22 @@ def download_file(
         overwrite=False,
         raise_for_undersized=True,
         verbose=False,
+        **get_kwargs
     ):
     headers = headers or {}
 
     url = sanitize_url(url)
     if localname in [None, '']:
         localname = basename_from_url(url)
+    if os.path.isdir(localname):
+        localname = os.path.join(localname, basename_from_url(url))
     localname = sanitize_filename(localname)
+    if localname != os.devnull:
+        localname = os.path.abspath(localname)
 
     if verbose:
-        print(url)
+        safeprint(' URL:', url)
+        safeprint('File:', localname)
 
     plan = prepare_plan(
         url,
@@ -81,7 +87,7 @@ def download_file(
     else:
         bytes_downloaded = 0
 
-    download_stream = request('get', url, stream=True, headers=headers, auth=auth)
+    download_stream = request('get', url, stream=True, headers=headers, auth=auth, **get_kwargs)
     if callback_progress is not None:
         callback_progress = callback_progress(plan['remote_total_bytes'])
 
@@ -223,8 +229,7 @@ def prepare_plan(
 
         return plan_fulldownload
 
-    print('No plan was chosen?')
-    return None
+    raise Exception('No plan was chosen?')
 
 
 class Progress1:
@@ -288,8 +293,6 @@ class Progress2:
         )
         print(message, end=end, flush=True)
 
-progress1 = Progress1
-progress2 = Progress2
 
 def basename_from_url(url):
     '''
@@ -321,9 +324,13 @@ def request(method, url, stream=False, headers=None, timeout=TIMEOUT, **kwargs):
         'head': session.head,
         'post': session.post,
     }[method]
-    req = method(url, stream=stream, headers=headers, timeout=None, **kwargs)
+    req = method(url, stream=stream, headers=headers, timeout=timeout, **kwargs)
     req.raise_for_status()
     return req
+
+def safeprint(*texts, **kwargs):
+    texts = [str(text).encode('ascii', 'replace').decode() for text in texts]
+    print(*texts, **kwargs)
 
 def sanitize_filename(text, exclusions=''):
     bet = FILENAME_BADCHARS.replace(exclusions, '')
@@ -375,7 +382,7 @@ if __name__ == '__main__':
 
     parser.add_argument('url')
     parser.add_argument('localname', nargs='?', default=None)
-    parser.add_argument('-c', '--callback', dest='callback', default=progress1)
+    parser.add_argument('-c', '--callback', dest='callback', default=Progress1)
     parser.add_argument('-bps', '--bytespersecond', dest='bytespersecond', default=None)
     parser.add_argument('-ow', '--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('-r', '--range', dest='range', default=None)
