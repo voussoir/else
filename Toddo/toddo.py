@@ -115,6 +115,7 @@ class Toddo():
         requestedtable = todo[SQL_TODOTABLE]
         if requestedtable.lower() != activetable.lower():
             raise ToddoExc('Todo %d is not part of the active table `%s`. It belongs to `%s`.' % (idnumber, activetable, requestedtable))
+        print(self.display_one_todo(idnumber))
         self.cur.execute('DELETE FROM todos WHERE id=?', [idnumber])
         self.sql.commit()
         return idnumber

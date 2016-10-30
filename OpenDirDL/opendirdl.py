@@ -139,6 +139,7 @@ UNKNOWN_SIZE_STRING = '???'
 # This isn't meant to be a comprehensive filetype library, but it covers
 # enough of the typical opendir to speed things up.
 SKIPPABLE_FILETYPES = [
+    '.3gp',
     '.aac',
     '.avi',
     '.bin',
