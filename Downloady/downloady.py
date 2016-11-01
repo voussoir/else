@@ -7,9 +7,19 @@ import time
 import urllib
 import warnings
 
-sys.path.append('C:\\git\\else\\bytestring'); import bytestring
-sys.path.append('C:\\git\\else\\clipext'); import clipext
-sys.path.append('C:\\git\\else\\ratelimiter'); import ratelimiter
+try:
+    sys.path.append('C:\\git\\else\\Bytestring')
+    sys.path.append('C:\\git\\else\\clipext');
+    sys.path.append('C:\\git\\else\\ratelimiter');
+    import bytestring
+    import ratelimiter
+    import clipext
+except ImportError:
+    # pip install
+    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+    from vousoirkit import bytestring
+    from vousoirkit import ratelimiter
+    from vousoirkit import clipext
 
 warnings.simplefilter('ignore')
 

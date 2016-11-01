@@ -6,8 +6,16 @@ import os
 import requests
 import sys
 
-sys.path.append('C:\\git\\else\\clipext'); import clipext
-sys.path.append('C:\\git\\else\\downloady'); import downloady
+try:
+    sys.path.append('C:\\git\\else\\Clipext');
+    sys.path.append('C:\\git\\else\\Downloady');
+    import clipext
+    import downloady
+except ImportError:
+    # pip install
+    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+    from voussoirkit import clipext
+    from voussoirkit import downloady
 
 
 ''' '''

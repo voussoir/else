@@ -10,9 +10,19 @@ import string
 import sys
 import time
 
-sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
-sys.path.append('C:\\git\\else\\Pathclass'); import pathclass
-sys.path.append('C:\\git\\else\\Ratelimiter'); import ratelimiter
+try:
+    sys.path.append('C:\\git\\else\\Bytestring');
+    sys.path.append('C:\\git\\else\\Pathclass');
+    sys.path.append('C:\\git\\else\\Ratelimiter');
+    import bytestring
+    import pathclass
+    import ratelimiter
+except ImportError:
+    # pip install
+    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+    from voussoirkit import bytestring
+    from voussoirkit import pathclass
+    from voussoirkit import ratelimiter
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)

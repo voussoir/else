@@ -123,11 +123,16 @@ import sys
 ## import tkinter
 import urllib.parse
 
-# Please consult my github repo for these files
-# https://github.com/voussoir/else
-sys.path.append('C:\\git\\else\\Downloady'); import downloady
-sys.path.append('C:\\git\\else\\Bytestring'); import bytestring
-
+try:
+    sys.path.append('C:\\git\\else\\Bytestring');
+    sys.path.append('C:\\git\\else\\Downloady');
+    import bytestring
+    import downloady
+except ImportError:
+    # pip install
+    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+    from voussoirkit import bytestring
+    from voussoirkit import downloady
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 FILENAME_BADCHARS = '/\\:*?"<>|'
