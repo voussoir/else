@@ -1,0 +1,3 @@
+https://github.com/voussoir/else/raw/master/_voussoirkit/voussoirkit.zip
+bs4
+requests

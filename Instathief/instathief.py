@@ -7,8 +7,8 @@ import requests
 import sys
 
 try:
-    sys.path.append('C:\\git\\else\\Clipext');
-    sys.path.append('C:\\git\\else\\Downloady');
+    sys.path.append('C:\\git\\else\\Clipext')
+    sys.path.append('C:\\git\\else\\Downloady')
     import clipext
     import downloady
 except ImportError:

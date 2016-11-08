@@ -9,8 +9,8 @@ import warnings
 
 try:
     sys.path.append('C:\\git\\else\\Bytestring')
-    sys.path.append('C:\\git\\else\\clipext');
-    sys.path.append('C:\\git\\else\\ratelimiter');
+    sys.path.append('C:\\git\\else\\clipext')
+    sys.path.append('C:\\git\\else\\ratelimiter')
     import bytestring
     import ratelimiter
     import clipext

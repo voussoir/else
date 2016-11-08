@@ -113,6 +113,7 @@ tree:
 import argparse
 ## import bs4
 import collections
+import concurrent.futures
 ## import hashlib
 import os
 ## import re
@@ -124,8 +125,8 @@ import sys
 import urllib.parse
 
 try:
-    sys.path.append('C:\\git\\else\\Bytestring');
-    sys.path.append('C:\\git\\else\\Downloady');
+    sys.path.append('C:\\git\\else\\Bytestring')
+    sys.path.append('C:\\git\\else\\Downloady')
     import bytestring
     import downloady
 except ImportError:
@@ -299,6 +300,7 @@ class Walker:
         self.fullscan = bool(fullscan)
         self.queue = collections.deque()
         self.seen_directories = set()
+        self.threadpool = concurrent.futures.ThreadPoolExecutor(4)
 
     def smart_insert(self, url=None, head=None, commit=True):
         '''

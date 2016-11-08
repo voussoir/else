@@ -11,9 +11,9 @@ import sys
 import time
 
 try:
-    sys.path.append('C:\\git\\else\\Bytestring');
-    sys.path.append('C:\\git\\else\\Pathclass');
-    sys.path.append('C:\\git\\else\\Ratelimiter');
+    sys.path.append('C:\\git\\else\\Bytestring')
+    sys.path.append('C:\\git\\else\\Pathclass')
+    sys.path.append('C:\\git\\else\\Ratelimiter')
     import bytestring
     import pathclass
     import ratelimiter
@@ -24,7 +24,7 @@ except ImportError:
     from voussoirkit import pathclass
     from voussoirkit import ratelimiter
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.CRITICAL)
 log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 128 * bytestring.KIBIBYTE

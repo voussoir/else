@@ -10,13 +10,19 @@ class Path:
         self.absolute_path = path
 
     def __contains__(self, other):
-        return other.absolute_path.startswith(self.absolute_path)
+        this = os.path.normcase(self.absolute_path)
+        that = os.path.normcase(other.absolute_path)
+        return that.startswith(this)
 
     def __eq__(self, other):
-        return hasattr(other, 'absolute_path') and self.absolute_path == other.absolute_path
+        if not hasattr(other, 'absolute_path'):
+            return False
+        this = os.path.normcase(self.absolute_path)
+        that = os.path.normcase(other.absolute_path)
+        return this == that
 
     def __hash__(self):
-        return hash(self.absolute_path)
+        return hash(os.path.normcase(self.absolute_path))
 
     def __repr__(self):
         return '{c}({path})'.format(c=self.__class__.__name__, path=repr(self.absolute_path))
