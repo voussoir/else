@@ -75,6 +75,11 @@ class Path:
     def stat(self):
         return os.stat(self.absolute_path)
 
+    def with_child(self, basename):
+        basename = os.path.basename(basename)
+        return Path(os.path.join(self.absolute_path, basename))
+
+
 def get_path_casing(path):
     '''
     Take what is perhaps incorrectly cased input and get the path's actual

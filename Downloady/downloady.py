@@ -17,9 +17,9 @@ try:
 except ImportError:
     # pip install
     # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from vousoirkit import bytestring
-    from vousoirkit import ratelimiter
-    from vousoirkit import clipext
+    from voussoirkit import bytestring
+    from voussoirkit import ratelimiter
+    from voussoirkit import clipext
 
 warnings.simplefilter('ignore')
 

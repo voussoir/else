@@ -88,6 +88,9 @@ measure:
         When included, perform HEAD requests only on files that haven't gotten
         one yet.
 
+    -t 4 | --threads 4:
+        The number of threads to use for performing requests.
+
     If a file's size is not known by the time this operation completes, you
     will receive a printed note.
 
@@ -300,7 +303,6 @@ class Walker:
         self.fullscan = bool(fullscan)
         self.queue = collections.deque()
         self.seen_directories = set()
-        self.threadpool = concurrent.futures.ThreadPoolExecutor(4)
 
     def smart_insert(self, url=None, head=None, commit=True):
         '''
@@ -600,10 +602,10 @@ def do_head(url, raise_for_status=True):
     return do_request('HEAD', requests.head, url, raise_for_status=raise_for_status)
 
 def do_request(message, method, url, raise_for_status=True):
-    message = '{message:>4s}: {url} : '.format(message=message, url=url)
-    write(message, end='', flush=True)
+    form = '{message:>4s}: {url} : {status}'
+    write(form.format(message=message, url=url, status=''))
     response = method(url)
-    write(response.status_code)
+    write(form.format(message=message, url=url, status=response.status_code))
     if raise_for_status:
         response.raise_for_status()
     return response
@@ -637,6 +639,11 @@ def hashit(text, length=None):
     if length is not None:
         sha = sha[:length]
     return sha
+
+def int_none(x):
+    if x is None:
+        return x
+    return int(x)
 
 def recursive_get_size(node):
     '''
@@ -996,7 +1003,37 @@ def list_basenames_argparse(args):
         output_filename=args.outputfile,
     )
 
-def measure(databasename, fullscan=False, new_only=False):
+def list_urls(databasename, output_filename=None):
+    '''
+    Print the Enabled entries in order of the file basenames.
+    This makes it easier to find interesting titles without worrying about
+    what directory they're in.
+    '''
+    sql = sqlite3.connect(databasename)
+    cur = sql.cursor()
+
+    cur.execute('SELECT * FROM urls WHERE do_download == 1')
+    items = cur.fetchall()
+    items.sort(key=lambda x: x[SQL_URL].lower())
+
+    if output_filename is not None:
+        output_file = open(output_filename, 'w', encoding='utf-8')
+    else:
+        output_file = None
+
+    for item in items:
+        write(item[SQL_URL], output_file)
+
+    if output_file:
+        output_file.close()
+
+def list_urls_argparse(args):
+    return list_urls(
+        databasename=args.databasename,
+        output_filename=args.outputfile,
+    )
+
+def measure(databasename, fullscan=False, new_only=False, threads=4):
     '''
     Given a database, print the sum of all Content-Lengths.
     URLs will be HEAD requested if:
@@ -1006,7 +1043,6 @@ def measure(databasename, fullscan=False, new_only=False):
     if isinstance(fullscan, str):
         fullscan = bool(fullscan)
 
-    totalsize = 0
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
 
@@ -1016,30 +1052,47 @@ def measure(databasename, fullscan=False, new_only=False):
         cur.execute('SELECT * FROM urls WHERE do_download == 1')
 
     items = cur.fetchall()
-
     filecount = len(items)
+    totalsize = 0
     unmeasured_file_count = 0
 
-    for fetch in items:
-        size = fetch[SQL_CONTENT_LENGTH]
+    if threads is None:
+        threads = 1
 
-        if fullscan or new_only:
-            url = fetch[SQL_URL]
-            head = do_head(url, raise_for_status=False)
-            fetch = smart_insert(sql, cur, head=head, commit=True)
+    threadpool = concurrent.futures.ThreadPoolExecutor(threads)
+    thread_promises = []
+
+    try:
+        for fetch in items:
             size = fetch[SQL_CONTENT_LENGTH]
 
-        elif size is None:
-            # Unmeasured and no intention to measure.
-            unmeasured_file_count += 1
-            size = 0
+            if fullscan or new_only:
+                url = fetch[SQL_URL]
+                promise = threadpool.submit(do_head, url, raise_for_status=False)
+                thread_promises.append(promise)
 
-        if size is None:
-            # Unmeasured even though we tried the head request.
-            write('"%s" is not revealing Content-Length' % url)
-            size = 0
+            elif size is None:
+                # Unmeasured and no intention to measure.
+                unmeasured_file_count += 1
 
-        totalsize += size
+            else:
+                totalsize += size
+
+        while len(thread_promises) > 0:
+            # If that thread is done, `result()` will return immediately
+            # Otherwise, it will wait, which is okay because the threads themselves
+            # are not blocked.
+            head = thread_promises.pop(0).result()
+            fetch = smart_insert(sql, cur, head=head, commit=True)
+            size = fetch[SQL_CONTENT_LENGTH]
+            if size is None:
+                write('"%s" is not revealing Content-Length' % url)
+                size = 0
+            totalsize += size
+    except KeyboardInterrupt:
+        for promise in thread_promises:
+            promise.cancel()
+        raise
 
     sql.commit()
     size_string = bytestring.bytestring(totalsize)
@@ -1059,6 +1112,7 @@ def measure_argparse(args):
         databasename=args.databasename,
         fullscan=args.fullscan,
         new_only=args.new_only,
+        threads=int_none(args.threads),
     )
 
 def remove_pattern_argparse(args):
@@ -1142,10 +1196,16 @@ def main(argv):
     p_list_basenames.add_argument('-o', '--outputfile', dest='outputfile', default=None)
     p_list_basenames.set_defaults(func=list_basenames_argparse)
 
+    p_list_urls = subparsers.add_parser('list_urls')
+    p_list_urls.add_argument('databasename')
+    p_list_urls.add_argument('-o', '--outputfile', dest='outputfile', default=None)
+    p_list_urls.set_defaults(func=list_urls_argparse)
+
     p_measure = subparsers.add_parser('measure')
     p_measure.add_argument('databasename')
     p_measure.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
     p_measure.add_argument('-n', '--new_only', dest='new_only', action='store_true')
+    p_measure.add_argument('-t', '--threads', dest='threads', default=1)
     p_measure.set_defaults(func=measure_argparse)
 
     p_remove_pattern = subparsers.add_parser('remove_pattern')
@@ -1157,6 +1217,12 @@ def main(argv):
     p_tree.add_argument('databasename')
     p_tree.add_argument('-o', '--outputfile', dest='outputfile', default=None)
     p_tree.set_defaults(func=tree_argparse)
+
+    # Allow interchangability of the command and database name
+    # opendirdl measure test.db -n = opendirdl test.db measure -n
+    if os.path.isfile(argv[0]):
+        (argv[0], argv[1]) = (argv[1], argv[0])
+    #print(argv)
 
     args = parser.parse_args(argv)
     args.func(args)

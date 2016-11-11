@@ -13,6 +13,11 @@ See inside opendirdl.py for usage instructions.
 
 &nbsp;
 
+-2016 11 11
+    - **[addition]** You can now call opendirdl using the database filename as the first argument, and the subcommand as the second. Previously, the subcommand always had to come first, but now they are interchangeable when the system detects that argv[0] is a file. This makes it much easier to do multiple operations on a single database because you can just backspace the previous command rather than having to hop over the database name to get to it.
+    - **[addition]** `measure` now takes an argument `--threads x` to use `x` threads during the head requests.
+    - **[addition]** New subcommand `list_urls` to just dump the urls.
+
 - 2016 10 03
     - **[bugfix]** Fix KeyError caused by the 'root' -> 'domain' rename.
 

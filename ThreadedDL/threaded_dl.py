@@ -52,6 +52,7 @@ def threaded_dl(urls, thread_count, filename_format=None):
         extension = os.path.splitext(basename)[1]
         filename = filename_format.format(
             basename=basename,
+            ext=extension,
             extension=extension,
             index=index,
             now=now,
