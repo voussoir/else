@@ -7,12 +7,12 @@ The basics:
 1. Create a database of the directory's files with
     > opendirdl digest http://website.com/directory/
 2. Enable and disable the files you are interested in with
-    > opendirdl remove_pattern ".*"
-    > opendirdl keep_pattern "Daft%20Punk"
-    > opendirdl remove_pattern "folder\.jpg"
+    > opendirdl website.com.db remove_pattern ".*"
+    > opendirdl website.com.db keep_pattern "Daft%20Punk"
+    > opendirdl website.com.db remove_pattern "folder\.jpg"
    Note the percent-encoded string.
 3. Download the enabled files with
-    > opendirdl download website.com.db
+    > opendirdl website.com.db download
 
 
 The specifics:
@@ -74,6 +74,15 @@ list_basenames:
         Output the results to a file instead of stdout. This is useful if the
         filenames contain special characters that crash Python, or are so long
         that the console becomes unreadable.
+
+list_urls:
+    List Enabled URLs in alphabetical order. No stylization, just dumped.
+
+    > opendirdl list_urls website.com.db <flags>
+
+    flags:
+    -o "x.txt" | --outputfile "x.txt":
+        Output the results to a file instead of stdout.
 
 measure:
     Sum up the filesizes of all Enabled URLs.
@@ -1220,7 +1229,7 @@ def main(argv):
 
     # Allow interchangability of the command and database name
     # opendirdl measure test.db -n = opendirdl test.db measure -n
-    if os.path.isfile(argv[0]):
+    if argv[0] != 'digest' and os.path.isfile(argv[0]):
         (argv[0], argv[1]) = (argv[1], argv[0])
     #print(argv)
 
