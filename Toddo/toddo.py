@@ -233,7 +233,7 @@ def colorama_print(text):
     alternator = False
     terminal_size = shutil.get_terminal_size()[0]
     for line in text.split('\n'):
-        line += ' ' * (terminal_size - (len(line)+1))
+        line = line.ljust(terminal_size, ' ')
         if HAS_COLORAMA:
             if alternator:
                 sys.stdout.write(colorama.Fore.BLACK)
@@ -242,7 +242,8 @@ def colorama_print(text):
                 sys.stdout.write(colorama.Fore.WHITE)
                 sys.stdout.write(colorama.Back.BLACK)
         alternator = not alternator
-        print(line)
+        # \r because the ljust puts us on the next line, no need for \n
+        print(line, end='\r', flush=True)
     if HAS_COLORAMA:
         sys.stdout.write(colorama.Back.RESET)
         sys.stdout.write(colorama.Fore.RESET)
@@ -274,11 +275,20 @@ def multi_line_input():
     return userinput.strip()
 
 def nicewrap(message, width, paddingleft):
-    # http://stackoverflow.com/a/26538082 ##########################
-    message = '\n'.join(['\n'.join(textwrap.wrap(line, width,#######
-         break_long_words=True, replace_whitespace=False))##########
-         for line in message.split('\n')])##########################
-    ################################################################
+    # http://stackoverflow.com/a/26538082
+    message = message.split('\n')
+    message = [
+        textwrap.wrap(
+            line,
+            width,
+            break_long_words=True,
+            replace_whitespace=False,
+        )
+        for line in message
+    ]
+    message = ['\n'.join(line) for line in message]
+    message = '\n'.join(message)
+
     message = message.strip()
     message = message.replace('\n', '\n' + (' '*paddingleft))
     return message

@@ -1,0 +1,27 @@
+import fnmatch
+import glob
+import re
+import sys
+sys.path.append('C:\\git\\else\\spinaltap'); import spinal
+
+filepattern = sys.argv[1]
+searchpattern = sys.argv[2]
+
+for filename in spinal.walk_generator():
+    filename = filename.absolute_path
+    if not fnmatch.fnmatch(filename, filepattern):
+        continue
+    matches = []
+    handle = open(filename, 'r', encoding='utf-8')
+    try:
+        with handle:
+            for (index, line) in enumerate(handle):
+                if re.search(searchpattern, line, flags=re.IGNORECASE):
+                    line = '%d | %s' % (index, line.strip())
+                    matches.append(line)
+    except:
+        pass
+    if matches:
+        print(filename)
+        print('\n'.join(matches))
+        print()

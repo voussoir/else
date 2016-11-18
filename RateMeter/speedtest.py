@@ -1,4 +1,4 @@
-import bytestring
+from voussoirkit import bytestring
 import downloady
 import ratemeter
 import requests

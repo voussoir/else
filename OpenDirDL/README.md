@@ -3,7 +3,17 @@ Open Dir DL
 
 The open directory downloader.
 
+## Installation
+    
+    pip install requirements.txt
+
+## Usage
+
 See inside opendirdl.py for usage instructions.
+
+&nbsp;
+
+### Changelog
 
 - **[addition]** A new feature was added.
 - **[bugfix]** Incorrect behavior was fixed.
@@ -33,7 +43,7 @@ See inside opendirdl.py for usage instructions.
 - 2016 08 10
     - **[addition]** Added clickable links to each directory on HTML tree pages.
     - **[bugfix]** Fixed bug in smart_insert caused by 404's being considered falsey, triggering the 'one and only one' exception.
-    - **[bugfix]** Fixed bug in smart_insert where 404'd URLs were not being dele`ted from the database.
+    - **[bugfix]** Fixed bug in smart_insert where 404'd URLs were not being deleted from the database.
 
 - 2016 08 02
     - **[cleanup]** Removed the need for div IDs on the Tree pages by making the collapse button use `this.nextSibling`.
@@ -52,7 +62,7 @@ See inside opendirdl.py for usage instructions.
 
 - 2016 07 25
     - **[change]** Bytespersecond is now parsed by `bytestring.parsebytes` rather than `eval`, so you can write "100k" as opposed to "100 * 1024" etc.
-    - **[removal]** Removed the `Downloader` class after watching [this Jack Diederich talk](https://youtu.be/o9pEzgHorH0) about unecessary classes.
+    - **[removal]** Removed the `Downloader` class and replaced it with a function, because it only had one real method anyway.
 
 - 2016 07 19
     - **[addition]** Gave the HTML tree divs a very gentle shadow and alternating colors to help with depth perception.
