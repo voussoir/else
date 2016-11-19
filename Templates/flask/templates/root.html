@@ -1,0 +1,29 @@
+<!DOCTYPE html5>
+<html>
+
+<style>
+body, a
+{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+</style>
+
+<head>
+    {% import "header.html" as header %}
+    <title>Flasksite</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/common.css">
+</head>
+
+<body>
+    {{header.make_header()}}
+    <p>Welcome to my flask site</p>
+</body>
+
+</html>
+
+<script type="text/javascript">
+</script>
