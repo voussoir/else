@@ -1,10 +1,5 @@
 <!DOCTYPE html5>
 <html>
-<head>
-    {% import "header.html" as header %}
-    <title>Flasksite</title>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="/static/common.css">
 
 <style>
 body, a
@@ -15,11 +10,16 @@ body, a
     align-items: center;
 }
 </style>
+
+<head>
+    {% import "header.html" as header %}
+    <title>Flasksite</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/common.css">
 </head>
 
 <body>
-    {{header.make_header()}}
-    <p>Welcome to my flask site</p>
+    <a href='/channels'>Manage channels</a>
 </body>
 
 </html>

@@ -1,0 +1,32 @@
+body
+{
+    display: flex;
+    flex-direction: column;
+    background-color:#fff;
+    margin: 8px;
+}
+#header
+{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-content: center;
+    margin-bottom: 4px;
+}
+.header_element
+{
+    display: flex;
+    justify-content: center;
+    flex: 1;
+    background-color: rgba(0, 0, 0, 0.1);   
+}
+.header_element:hover
+{
+    background-color: rgba(0, 0, 0, 0.2);
+}
+#content_body
+{
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+}
