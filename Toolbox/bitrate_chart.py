@@ -19,9 +19,10 @@
 16384 kbps |   2.000 MiB | 120.000 MiB |   3.516 GiB |   7.031 GiB |  10.547 GiB |  14.062 GiB
 '''
 import sys
-sys.path.append('C:\\git\\else\\bytestring')
-import bytestring
 import kbps
+
+from voussoirkit import bytestring
+
 times = ['01', '1:00', '30:00', '1:00:00', '1:30:00', '2:00:00']
 rates = [128, 256, 320, 500, 640, 738, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 2330.17, 4660.34]
 
@@ -35,7 +36,7 @@ for r in rates:
     l = []
     l.append('%d kbps' % r)
     for t in times:
-            l.append(bytestring.bytestring(kbps.calc(kbps.hms_s(t), r)))
+            l.append(kbps.kbps(time=t, kbps=r))
     l = ' | '.join(l)
     table.append(l)
 

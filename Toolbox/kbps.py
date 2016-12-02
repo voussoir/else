@@ -1,11 +1,7 @@
+import argparse
 import sys
-try:
-    sys.path.append('C:\\git\\else\\Bytestring')
-    import bytestring
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from vousoirkit import bytestring
+
+from voussoirkit import bytestring
 
 def hms_s(hms):
     hms = hms.split(':')
@@ -20,13 +16,50 @@ def hms_s(hms):
         seconds += int(hms[0])
     return seconds
 
-def calc(seconds, kbps):
-    final_kilobits = kbps * seconds
-    final_bytes = final_kilobits * 128
-    return final_bytes
+def s_hms(s):
+    (minutes, seconds) = divmod(s, 60)
+    (hours, minutes) = divmod(minutes, 60)
+    return '%02d:%02d:%02d' % (hours, minutes, seconds)
+
+def kbps(time=None, size=None, kbps=None):
+    if [time, size, kbps].count(None) != 1:
+        raise ValueError('Incorrect number of unknowns')
+
+    if size is None:
+        seconds = hms_s(time)
+        kibs = int(kbps) / 8
+        size = kibs * 1024
+        size *= seconds
+        out = bytestring.bytestring(size)
+        return out
+
+    if time is None:
+        size = bytestring.parsebytes(size)
+        kilobits = size / 128
+        time = kilobits / int(kbps)
+        return s_hms(time)
+
+    if kbps is None:
+        seconds = hms_s(time)
+        size = bytestring.parsebytes(size)
+        kibs = size / 1024
+        kilobits = kibs * 8
+        kbps = kilobits / seconds
+        return int(kbps)
+
+def example_argparse(args):
+    print(kbps(time=args.time, size=args.size, kbps=args.kbps))
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-t', '--time', dest='time', default=None)
+    parser.add_argument('-s', '--size', dest='size', default=None)
+    parser.add_argument('-k', '--kbps', dest='kbps', default=None)
+    parser.set_defaults(func=example_argparse)
+
+    args = parser.parse_args(argv)
+    args.func(args)
 
 if __name__ == '__main__':
-    length = sys.argv[1] # HH:MM:SS
-    kbps = int(sys.argv[2])
-    seconds = hms_s(length)
-    print(bytestring.bytestring(calc(seconds, kbps)))
+    main(sys.argv[1:])

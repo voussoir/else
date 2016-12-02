@@ -2,7 +2,8 @@ import fnmatch
 import glob
 import re
 import sys
-sys.path.append('C:\\git\\else\\spinaltap'); import spinal
+
+from voussoirkit import spinal
 
 filepattern = sys.argv[1]
 searchpattern = sys.argv[2]

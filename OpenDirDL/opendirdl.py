@@ -136,16 +136,10 @@ import sys
 ## import tkinter
 import urllib.parse
 
-try:
-    sys.path.append('C:\\git\\else\\Bytestring')
-    sys.path.append('C:\\git\\else\\Downloady')
-    import bytestring
-    import downloady
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from voussoirkit import bytestring
-    from voussoirkit import downloady
+# pip install
+# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+from voussoirkit import bytestring
+from voussoirkit import downloady
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 FILENAME_BADCHARS = '/\\:*?"<>|'
@@ -158,6 +152,7 @@ UNKNOWN_SIZE_STRING = '???'
 # enough of the typical opendir to speed things up.
 SKIPPABLE_FILETYPES = [
     '.3gp',
+    '.7z',
     '.aac',
     '.avi',
     '.bin',
@@ -532,21 +527,24 @@ def build_file_tree(databasename):
     sql = sqlite3.connect(databasename)
     cur = sql.cursor()
     cur.execute('SELECT * FROM urls WHERE do_download == 1')
-    all_items = cur.fetchall()
+    fetch_all = cur.fetchall()
     sql.close()
 
-    if len(all_items) == 0:
+    if len(fetch_all) == 0:
         return
 
     path_form = '{domain}\\{folder}\\{filename}'
-    all_items = [
-        {
-            'url': item[SQL_URL],
-            'size': item[SQL_CONTENT_LENGTH],
-            'path_parts': path_form.format(**url_split(item[SQL_URL])).split('\\'),
-        }
-        for item in all_items
-    ]
+    all_items = []
+    for item in fetch_all:
+        url = item[SQL_URL]
+        size = item[SQL_CONTENT_LENGTH]
+        path_parts = url_split(item[SQL_URL])
+        path_parts = path_form.format(**path_parts)
+        #path_parts = urllib.parse.unquote(path_parts)
+        path_parts = path_parts.split('\\')
+        item = {'url': url, 'size': size, 'path_parts': path_parts}
+        all_items.append(item)
+
     all_items.sort(key=lambda x: x['url'])
 
     root_data = {
@@ -771,7 +769,7 @@ def smart_insert(sql, cur, url=None, head=None, commit=True):
             content_type = head.headers.get('Content-Type', None)
 
     basename = url_split(url)['filename']
-    basename = urllib.parse.unquote(basename)
+    #basename = urllib.parse.unquote(basename)
     do_download = True
 
     cur.execute('SELECT * FROM urls WHERE url == ?', [url])
@@ -798,7 +796,7 @@ def url_split(url):
     '''
     Given a url, return a dictionary of its components.
     '''
-    url = urllib.parse.unquote(url)
+    #url = urllib.parse.unquote(url)
     parts = urllib.parse.urlsplit(url)
     if any(part == '' for part in [parts.scheme, parts.netloc]):
         raise ValueError('Not a valid URL')
@@ -817,9 +815,9 @@ def url_split(url):
 
     result = {
         'scheme': scheme,
-        'domain': root,
-        'folder': folder,
-        'filename': filename,
+        'domain': urllib.parse.unquote(root),
+        'folder': urllib.parse.unquote(folder),
+        'filename': urllib.parse.unquote(filename),
     }
     return result
 

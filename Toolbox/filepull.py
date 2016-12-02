@@ -1,8 +1,7 @@
 import os
 import sys
 
-sys.path.append('C:\\git\\else\\spinaltap')
-import spinal
+from voussoirkit import spinal
 
 def main():
     files = list(spinal.walk_generator())

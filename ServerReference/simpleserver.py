@@ -8,19 +8,11 @@ import socketserver
 import sys
 import types
 
-try:
-    sys.path.append('C:\\git\\else\\Bytestring')
-    sys.path.append('C:\\git\\else\\Pathclass')
-    sys.path.append('C:\\git\\else\\Ratelimiter')
-    import bytestring
-    import pathclass
-    import ratelimiter
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from voussoirkit import bytestring
-    from voussoirkit import pathclass
-    from voussoirkit import ratelimiter
+# pip install
+# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+from voussoirkit import bytestring
+from voussoirkit import pathclass
+from voussoirkit import ratelimiter
 
 FILE_READ_CHUNK = bytestring.MIBIBYTE
 RATELIMITER = ratelimiter.Ratelimiter(16 * bytestring.MIBIBYTE)

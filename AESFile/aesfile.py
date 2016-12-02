@@ -4,13 +4,9 @@ from Crypto.Cipher import AES
 import sys
 import os
 
-try:
-    sys.path.append('C:\\git\\else\\Bytestring')
-    import bytestring
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from voussoirkit import bytestring
+# pip install
+# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+from voussoirkit import bytestring
 
 
 BLOCK_SIZE = 32

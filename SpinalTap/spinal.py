@@ -1,33 +1,20 @@
 import collections
-import glob
 import hashlib
-import json
 import logging
 import os
 import shutil
-import stat
-import string
 import sys
-import time
 
-try:
-    sys.path.append('C:\\git\\else\\Bytestring')
-    sys.path.append('C:\\git\\else\\Pathclass')
-    sys.path.append('C:\\git\\else\\Ratelimiter')
-    import bytestring
-    import pathclass
-    import ratelimiter
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from voussoirkit import bytestring
-    from voussoirkit import pathclass
-    from voussoirkit import ratelimiter
+# pip install
+# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+from voussoirkit import bytestring
+from voussoirkit import pathclass
+from voussoirkit import ratelimiter
 
 logging.basicConfig(level=logging.CRITICAL)
 log = logging.getLogger(__name__)
 
-CHUNK_SIZE = 128 * bytestring.KIBIBYTE
+CHUNK_SIZE = 256 * bytestring.KIBIBYTE
 # Number of bytes to read and write at a time
 
 HASH_CLASS = hashlib.md5
@@ -53,7 +40,7 @@ class SpinalError(Exception):
 class ValidationError(Exception):
     pass
 
-def callback_exclusion(name, path_type):
+def callback_exclusion_v1(name, path_type):
     '''
     Example of an exclusion callback function.
     '''
@@ -98,12 +85,12 @@ def copy(source, file_args=None, file_kwargs=None, dir_args=None, dir_kwargs=Non
 def copy_dir(
         source,
         destination=None,
-        destination_new_root=None,
         bytes_per_second=None,
         callback_directory=None,
         callback_exclusion=None,
         callback_file=None,
         callback_permission_denied=None,
+        destination_new_root=None,
         dry_run=False,
         exclude_directories=None,
         exclude_filenames=None,
@@ -123,13 +110,6 @@ def copy_dir(
         The directory in which copied files are placed. Alternatively, use
         destination_new_root.
 
-    destination_new_root:
-        Determine the destination path by calling
-        `new_root(source, destination_new_root)`.
-        Thus, this path acts as a root and the rest of the path is matched.
-
-        `destination` and `destination_new_root` are mutually exclusive.
-
     bytes_per_second:
         Restrict file copying to this many bytes per second. Can be an integer
         or an existing Ratelimiter object.
@@ -139,8 +119,8 @@ def copy_dir(
 
     callback_directory:
         This function will be called after each file copy with three parameters:
-        name of file copied, number of bytes written to destination so far,
-        total bytes needed (from precalcsize).
+        name of file copied, number of bytes written to destination directory
+        so far, total bytes needed (based on precalcsize).
         If `precalcsize` is False, this function will receive written bytes
         for both written and total, showing 100% always.
 
@@ -163,6 +143,13 @@ def copy_dir(
 
         Default = None
 
+    destination_new_root:
+        Determine the destination path by calling
+        `new_root(source, destination_new_root)`.
+        Thus, this path acts as a root and the rest of the path is matched.
+
+        `destination` and `destination_new_root` are mutually exclusive.
+
     dry_run:
         Do everything except the actual file copying.
 
@@ -179,8 +166,8 @@ def copy_dir(
         Default = None
 
     files_per_second:
-        Maximum number of files to be processed per second. Helps to keep CPU usage
-        low.
+        Maximum number of files to be processed per second. Helps to keep CPU
+        usage low.
 
         Default = None
 
@@ -207,9 +194,9 @@ def copy_dir(
     '''
     # Prepare parameters
     if not is_xor(destination, destination_new_root):
-        m = 'One and only one of `destination` and '
-        m += '`destination_new_root` can be passed.'
-        raise ValueError(m)
+        message = 'One and only one of `destination` and '
+        message += '`destination_new_root` can be passed.'
+        raise ValueError(message)
 
     source = str_to_fp(source)
 
@@ -244,7 +231,7 @@ def copy_dir(
         exclude_directories=exclude_directories,
         exclude_filenames=exclude_filenames,
     )
-    for (source_abspath) in walker:
+    for source_abspath in walker:
         # Terminology:
         # abspath: C:\folder\subfolder\filename.txt
         # location: C:\folder\subfolder
@@ -267,7 +254,7 @@ def copy_dir(
             source_abspath,
             destination_abspath,
             bytes_per_second=bytes_per_second,
-            callback=callback_file,
+            callback_progress=callback_file,
             callback_permission_denied=callback_permission_denied,
             dry_run=dry_run,
             overwrite_old=overwrite_old,
@@ -292,7 +279,7 @@ def copy_file(
         destination=None,
         destination_new_root=None,
         bytes_per_second=None,
-        callback=None,
+        callback_progress=None,
         callback_permission_denied=None,
         callback_validate_hash=None,
         dry_run=False,
@@ -321,20 +308,20 @@ def copy_file(
 
         Default = None
 
-    callback:
-        If provided, this function will be called after writing
-        each CHUNK_SIZE bytes to destination with three parameters:
-        the Path object being copied, number of bytes written so far,
-        total number of bytes needed.
-
-        Default = None
-
     callback_permission_denied:
         If provided, this function will be called when a source file denies
         read access, with the file path and the exception object as parameters.
         THE OPERATION WILL RETURN NORMALLY.
 
         If not provided, the PermissionError is raised.
+
+        Default = None
+
+    callback_progress:
+        If provided, this function will be called after writing
+        each CHUNK_SIZE bytes to destination with three parameters:
+        the Path object being copied, number of bytes written so far,
+        total number of bytes needed.
 
         Default = None
 
@@ -365,9 +352,9 @@ def copy_file(
     '''
     # Prepare parameters
     if not is_xor(destination, destination_new_root):
-        m = 'One and only one of `destination` and '
-        m += '`destination_new_root` can be passed'
-        raise ValueError(m)
+        message = 'One and only one of `destination` and '
+        message += '`destination_new_root` can be passed'
+        raise ValueError(message)
 
     source = str_to_fp(source)
 
@@ -379,10 +366,10 @@ def copy_file(
         destination = new_root(source, destination_new_root)
     destination = str_to_fp(destination)
 
-    callback = callback or do_nothing
+    callback_progress = callback_progress or do_nothing
 
     if destination.is_dir:
-        raise DestinationIsDirectory(destination)
+        destination = destination.with_child(source.basename)
 
     bytes_per_second = limiter_or_none(bytes_per_second)
 
@@ -397,8 +384,8 @@ def copy_file(
 
     # Copy
     if dry_run:
-        if callback is not None:
-            callback(destination, 0, 0)
+        if callback_progress is not None:
+            callback_progress(destination, 0, 0)
         return [destination, 0]
 
     source_bytes = source.size
@@ -435,7 +422,7 @@ def copy_file(
         if bytes_per_second is not None:
             bytes_per_second.limit(data_bytes)
 
-        callback(destination, written_bytes, source_bytes)
+        callback_progress(destination, written_bytes, source_bytes)
 
     # Fin
     log.debug('Closing source handle.')
@@ -539,7 +526,7 @@ def verify_hash(path, known_size, known_hash, callback=None):
         path object, bytes ingested so far, bytes total
     '''
     path = str_to_fp(path)
-    log.debug('Validating hash for "%s" against %s' % (path.absolute_path, known_hash))
+    log.debug('Validating hash for "%s" against %s', path.absolute_path, known_hash)
     file_size = os.path.getsize(path.absolute_path)
     if file_size != known_size:
         raise ValidationError('File size %d != known size %d' % (file_size, known_size))
@@ -565,6 +552,7 @@ def verify_hash(path, known_size, known_hash, callback=None):
 def walk_generator(
         path='.',
         callback_exclusion=None,
+        callback_permission_denied=None,
         exclude_directories=None,
         exclude_filenames=None,
         recurse=True,
@@ -613,6 +601,7 @@ def walk_generator(
         exclude_filenames = set()
 
     callback_exclusion = callback_exclusion or do_nothing
+    callback_permission_denied = callback_permission_denied or do_nothing
 
     exclude_filenames = {normalize(f) for f in exclude_filenames}
     exclude_directories = {normalize(f) for f in exclude_directories}
@@ -636,9 +625,14 @@ def walk_generator(
     # Thank you for your cooperation.
     while len(directory_queue) > 0:
         current_location = directory_queue.popleft()
-        log.debug('listdir: %s' % current_location.absolute_path)
-        contents = os.listdir(current_location.absolute_path)
-        log.debug('received %d items' % len(contents))
+        log.debug('listdir: %s', current_location.absolute_path)
+        try:
+            contents = os.listdir(current_location.absolute_path)
+        except PermissionError as exception:
+            callback_permission_denied(current_location, exception)
+            continue
+
+        log.debug('received %d items', len(contents))
 
         directories = []
         files = []

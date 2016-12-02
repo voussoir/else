@@ -9,8 +9,7 @@ import sys
 PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 if '/r' in sys.argv:
-    sys.path.append('C:\\git\\else\\spinaltap')
-    import spinal
+    from voussoirkit import spinal
     walker = spinal.walk_generator()
     files = list(walker)
     files = [f.absolute_path for f in files]

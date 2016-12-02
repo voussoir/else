@@ -3,16 +3,10 @@ import sys
 import threading
 import time
 
-try:
-    sys.path.append('C:\\git\\else\\Clipext')
-    sys.path.append('C:\\git\\else\\Downloady')
-    import clipext
-    import downloady
-except ImportError:
-    # pip install
-    # https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
-    from voussoirkit import bytestring
-    from voussoirkit import pathclass
+# pip install
+# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+from voussoirkit import clipext
+from voussoirkit import downloady
 
 def remove_finished(threads):
     threads = [t for t in threads if t.is_alive()]

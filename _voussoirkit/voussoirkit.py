@@ -39,7 +39,7 @@ import setuptools
 setuptools.setup(
     author='voussoir',
     name='{package}',
-    version='0.0.1',
+    version='0.0.2',
     description='',
     py_modules=[{py_modules}],
 )
