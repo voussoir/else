@@ -1,11 +1,24 @@
+'''
+Batch rename files by providing a string to be `eval`ed, using variable `x` as
+the current filename.
+Yes I know this is weird, but for certain tasks it's just too quick and easy to pass up.
+
+For example:
+
+Prefix all the files:
+brename.py "'Test_' + x"
+
+Keep the first word and extension:
+brename.py "(x.split(' ')[0] + '.' + x.split('.')[-1]) if ' ' in x else x"
+'''
 import os
+import random
+import re
 import sys
 
 
 def brename(transformation):
     old = os.listdir()
-    if 're.' in transformation:
-        import re
     new = [eval(transformation) for x in old]
     pairs = []
     for (x, y) in zip(old, new):

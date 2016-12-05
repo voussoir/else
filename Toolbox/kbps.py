@@ -1,3 +1,12 @@
+'''
+Find time, filesize, or bitrate, given two of the three.
+
+For example:
+
+kbps.py --time 1:00:00 --size 2g
+kbps.py --time 1:00:00 --kbps 4660
+kbps.py --size 2g --kpbps 4660
+'''
 import argparse
 import sys
 
@@ -45,7 +54,8 @@ def kbps(time=None, size=None, kbps=None):
         kibs = size / 1024
         kilobits = kibs * 8
         kbps = kilobits / seconds
-        return int(kbps)
+        kbps = '%d kbps' % int(round(kbps))
+        return kbps
 
 def example_argparse(args):
     print(kbps(time=args.time, size=args.size, kbps=args.kbps))

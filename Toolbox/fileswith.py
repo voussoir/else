@@ -1,3 +1,10 @@
+'''
+Search for a target string within the lines of files.
+
+For example:
+fileswith.py *.py "import random"
+'''
+
 import fnmatch
 import glob
 import re

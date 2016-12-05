@@ -1,6 +1,8 @@
+'''
+Dump the clipboard to stdout. I use this for redirecting to files.
+'''
 import pyperclip
 import sys
-
 
 if len(sys.argv) > 1:
     from voussoirkit import clipext

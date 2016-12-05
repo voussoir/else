@@ -1,3 +1,6 @@
+'''
+Batch rename files by replacing the first argument with the second.
+'''
 import brename
 import sys
 

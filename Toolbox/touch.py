@@ -1,3 +1,6 @@
+'''
+Create the file, or update the last modified timestamp.
+'''
 import glob
 import os
 import sys

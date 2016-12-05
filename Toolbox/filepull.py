@@ -1,3 +1,7 @@
+'''
+Pull all of the files in nested directories into the current directory.
+'''
+
 import os
 import sys
 

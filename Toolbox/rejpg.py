@@ -1,3 +1,8 @@
+'''
+Recompress all jpg images in the current directory.
+Add /r to do nested directories as well.
+'''
+
 from voussoirkit import bytestring
 import io
 import os
