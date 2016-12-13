@@ -100,7 +100,7 @@ def image_to_ico(filename):
     if min(image.size) > 256:
         w = image.size[0]
         h = image.size[1]
-        image = image.resize((256, 256))
+        image = image.resize((256, 256), resample=Image.ANTIALIAS)
     image = image.convert('RGBA')
 
     print('Building ico header')

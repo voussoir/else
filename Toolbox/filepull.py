@@ -1,14 +1,14 @@
 '''
 Pull all of the files in nested directories into the current directory.
 '''
-
+import argparse
 import os
 import sys
 
 from voussoirkit import spinal
 
-def main():
-    files = list(spinal.walk_generator())
+def filepull(pull_from='.'):
+    files = list(spinal.walk_generator(pull_from))
     cwd = os.getcwd()
     files = [f for f in files if os.path.split(f.absolute_path)[0] != cwd]
 
@@ -36,5 +36,17 @@ def main():
             local = os.path.join('.', f.basename)
             os.rename(f.absolute_path, local)
 
+def filepull_argparse(args):
+    filepull(pull_from=args.pull_from)
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('pull_from', nargs='?', default='.')
+    parser.set_defaults(func=filepull_argparse)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

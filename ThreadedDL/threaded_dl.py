@@ -61,8 +61,8 @@ def threaded_dl(urls, thread_count, filename_format=None):
         print('%d threads remaining\r' % len(threads), end='', flush=True)
         time.sleep(0.1)
 
-def main():
-    filename = sys.argv[1]
+def main(argv):
+    filename = argv[0]
     if os.path.isfile(filename):
         f = open(filename, 'r')
         with f:
@@ -70,9 +70,9 @@ def main():
     else:
         urls = clipext.resolve(filename)
     urls = urls.replace('\r', '').split('\n')
-    thread_count = int(listget(sys.argv, 2, 4))
-    filename_format = listget(sys.argv, 3, None)
+    thread_count = int(listget(argv, 1, 4))
+    filename_format = listget(argv, 2, None)
     threaded_dl(urls, thread_count=thread_count, filename_format=filename_format)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

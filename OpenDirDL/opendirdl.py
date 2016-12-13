@@ -189,6 +189,7 @@ SKIPPABLE_FILETYPES = [
     '.wav',
     '.webm',
     '.wma',
+    '.xml',
     '.zip',
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)

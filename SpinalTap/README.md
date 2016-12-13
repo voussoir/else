@@ -3,6 +3,9 @@ Spinal
 
 A couple of tools for copying files and directories.
 
+- 2016 12 06
+    - Fixed bug where dry runs would still create directories
+
 - 2016 11 27
     - Renamed the `copy_file` parameter `callback` to `callback_progress` for clarity.
 

@@ -1,4 +1,5 @@
 import converter
+import glob
 import os
 import re
 import subprocess
@@ -6,7 +7,6 @@ import sys
 import time
 
 def main(filename):
-    assert os.path.isfile(filename)
     ffmpeg = converter.Converter()
     probe = ffmpeg.probe(filename)
     new_name = filename
@@ -16,10 +16,12 @@ def main(filename):
     if '___' in filename:
         video_codec = probe.video.codec
 
-        audios = [stream for stream in probe.streams if stream.type == 'audio']
-        audio = max(audios, key=lambda x: x.bitrate)
-
-        audio_codec = probe.audio.codec
+        audios = [stream for stream in probe.streams if stream.type == 'audio' and stream.bitrate]
+        if audios:
+            audio = max(audios, key=lambda x: x.bitrate)
+            audio_codec = probe.audio.codec
+        else:
+            audio_codec = None
 
         if any(not x for x in [video_codec, probe.video.bitrate, audio_codec, probe.audio.bitrate]):
             print('Could not identify media info')
@@ -40,4 +42,5 @@ def main(filename):
         os.rename(filename, new_name)
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    for filename in glob.glob(sys.argv[1]):
+        main(filename)

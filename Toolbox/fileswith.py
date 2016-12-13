@@ -31,5 +31,5 @@ for filename in spinal.walk_generator():
         pass
     if matches:
         print(filename)
-        print('\n'.join(matches))
+        print('\n'.join(matches).encode('ascii', 'replace').decode())
         print()

@@ -46,7 +46,7 @@ def loop(pairs, dry=False):
             line = '{old}\n{new}\n'
             line = line.format(old=x, new=y)
             #print(line.encode('utf-8'))
-            print(line)
+            print(line.encode('ascii', 'replace').decode())
             has_content = True
         else:
             os.rename(x, y)

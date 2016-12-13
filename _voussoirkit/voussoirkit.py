@@ -11,6 +11,7 @@ PATHS = [
 'C:\\git\\else\\Ratelimiter\\ratelimiter.py',
 'C:\\git\\else\\RateMeter\\ratemeter.py',
 'C:\\git\\else\\SpinalTap\\spinal.py',
+'C:\\git\\else\\WebstreamZip\\webstreamzip.py',
 ]
 
 os.makedirs(PACKAGE, exist_ok=True)
@@ -39,7 +40,7 @@ import setuptools
 setuptools.setup(
     author='voussoir',
     name='{package}',
-    version='0.0.2',
+    version='0.0.3',
     description='',
     py_modules=[{py_modules}],
 )

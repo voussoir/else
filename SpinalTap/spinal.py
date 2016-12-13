@@ -248,7 +248,8 @@ def copy_dir(
             raise DestinationIsDirectory(destination_abspath)
 
         destination_location = os.path.split(destination_abspath.absolute_path)[0]
-        os.makedirs(destination_location, exist_ok=True)
+        if not dry_run:
+            os.makedirs(destination_location, exist_ok=True)
 
         copied = copy_file(
             source_abspath,
@@ -391,7 +392,6 @@ def copy_file(
     source_bytes = source.size
     destination_location = os.path.split(destination.absolute_path)[0]
     os.makedirs(destination_location, exist_ok=True)
-    written_bytes = 0
 
     try:
         log.debug('Opening handles.')
@@ -407,6 +407,7 @@ def copy_file(
     if validate_hash:
         hasher = HASH_CLASS()
 
+    written_bytes = 0
     while True:
         data_chunk = source_handle.read(CHUNK_SIZE)
         data_bytes = len(data_chunk)
@@ -422,6 +423,10 @@ def copy_file(
         if bytes_per_second is not None:
             bytes_per_second.limit(data_bytes)
 
+        callback_progress(destination, written_bytes, source_bytes)
+
+    if written_bytes == 0:
+        # For zero-length files, we want to get at least one call in there.
         callback_progress(destination, written_bytes, source_bytes)
 
     # Fin
@@ -556,7 +561,9 @@ def walk_generator(
         exclude_directories=None,
         exclude_filenames=None,
         recurse=True,
-        yield_style='flat'
+        yield_directories=False,
+        yield_files=True,
+        yield_style='flat',
     ):
     '''
     Yield Path objects for files in the file tree, similar to os.walk.
@@ -586,11 +593,20 @@ def walk_generator(
     recurse:
         Yield from subdirectories. If False, only immediate files are returned.
 
+    yield_directories:
+        Should the generator produce directories? Has no effect in nested yield style.
+
+    yield_files:
+        Should the generator produce files? Has no effect in nested yield style.
+
     yield_style:
         If 'flat', yield individual files one by one in a constant stream.
         If 'nested', yield tuple(root, directories, files) like os.walk does,
             except I use Path objects with absolute paths for everything.
     '''
+    if not yield_directories and not yield_files:
+        raise ValueError('yield_directories and yield_files cannot both be False')
+
     if yield_style not in ['flat', 'nested']:
         raise ValueError('Invalid yield_style %s. Either "flat" or "nested".' % repr(yield_style))
 
@@ -607,6 +623,7 @@ def walk_generator(
     exclude_directories = {normalize(f) for f in exclude_directories}
 
     path = str_to_fp(path)
+    path.correct_case()
 
     # Considering full paths
     if normalize(path.absolute_path) in exclude_directories:
@@ -631,8 +648,10 @@ def walk_generator(
         except PermissionError as exception:
             callback_permission_denied(current_location, exception)
             continue
-
         log.debug('received %d items', len(contents))
+
+        if yield_style == 'flat' and yield_directories:
+            yield current_location
 
         directories = []
         files = []
@@ -646,7 +665,11 @@ def walk_generator(
                     callback_exclusion(absolute_name, 'directory')
                     continue
 
-                directories.append(str_to_fp(absolute_name))
+                directory = str_to_fp(absolute_name)
+                directories.append(directory)
+
+            elif yield_style == 'flat' and not yield_files:
+                continue
 
             else:
                 exclude = normalize(absolute_name) in exclude_filenames
