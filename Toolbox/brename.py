@@ -16,6 +16,8 @@ import random
 import re
 import sys
 
+from voussoirkit import safeprint
+
 
 def brename(transformation):
     old = os.listdir()
@@ -46,7 +48,7 @@ def loop(pairs, dry=False):
             line = '{old}\n{new}\n'
             line = line.format(old=x, new=y)
             #print(line.encode('utf-8'))
-            print(line.encode('ascii', 'replace').decode())
+            safeprint.safeprint(line)
             has_content = True
         else:
             os.rename(x, y)

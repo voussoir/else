@@ -10,6 +10,7 @@ PATHS = [
 'C:\\git\\else\\Pathclass\\pathclass.py',
 'C:\\git\\else\\Ratelimiter\\ratelimiter.py',
 'C:\\git\\else\\RateMeter\\ratemeter.py',
+'C:\\git\\else\\Safeprint\\safeprint.py',
 'C:\\git\\else\\SpinalTap\\spinal.py',
 'C:\\git\\else\\WebstreamZip\\webstreamzip.py',
 ]
@@ -40,7 +41,7 @@ import setuptools
 setuptools.setup(
     author='voussoir',
     name='{package}',
-    version='0.0.3',
+    version='0.0.4',
     description='',
     py_modules=[{py_modules}],
 )

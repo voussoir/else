@@ -290,7 +290,7 @@ def generate_random_filename(original_filename='', length=8):
     return identifier
 
 def main():
-    server = ThreadedServer(('', 32768), RequestHandler)
+    server = ThreadedServer(('', int(sys.argv[1] or 32768)), RequestHandler)
     print('server starting')
     server.serve_forever()
 

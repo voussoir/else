@@ -10,6 +10,7 @@ import glob
 import re
 import sys
 
+from voussoirkit import safeprint
 from voussoirkit import spinal
 
 filepattern = sys.argv[1]
@@ -31,5 +32,5 @@ for filename in spinal.walk_generator():
         pass
     if matches:
         print(filename)
-        print('\n'.join(matches).encode('ascii', 'replace').decode())
+        safeprint.safeprint('\n'.join(matches))
         print()

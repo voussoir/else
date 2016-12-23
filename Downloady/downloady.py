@@ -23,7 +23,7 @@ FILENAME_BADCHARS = '*?"<>|\r'
 
 last_request = 0
 CHUNKSIZE = 4 * bytestring.KIBIBYTE
-TIMEOUT = 600
+TIMEOUT = 60
 TEMP_EXTENSION = '.downloadytemp'
 
 PRINT_LIMITER = ratelimiter.Ratelimiter(allowance=5, mode='reject')
@@ -35,11 +35,12 @@ def download_file(
         auth=None,
         bytespersecond=None,
         callback_progress=None,
+        do_head=True,
         headers=None,
         overwrite=False,
         raise_for_undersized=True,
+        timeout=None,
         verbose=False,
-        **get_kwargs
     ):
     headers = headers or {}
 
@@ -61,13 +62,20 @@ def download_file(
         localname,
         auth=auth,
         bytespersecond=bytespersecond,
+        callback_progress=callback_progress,
+        do_head=do_head,
         headers=headers,
         overwrite=overwrite,
+        raise_for_undersized=raise_for_undersized,
+        timeout=timeout,
     )
     #print(plan)
     if plan is None:
         return
 
+    return download_plan(plan)
+
+def download_plan(plan):
     localname = plan['download_into']
     directory = os.path.split(localname)[0]
     if directory != '':
@@ -77,7 +85,7 @@ def download_file(
     file_handle.seek(plan['seek_to'])
 
     if plan['header_range_min'] is not None:
-        headers['range'] = 'bytes={min}-{max}'.format(
+        plan['headers']['range'] = 'bytes={min}-{max}'.format(
             min=plan['header_range_min'],
             max=plan['header_range_max'],
         )
@@ -89,7 +97,20 @@ def download_file(
     else:
         bytes_downloaded = 0
 
-    download_stream = request('get', url, stream=True, headers=headers, auth=auth, **get_kwargs)
+    download_stream = request(
+        'get',
+        plan['url'],
+        stream=True,
+        auth=plan['auth'],
+        headers=plan['headers'],
+        timeout=plan['timeout'],
+    )
+
+    if plan['remote_total_bytes'] is None:
+        # Since we didn't do a head, let's fill this in now.
+        plan['remote_total_bytes'] = int(download_stream.headers.get('Content-Length', 0))
+
+    callback_progress = plan['callback_progress']
     if callback_progress is not None:
         callback_progress = callback_progress(plan['remote_total_bytes'])
 
@@ -108,7 +129,7 @@ def download_file(
     if os.devnull not in [localname, plan['real_localname']]:
         localsize = os.path.getsize(localname)
         undersized = plan['plan_type'] != 'partial' and localsize < plan['remote_total_bytes']
-        if raise_for_undersized and undersized:
+        if plan['raise_for_undersized'] and undersized:
             message = 'File does not contain expected number of bytes. Received {size} / {total}'
             message = message.format(size=localsize, total=plan['remote_total_bytes'])
             raise Exception(message)
@@ -121,12 +142,17 @@ def download_file(
 def prepare_plan(
         url,
         localname,
-        auth,
-        bytespersecond,
-        headers,
-        overwrite,
+        auth=None,
+        bytespersecond=None,
+        callback_progress=None,
+        do_head=True,
+        headers=None,
+        overwrite=False,
+        raise_for_undersized=True,
+        timeout=TIMEOUT,
     ):
     # Chapter 1: File existence
+    headers = headers or {}
     user_provided_range = 'range' in headers
     real_localname = localname
     temp_localname = localname + TEMP_EXTENSION
@@ -163,21 +189,34 @@ def prepare_plan(
     temp_headers = headers
     temp_headers.update({'range': 'bytes=0-'})
 
-    # I'm using a GET instead of an actual HEAD here because some servers respond
-    # differently, even though they're not supposed to.
-    head = request('get', url, stream=True, headers=temp_headers, auth=auth)
-    remote_total_bytes = int(head.headers.get('content-length', 0))
-    server_respects_range = (head.status_code == 206 and 'content-range' in head.headers)
-    head.connection.close()
+    if do_head:
+        # I'm using a GET instead of an actual HEAD here because some servers respond
+        # differently, even though they're not supposed to.
+        head = request('get', url, stream=True, headers=temp_headers, auth=auth)
+        remote_total_bytes = int(head.headers.get('content-length', 0))
+        server_respects_range = (head.status_code == 206 and 'content-range' in head.headers)
+        head.connection.close()
+    else:
+        remote_total_bytes = None
+        server_respects_range = False
 
     if user_provided_range and not server_respects_range:
-        raise Exception('Server did not respect your range header')
+        if not do_head:
+            raise Exception('Cannot determine range support without the head request')
+        else:
+            raise Exception('Server did not respect your range header')
 
     # Chapter 5: Plan definitions
     plan_base = {
+        'url': url,
+        'auth': auth,
+        'callback_progress': callback_progress,
         'limiter': limiter,
+        'headers': headers,
         'real_localname': real_localname,
+        'raise_for_undersized': raise_for_undersized,
         'remote_total_bytes': remote_total_bytes,
+        'timeout': timeout,
     }
     plan_fulldownload = dict(
         plan_base,
@@ -373,8 +412,10 @@ def download_argparse(args):
         localname=args.localname,
         bytespersecond=bytespersecond,
         callback_progress=callback,
+        do_head=args.no_head is False,
         headers=headers,
         overwrite=args.overwrite,
+        timeout=int(args.timeout),
         verbose=True,
     )
 
@@ -388,6 +429,8 @@ if __name__ == '__main__':
     parser.add_argument('-bps', '--bytespersecond', dest='bytespersecond', default=None)
     parser.add_argument('-ow', '--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('-r', '--range', dest='range', default=None)
+    parser.add_argument('--timeout', dest='timeout', default=TIMEOUT)
+    parser.add_argument('--no-head', dest='no_head', action='store_true')
     parser.set_defaults(func=download_argparse)
 
     args = parser.parse_args()

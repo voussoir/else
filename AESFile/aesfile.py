@@ -9,9 +9,23 @@ import os
 from voussoirkit import bytestring
 
 
+# 128 bits
 BLOCK_SIZE = 32
-
+KEY_SIZE = 32
 SEEK_END = 2
+
+def decrypt_data(aes, data):
+    data = aes.decrypt(data)
+    pad_byte = data[-1:]
+    data = data.rstrip(pad_byte)
+    return data
+
+def encrypt_data(aes, data):
+    pad_byte = (data[-1] + 1) % 256
+    pad_length = BLOCK_SIZE - (len(data) % BLOCK_SIZE)
+    data += (bytes([pad_byte]) * pad_length)
+    data = aes.encrypt(data)
+    return data
 
 def decrypt_file(aes, input_handle, output_handle):
     current_pos = input_handle.tell()
@@ -42,8 +56,7 @@ def encrypt_file(aes, input_handle, output_handle):
             last_byte = chunk[-1]
         if len(chunk) < BLOCK_SIZE:
             pad_byte = (last_byte + 1) % 256
-            pad_byte = chr(pad_byte)
-            pad_byte = pad_byte.encode('ascii')
+            pad_byte = bytes([pad_byte])
             chunk += pad_byte * (BLOCK_SIZE - len(chunk))
             done = True
         bytes_read += len(chunk)
@@ -60,7 +73,7 @@ def encrypt_argparse(args):
     input_handle = open(args.input, 'rb')
     output_handle = open(args.output, 'wb')
 
-    password = hashit(args.password, 32)
+    password = hashit(args.password)
     initialization_vector = os.urandom(16)
     aes = AES.new(password, mode=3, IV=initialization_vector)
     output_handle.write(initialization_vector)
@@ -71,15 +84,14 @@ def decrypt_argparse(args):
     input_handle = open(args.input, 'rb')
     output_handle = open(args.output, 'wb')
 
-    password = hashit(args.password, 32)
+    password = hashit(args.password)
     initialization_vector = input_handle.read(16)
     aes = AES.new(password, mode=3, IV=initialization_vector)
     decrypt_file(aes, input_handle, output_handle)
 
-def hashit(text, length=None):
+def hashit(text):
     h = hashlib.sha512(text.encode('utf-8')).hexdigest()
-    if length is not None:
-        h = h[:length]
+    h = h[:BLOCK_SIZE]
     return h
 
 def main(argv):

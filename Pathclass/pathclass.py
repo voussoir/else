@@ -1,25 +1,25 @@
 import glob
 import os
+
 class Path:
     '''
     I started to use pathlib.Path, but it was too much of a pain.
     '''
     def __init__(self, path):
-        path = os.path.normpath(path)
-        path = os.path.abspath(path)
-        self.absolute_path = path
+        if isinstance(path, Path):
+            self.absolute_path = path.absolute_path
+        else:
+            path = os.path.normpath(path)
+            path = os.path.abspath(path)
+            self.absolute_path = path
 
     def __contains__(self, other):
-        this = os.path.normcase(self.absolute_path)
-        that = os.path.normcase(other.absolute_path)
-        return that.startswith(this)
+        return other.normcase.startswith(self.normcase)
 
     def __eq__(self, other):
         if not hasattr(other, 'absolute_path'):
             return False
-        this = os.path.normcase(self.absolute_path)
-        that = os.path.normcase(other.absolute_path)
-        return this == that
+        return self.normcase == other.normcase
 
     def __hash__(self):
         return hash(os.path.normcase(self.absolute_path))
@@ -34,6 +34,10 @@ class Path:
     def correct_case(self):
         self.absolute_path = get_path_casing(self.absolute_path)
         return self.absolute_path
+
+    @property
+    def depth(self):
+        return len(self.absolute_path.split(os.sep))
 
     @property
     def exists(self):
@@ -52,6 +56,10 @@ class Path:
         return os.path.islink(self.absolute_path)
 
     @property
+    def normcase(self):
+        return os.path.normcase(self.absolute_path)
+
+    @property
     def parent(self):
         parent = os.path.dirname(self.absolute_path)
         parent = self.__class__(parent)
@@ -59,10 +67,21 @@ class Path:
 
     @property
     def relative_path(self):
-        relative = self.absolute_path
-        relative = relative.replace(os.getcwd(), '')
-        relative = relative.lstrip(os.sep)
-        return relative
+        cwd = Path(os.getcwd())
+        self.correct_case()
+        if self.absolute_path == cwd:
+            return '.'
+
+        if self in cwd:
+            return self.absolute_path.replace(cwd.absolute_path, '.')
+
+        common = common_path([os.getcwd(), self.absolute_path], fallback=None)
+        if common is None:
+            return self.absolute_path
+        backsteps = cwd.depth - common.depth
+        backsteps = os.sep.join('..' for x in range(backsteps))
+        print('hi')
+        return self.absolute_path.replace(common.absolute_path, backsteps)
 
     @property
     def size(self):
@@ -80,6 +99,34 @@ class Path:
         return Path(os.path.join(self.absolute_path, basename))
 
 
+def common_path(paths, fallback):
+    '''
+    Given a list of file paths, determine the deepest path which all
+    have in common.
+    '''
+    if isinstance(paths, (str, Path)):
+        raise TypeError('`paths` must be a collection')
+    paths = [Path(f) for f in paths]
+
+    if len(paths) == 0:
+        raise ValueError('Empty list')
+
+    if hasattr(paths, 'pop'):
+        model = paths.pop()
+    else:
+        model = paths[0]
+        paths = paths[1:]
+
+    while True:
+        if all(f in model for f in paths):
+            return model
+        parent = model.parent
+        if parent == model:
+            # We just processed the root, and now we're stuck at the root.
+            # Which means there was no common path.
+            return fallback
+        model = parent
+
 def get_path_casing(path):
     '''
     Take what is perhaps incorrectly cased input and get the path's actual
@@ -89,8 +136,21 @@ def get_path_casing(path):
     Ethan Furman http://stackoverflow.com/a/7133137/5430534
     xvorsx http://stackoverflow.com/a/14742779/5430534
     '''
-    if isinstance(path, Path):
-        path = path.absolute_path
+    if not isinstance(path, Path):
+        path = Path(path)
+
+    # Nonexistent paths don't glob correctly. If the input is a nonexistent
+    # subpath of an existing path, we have to glob the existing portion first,
+    # and then attach the fake portion again at the end.
+    input_path = path
+    while not path.exists:
+        parent = path.parent
+        if path == parent:
+            # We're stuck at a fake root.
+            return input_path.absolute_path
+        path = parent
+
+    path = path.absolute_path
 
     (drive, subpath) = os.path.splitdrive(path)
     drive = drive.upper()
@@ -99,11 +159,17 @@ def get_path_casing(path):
     pattern = [glob_patternize(piece) for piece in subpath.split(os.sep)]
     pattern = os.sep.join(pattern)
     pattern = drive + os.sep + pattern
-    #print(pattern)
+
     try:
-        return glob.glob(pattern)[0]
+        cased = glob.glob(pattern)[0]
+        imaginary_portion = input_path.normcase
+        real_portion = os.path.normcase(cased)
+        imaginary_portion = imaginary_portion.replace(real_portion, '')
+        imaginary_portion = imaginary_portion.lstrip(os.sep)
+        cased = os.path.join(cased, imaginary_portion)
+        return cased
     except IndexError:
-        return path
+        return input_path
 
 def glob_patternize(piece):
     '''
@@ -111,10 +177,15 @@ def glob_patternize(piece):
     correct path name, while guaranteeing that the only result will be the correct path.
 
     Special cases are:
-        !, because in glob syntax, [!x] tells glob to look for paths that don't contain
-            "x". [!] is invalid syntax, so we pick the first non-! character to put
-            in the brackets.
-        [, because this starts a capture group
+        `!`
+            because in glob syntax, [!x] tells glob to look for paths that don't contain
+            "x", and [!] is invalid syntax.
+        `[`, `]`
+            because this starts a glob capture group
+
+        so we pick the first non-special character to put in the brackets.
+        If the path consists entirely of these special characters, then the
+        casing doesn't need to be corrected anyway.
     '''
     piece = glob.escape(piece)
     for character in piece:
@@ -124,3 +195,13 @@ def glob_patternize(piece):
             piece = piece.replace(character, replacement, 1)
             break
     return piece
+
+def normalize_sep(path):
+    for char in ('\\', '/'):
+        if char != os.sep:
+            path = path.replace(char, os.sep)
+    path = path.rstrip(os.sep)
+    return path
+
+def system_root():
+    return os.path.abspath(os.sep)
