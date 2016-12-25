@@ -136,8 +136,7 @@ import sys
 ## import tkinter
 import urllib.parse
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import bytestring
 from voussoirkit import downloady
 

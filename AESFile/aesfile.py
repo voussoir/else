@@ -4,8 +4,7 @@ from Crypto.Cipher import AES
 import sys
 import os
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import bytestring
 
 

@@ -6,8 +6,7 @@ import os
 import requests
 import sys
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import clipext
 from voussoirkit import downloady
 

@@ -8,8 +8,7 @@ import socketserver
 import sys
 import types
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import bytestring
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter

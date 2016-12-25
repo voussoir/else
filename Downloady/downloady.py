@@ -1,14 +1,13 @@
 import argparse
 import os
-import pyperclip # pip install pyperclip
+import pyperclip
 import requests
 import sys
 import time
 import urllib
 import warnings
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import bytestring
 from voussoirkit import ratelimiter
 from voussoirkit import clipext

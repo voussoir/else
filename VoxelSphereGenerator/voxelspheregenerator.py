@@ -215,32 +215,6 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
         layer_image.save(layer_filename)
 
 
-        # Copy to the upper right corner.
-        #for y in range(math.ceil(RAD_Y)):
-        #    #print(y)
-        #    for x in range(math.ceil(RAD_X), WIDTH):
-        #        #print(x, '==', (WIDTH-1) - x)
-        #        mapped_x = (WIDTH - 1) - x
-        #        layer_matrix[x][y] = layer_matrix[mapped_x][y]
-
-        # Copy to the lower semicircle.
-        #for y in range(math.ceil(RAD_Y), HEIGH):
-        #    #print(y)
-        #    for x in range(WIDTH):
-        #        #print(y, '==', (HEIGH-1) - y)
-        #        mapped_y = (HEIGH-1) - y
-        #        layer_matrix[x][y] = layer_matrix[x][mapped_y]
-
-
-
-        #break
-        #layer_matrix = [['▓' if dot == dot_highlight else '░' if dot == dot_normal else ' 'for dot in sublist] for sublist in layer_matrix]
-        #layer_matrix = [''.join(sublist) for sublist in layer_matrix]
-        #layer_matrix = '\n'.join(layer_matrix)
-        #print(layer_matrix)
-        #print()
-
-
 def voxelsphere_argparse(args):
     height_depth_match = bool(args.height) == bool(args.depth)
     if not height_depth_match:

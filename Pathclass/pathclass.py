@@ -55,6 +55,11 @@ class Path:
     def is_link(self):
         return os.path.islink(self.absolute_path)
 
+    def join(self, subpath):
+        if not isinstance(subpath, str):
+            raise TypeError('subpath must be a string')
+        return Path(os.path.join(self.absolute_path, subpath))
+
     @property
     def normcase(self):
         return os.path.normcase(self.absolute_path)
@@ -95,8 +100,7 @@ class Path:
         return os.stat(self.absolute_path)
 
     def with_child(self, basename):
-        basename = os.path.basename(basename)
-        return Path(os.path.join(self.absolute_path, basename))
+        return self.join(os.path.basename(basename))
 
 
 def common_path(paths, fallback):
@@ -167,6 +171,7 @@ def get_path_casing(path):
         imaginary_portion = imaginary_portion.replace(real_portion, '')
         imaginary_portion = imaginary_portion.lstrip(os.sep)
         cased = os.path.join(cased, imaginary_portion)
+        cased = cased.rstrip(os.sep)
         return cased
     except IndexError:
         return input_path

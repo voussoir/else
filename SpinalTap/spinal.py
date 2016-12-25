@@ -5,8 +5,7 @@ import os
 import shutil
 import sys
 
-# pip install
-# https://raw.githubusercontent.com/voussoir/else/master/_voussoirkit/voussoirkit.zip
+# pip install voussoirkit
 from voussoirkit import bytestring
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter
@@ -558,6 +557,7 @@ def walk_generator(
         path='.',
         callback_exclusion=None,
         callback_permission_denied=None,
+        depth_first=True,
         exclude_directories=None,
         exclude_filenames=None,
         recurse=True,
@@ -690,6 +690,9 @@ def walk_generator(
         if not recurse:
             break
 
-        # Extendleft causes them to get reversed, so flip it first.
-        directories.reverse()
-        directory_queue.extendleft(directories)
+        if depth_first:
+            # Extendleft causes them to get reversed, so flip it first.
+            directories.reverse()
+            directory_queue.extendleft(directories)
+        else:
+            directory_queue.extend(directories)
