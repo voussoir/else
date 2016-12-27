@@ -14,7 +14,9 @@ class Path:
             self.absolute_path = path
 
     def __contains__(self, other):
-        return other.normcase.startswith(self.normcase)
+        if isinstance(other, Path):
+            other = other.normcase
+        return other.startswith(self.normcase)
 
     def __eq__(self, other):
         if not hasattr(other, 'absolute_path'):
@@ -22,7 +24,7 @@ class Path:
         return self.normcase == other.normcase
 
     def __hash__(self):
-        return hash(os.path.normcase(self.absolute_path))
+        return hash(self.normcase)
 
     def __repr__(self):
         return '{c}({path})'.format(c=self.__class__.__name__, path=repr(self.absolute_path))
@@ -73,8 +75,9 @@ class Path:
     @property
     def relative_path(self):
         cwd = Path(os.getcwd())
+        cwd.correct_case()
         self.correct_case()
-        if self.absolute_path == cwd:
+        if self == cwd:
             return '.'
 
         if self in cwd:
@@ -85,7 +88,6 @@ class Path:
             return self.absolute_path
         backsteps = cwd.depth - common.depth
         backsteps = os.sep.join('..' for x in range(backsteps))
-        print('hi')
         return self.absolute_path.replace(common.absolute_path, backsteps)
 
     @property
@@ -166,15 +168,16 @@ def get_path_casing(path):
 
     try:
         cased = glob.glob(pattern)[0]
-        imaginary_portion = input_path.normcase
-        real_portion = os.path.normcase(cased)
-        imaginary_portion = imaginary_portion.replace(real_portion, '')
-        imaginary_portion = imaginary_portion.lstrip(os.sep)
-        cased = os.path.join(cased, imaginary_portion)
-        cased = cased.rstrip(os.sep)
-        return cased
     except IndexError:
-        return input_path
+        return input_path.absolute_path
+
+    imaginary_portion = input_path.normcase
+    real_portion = os.path.normcase(cased)
+    imaginary_portion = imaginary_portion.replace(real_portion, '')
+    imaginary_portion = imaginary_portion.lstrip(os.sep)
+    cased = os.path.join(cased, imaginary_portion)
+    cased = cased.rstrip(os.sep)
+    return cased
 
 def glob_patternize(piece):
     '''

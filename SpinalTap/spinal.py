@@ -659,8 +659,10 @@ def walk_generator(
             absolute_name = os.path.join(current_location.absolute_path, base_name)
 
             if os.path.isdir(absolute_name):
-                exclude = normalize(absolute_name) in exclude_directories
-                exclude |= normalize(base_name) in exclude_directories
+                exclude = (
+                    normalize(absolute_name) in exclude_directories or
+                    normalize(base_name) in exclude_directories
+                )
                 if exclude:
                     callback_exclusion(absolute_name, 'directory')
                     continue
