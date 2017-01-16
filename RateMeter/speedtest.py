@@ -1,5 +1,5 @@
 from voussoirkit import bytestring
-import downloady
+from voussoirkit import downloady
 import ratemeter
 import requests
 import sys

@@ -9,7 +9,7 @@ def from_base(number, base, alphabet=None):
         raise TypeError('base must be an int.')
 
     if base == 10:
-        return number
+        return int(number)
 
     if alphabet is None:
         alphabet = ALPHABET

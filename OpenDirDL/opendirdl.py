@@ -133,17 +133,20 @@ import requests
 import shutil
 import sqlite3
 import sys
+import time
 ## import tkinter
 import urllib.parse
 
 # pip install voussoirkit
 from voussoirkit import bytestring
 from voussoirkit import downloady
+from voussoirkit import fusker
+from voussoirkit import treeclass
+from voussoirkit import pathtree
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 FILENAME_BADCHARS = '/\\:*?"<>|'
 TERMINAL_WIDTH = shutil.get_terminal_size().columns
-UNKNOWN_SIZE_STRING = '???'
 
 # When doing a basic scan, we will not send HEAD requests to URLs that end in
 # these strings, because they're probably files.
@@ -192,68 +195,16 @@ SKIPPABLE_FILETYPES = [
     '.zip',
 ]
 SKIPPABLE_FILETYPES = set(x.lower() for x in SKIPPABLE_FILETYPES)
+SKIPPABLE_FILETYPES.update(fusker.fusker('.r[0-99]'))
+SKIPPABLE_FILETYPES.update(fusker.fusker('.r[00-99]'))
+SKIPPABLE_FILETYPES.update(fusker.fusker('.r[000-099]'))
+SKIPPABLE_FILETYPES.update(fusker.fusker('.[00-99]'))
 
 # Will be ignored completely. Are case-sensitive
 BLACKLISTED_FILENAMES = [
     'desktop.ini',
     'thumbs.db',
 ]
-
-# oh shit
-HTML_TREE_HEAD = '''
-<head>
-<meta charset="UTF-8">
-
-<script type="text/javascript">
-function collapse(div)
-{
-    if (div.style.display != "none")
-    {
-        div.style.display = "none";
-    }
-    else
-    {
-        div.style.display = "block";
-    }
-}
-</script>
-
-<style>
-*
-{
-    font-family: Consolas;
-}
-
-.directory_even, .directory_odd
-{
-    padding: 10px;
-    padding-left: 15px;
-    margin-bottom: 10px;
-    border: 1px solid #000;
-    box-shadow: 1px 1px 2px 0px rgba(0,0,0,0.3);
-}
-
-.directory_even
-{
-    background-color: #fff;
-}
-
-.directory_odd
-{
-    background-color: #eee;
-}
-</style>
-</head>
-'''
-
-HTML_FORMAT_DIRECTORY = '''
-<div class="buttonbox">
-<button onclick="collapse(this.parentElement.nextElementSibling)">{name} ({size})</button>
-{directory_anchor}
-</div>
-<div class="{css}" style="display:none">
-'''.replace('\n', '')
-HTML_FORMAT_FILE = '<a href="{url}">{name} ({size})</a><br>'
 
 DB_INIT = '''
 CREATE TABLE IF NOT EXISTS urls(
@@ -435,92 +386,6 @@ class Walker:
 ## WALKER ##########################################################################################
 
 
-## OTHER CLASSES ###################################################################################
-##                                                                                                ##
-class TreeExistingChild(Exception):
-    pass
-
-class TreeInvalidIdentifier(Exception):
-    pass
-
-class TreeNode:
-    def __init__(self, identifier, data=None):
-        assert isinstance(identifier, str)
-        assert '\\' not in identifier
-        self.identifier = identifier
-        self.data = data
-        self.parent = None
-        self.children = {}
-
-    def __eq__(self, other):
-        return isinstance(other, TreeNode) and self.abspath() == other.abspath()
-
-    def __getitem__(self, key):
-        return self.children[key]
-
-    def __hash__(self):
-        return hash(self.abspath())
-
-    def __repr__(self):
-        return 'TreeNode %s' % self.abspath()
-
-    def abspath(self):
-        node = self
-        nodes = [node]
-        while node.parent is not None:
-            node = node.parent
-            nodes.append(node)
-        nodes.reverse()
-        nodes = [node.identifier for node in nodes]
-        return '\\'.join(nodes)
-
-    def add_child(self, other_node, overwrite_parent=False):
-        self.check_child_availability(other_node.identifier)
-        if other_node.parent is not None and not overwrite_parent:
-            raise ValueError('That node already has a parent. Try `overwrite_parent=True`')
-
-        other_node.parent = self
-        self.children[other_node.identifier] = other_node
-        return other_node
-
-    def check_child_availability(self, identifier):
-        if identifier in self.children:
-            raise TreeExistingChild('Node %s already has child %s' % (self.identifier, identifier))
-
-    def detach(self):
-        del self.parent.children[self.identifier]
-        self.parent = None
-
-    def list_children(self, customsort=None):
-        children = list(self.children.values())
-        if customsort is None:
-            children.sort(key=lambda node: node.identifier.lower())
-        else:
-            children.sort(key=customsort)
-        return children
-
-    def merge_other(self, othertree, otherroot=None):
-        newroot = None
-        if ':' in othertree.identifier:
-            if otherroot is None:
-                raise Exception('Must specify a new name for the other tree\'s root')
-            else:
-                newroot = otherroot
-        else:
-            newroot = othertree.identifier
-        othertree.identifier = newroot
-        othertree.parent = self
-        self.check_child_availability(newroot)
-        self.children[newroot] = othertree
-
-    def walk(self, customsort=None):
-        yield self
-        for child in self.list_children(customsort=customsort):
-            yield from child.walk(customsort=customsort)
-##                                                                                                ##
-## OTHER CLASSES ###################################################################################
-
-
 ## GENERAL FUNCTIONS ###############################################################################
 ##                                                                                                ##
 def build_file_tree(databasename):
@@ -533,67 +398,22 @@ def build_file_tree(databasename):
     if len(fetch_all) == 0:
         return
 
-    path_form = '{domain}\\{folder}\\{filename}'
-    all_items = []
+    path_datas = []
+    # :|| is my temporary (probably not temporary) hack for including the URL
+    # scheme without causing the pathtree processor to think there's a top
+    # level directory called 'http'.
+    # It will be replaced with :// in the calling `tree` function.
+    path_form = '{scheme}:||{domain}\\{folder}\\{filename}'
     for item in fetch_all:
         url = item[SQL_URL]
         size = item[SQL_CONTENT_LENGTH]
         path_parts = url_split(item[SQL_URL])
-        path_parts = path_form.format(**path_parts)
-        #path_parts = urllib.parse.unquote(path_parts)
-        path_parts = path_parts.split('\\')
-        item = {'url': url, 'size': size, 'path_parts': path_parts}
-        all_items.append(item)
+        path = path_form.format(**path_parts)
+        path = urllib.parse.unquote(path)
+        path_data = {'path': path, 'size': size, 'data': url}
+        path_datas.append(path_data)
 
-    all_items.sort(key=lambda x: x['url'])
-
-    root_data = {
-        'item_type': 'directory',
-        'name': databasename,
-    }
-    scheme = url_split(all_items[0]['url'])['scheme']
-    tree_root = TreeNode(databasename, data=root_data)
-    tree_root.unsorted_children = all_items
-    node_queue = set()
-    node_queue.add(tree_root)
-
-    # In this process, URLs are divided up into their nodes one directory layer at a time.
-    # The root receives all URLs, and creates nodes for each of the top-level
-    # directories. Those nodes receive all subdirectories, and repeat.
-    while len(node_queue) > 0:
-        node = node_queue.pop()
-        for new_child_data in node.unsorted_children:
-            path_parts = new_child_data['path_parts']
-            # Create a new node for the directory, path_parts[0]
-            # path_parts[1:] is assigned to that node to be divided next.
-            child_identifier = path_parts.pop(0)
-            #child_identifier = child_identifier.replace(':', '#')
-
-            child = node.children.get(child_identifier, None)
-            if not child:
-                child = TreeNode(child_identifier, data={})
-                child.unsorted_children = []
-                node.add_child(child)
-
-            child.data['name'] = child_identifier
-            if len(path_parts) > 0:
-                child.data['item_type'] = 'directory'
-                child.unsorted_children.append(new_child_data)
-                node_queue.add(child)
-            else:
-                child.data['item_type'] = 'file'
-                child.data['size'] = new_child_data['size']
-                child.data['url'] = new_child_data['url']
-        if node.parent is None:
-            continue
-        elif node.parent == tree_root:
-            node.data['url'] = scheme + '://' + node.identifier
-        else:
-            node.data['url'] = node.parent.data['url'] + '/' + node.identifier
-
-        del node.unsorted_children
-
-    return tree_root
+    return pathtree.from_paths(path_datas, root_name=databasename)
 
 def db_init(sql, cur):
     lines = DB_INIT.split(';')
@@ -652,83 +472,15 @@ def int_none(x):
         return x
     return int(x)
 
-def recursive_get_size(node):
-    '''
-    Calculate the size of the Directory nodes by summing the sizes of all children.
-    Modifies the nodes in-place.
-    '''
-    return_value = {
-        'size': 0,
-        'unmeasured': 0,
-    }
-    if node.data['item_type'] == 'file':
-        if node.data['size'] is None:
-            return_value['unmeasured'] = 1
-        return_value['size'] = node.data['size']
-
-    else:
-        for child in node.list_children():
-            child_details = recursive_get_size(child)
-            return_value['size'] += child_details['size'] or 0
-            return_value['unmeasured'] += child_details['unmeasured']
-        node.data['size'] = return_value['size']
-
-    return return_value
-
-def recursive_print_node(node, depth=0, use_html=False, output_file=None):
-    '''
-    Given a tree node (presumably the root), print it and all of its children.
-    '''
-    size = node.data['size']
-    if size is None:
-        size = UNKNOWN_SIZE_STRING
-    else:
-        size = bytestring.bytestring(size)
-
-    if use_html:
-        css_class = 'directory_even' if depth % 2 == 0 else 'directory_odd'
-        if node.data['item_type'] == 'directory':
-            directory_url = node.data.get('url')
-            directory_anchor = '<a href="{url}">►</a>' if directory_url else ''
-            directory_anchor = directory_anchor.format(url=directory_url)
-            line = HTML_FORMAT_DIRECTORY.format(
-                css=css_class,
-                directory_anchor=directory_anchor,
-                name=node.data['name'],
-                size=size,
-            )
-        else:
-            line = HTML_FORMAT_FILE.format(
-                name=node.data['name'],
-                size=size,
-                url=node.data['url'],
-            )
-    else:
-        line = '{space}{bar}{name} : ({size})'
-        line = line.format(
-            space='|   ' * (depth-1),
-            bar='|---' if depth > 0 else '',
-            name=node.data['name'],
-            size=size
-        )
-    write(line, output_file)
-
-    # Sort by type (directories first) then subsort by lowercase path
-    customsort = lambda node: (
-        node.data['item_type'] == 'file',
-        node.data['url'].lower(),
-    )
-
-    for child in node.list_children(customsort=customsort):
-        recursive_print_node(child, depth=depth+1, use_html=use_html, output_file=output_file)
-
-    if node.data['item_type'] == 'directory':
-        if use_html:
-            # Close the directory div
-            write('</div>', output_file)
-        else:
-            # This helps put some space between sibling directories
-            write('|   ' * (depth), output_file)
+def promise_results(promises):
+    promises = promises[:]
+    while len(promises) > 0:
+        for (index, promise) in enumerate(promises):
+            if not promise.done():
+                continue
+            yield promise.result()
+            promises.pop(index)
+            break
 
 def safeindex(sequence, index, fallback=None):
     try:
@@ -1085,18 +837,14 @@ def measure(databasename, fullscan=False, new_only=False, threads=4):
             else:
                 totalsize += size
 
-        while len(thread_promises) > 0:
-            # If that thread is done, `result()` will return immediately
-            # Otherwise, it will wait, which is okay because the threads themselves
-            # are not blocked.
-            head = thread_promises.pop(0).result()
+        for head in promise_results(thread_promises):
             fetch = smart_insert(sql, cur, head=head, commit=True)
             size = fetch[SQL_CONTENT_LENGTH]
             if size is None:
                 write('"%s" is not revealing Content-Length' % url)
                 size = 0
             totalsize += size
-    except KeyboardInterrupt:
+    except (Exception, KeyboardInterrupt):
         for promise in thread_promises:
             promise.cancel()
         raise
@@ -1141,6 +889,11 @@ def tree(databasename, output_filename=None):
     be a plain text drawing.
     '''
     tree_root = build_file_tree(databasename)
+    tree_root.path = None
+    for node in tree_root.walk():
+        if node.path:
+            node.path = node.path.replace(':||', '://')
+            node.display_name = node.display_name.replace(':||', '://')
 
     if output_filename is not None:
         output_file = open(output_filename, 'w', encoding='utf-8')
@@ -1149,19 +902,20 @@ def tree(databasename, output_filename=None):
         output_file = None
         use_html = False
 
-    if use_html:
-        write('<!DOCTYPE html>\n<html>', output_file)
-        write(HTML_TREE_HEAD, output_file)
-        write('<body>', output_file)
+    size_details = pathtree.recursive_get_size(tree_root)
 
-    size_details = recursive_get_size(tree_root)
-    recursive_print_node(tree_root, use_html=use_html, output_file=output_file)
+
     if size_details['unmeasured'] > 0:
-        write(UNMEASURED_WARNING % size_details['unmeasured'], output_file)
+        footer = UNMEASURED_WARNING % size_details['unmeasured']
+    else:
+        footer = None
+
+    line_generator = pathtree.recursive_print_node(tree_root, use_html=use_html, footer=footer)
+    for line in line_generator:
+        write(line, output_file)
+
 
     if output_file is not None:
-        if use_html:
-            write('</body>\n</html>', output_file)
         output_file.close()
     return tree_root
 

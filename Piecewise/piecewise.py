@@ -8,6 +8,7 @@ import traceback
 
 from voussoirkit import bytestring
 from voussoirkit import downloady
+from voussoirkit import clipext
 
 DEFAULT_PIECE_SIZE = bytestring.MIBIBYTE
 DEFAULT_THREAD_COUNT = 10
@@ -133,7 +134,8 @@ def init_argparse(args):
         piece_size = bytestring.parsebytes(args.piece_size)
     else:
         piece_size = args.piece_size
-    init(args.url, localname=args.localname, piece_size=piece_size)
+    url = clipext.resolve(args.url)
+    init(url, localname=args.localname, piece_size=piece_size)
 
 def reset_argparse(args):
     reset(args.databasename)

@@ -35,10 +35,11 @@ def threaded_dl(urls, thread_count, filename_format=None):
     if filename_format is None:
         filename_format = '{now}_{index}_{basename}'
     filename_format = filename_format.replace('{index}', '{index:0%0dd}' % index_digits)
-    if '{' not in filename_format and len(urls) > 1:
-        filename_format += '_{index}'
-    if '{extension}' not in filename_format:
-        filename_format += '{extension}'
+    if filename_format != os.devnull:
+        if '{' not in filename_format and len(urls) > 1:
+            filename_format += '_{index}'
+        if '{extension}' not in filename_format:
+            filename_format += '{extension}'
     now = int(time.time())
     for (index, url) in enumerate(urls):
         while len(threads) == thread_count:

@@ -3,9 +3,9 @@ Open Dir DL
 
 The open directory downloader.
 
-## Installation
+## Installing requirements
     
-    pip install requirements.txt
+    pip install -r requirements.txt
 
 ## Usage
 
@@ -17,11 +17,14 @@ See inside opendirdl.py for usage instructions.
 
 - **[addition]** A new feature was added.
 - **[bugfix]** Incorrect behavior was fixed.
-- **[change]** An existing feature was slightly modified or parameters were renamed.
+- **[change]** An existing feature was modified or parameters were renamed.
 - **[cleanup]** Code was improved, comments were added, or other changes with minor impact on the interface.
 - **[removal]** An old feature was removed.
 
 &nbsp;
+
+- 2017 01 06
+    - **[cleanup]** Much of the file tree builder has been moved to a new file in the voussoirkit, `pathtree.py`. The goal is to generalize the concept of a pathtree so I can start using it in other local-disk applications instead of having it locked into opendirdl's URL database. They were entangled very badly so it's still messy until I get the division of labor sorted out. Running the `tree` command on the commandline still works exactly the same as before.
 
 - 2016 11 11
     - **[addition]** You can now call opendirdl using the database filename as the first argument, and the subcommand as the second. Previously, the subcommand always had to come first, but now they are interchangeable when the system detects that argv[0] is a file. This makes it much easier to do multiple operations on a single database because you can just backspace the previous command rather than having to hop over the database name to get to it.
