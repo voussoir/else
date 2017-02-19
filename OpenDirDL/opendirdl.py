@@ -133,6 +133,7 @@ import requests
 import shutil
 import sqlite3
 import sys
+import threading
 import time
 ## import tkinter
 import urllib.parse
@@ -143,6 +144,7 @@ from voussoirkit import downloady
 from voussoirkit import fusker
 from voussoirkit import treeclass
 from voussoirkit import pathtree
+sys.path.append('C:\\git\\else\\threadqueue'); import threadqueue
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 FILENAME_BADCHARS = '/\\:*?"<>|'
@@ -184,6 +186,7 @@ SKIPPABLE_FILETYPES = [
     '.pdf',
     '.png',
     '.rar',
+    '.sfv',
     '.srt',
     '.tar',
     '.ttf',
@@ -237,7 +240,7 @@ class Walker:
     '''
     This class manages the extraction and saving of URLs, given a starting root url.
     '''
-    def __init__(self, root_url, databasename=None, fullscan=False):
+    def __init__(self, root_url, databasename=None, fullscan=False, threads=1):
         if not root_url.endswith('/'):
             root_url += '/'
         if '://' not in root_url.split('.')[0]:
@@ -255,6 +258,8 @@ class Walker:
         self.cur = self.sql.cursor()
         db_init(self.sql, self.cur)
 
+        self.thread_queue = threadqueue.ThreadQueue(threads)
+        self._main_thread = threading.current_thread().ident
         self.fullscan = bool(fullscan)
         self.queue = collections.deque()
         self.seen_directories = set()
@@ -326,10 +331,15 @@ class Walker:
             skippable = any(urll.endswith(ext) for ext in SKIPPABLE_FILETYPES)
             if skippable:
                 write('Skipping "%s" due to extension.' % url)
-                self.smart_insert(url=url, commit=False)
+                #self.smart_insert(url=url, commit=False)
+                #return {'url': url, 'commit': False}
+                self.thread_queue.behalf(self._main_thread, self.smart_insert, url=url, commit=False)
                 return
-            self.cur.execute('SELECT * FROM urls WHERE url == ?', [url])
-            skippable = self.cur.fetchone() is not None
+            skippable = lambda: self.cur.execute('SELECT * FROM urls WHERE url == ?', [url]).fetchone()
+            skippable = self.thread_queue.behalf(self._main_thread, skippable)
+            #print(skippable)
+            skippable = skippable is not None
+            #skippable = self.cur.fetchone() is not None
             if skippable:
                 write('Skipping "%s" since we already have it.' % url)
                 return
@@ -359,28 +369,34 @@ class Walker:
                 if href in self.seen_directories:
                     continue
                 else:
-                    self.queue.append(href)
+                    #self.queue.append(href)
+                    self.thread_queue.add(self.process_url, href)
                     added += 1
             write('Queued %d urls' % added)
         else:
             # This is not an index page, so save it.
-            self.smart_insert(head=head, commit=False)
+            #self.smart_insert(head=head, commit=False)
+            self.thread_queue.behalf(self._main_thread, self.smart_insert, head=head, commit=False)
+            #return {'head': head, 'commit': False}
 
     def walk(self, url=None):
         '''
         Given a starting URL (defaults to self.root_url), continually extract
         links from the page and repeat.
         '''
-        self.queue.appendleft(url)
-        try:
-            while len(self.queue) > 0:
-                url = self.queue.popleft()
-                self.process_url(url)
-                line = '{:,} Remaining'.format(len(self.queue))
-                write(line)
-        except:
-            self.sql.commit()
-            raise
+        #self.queue.appendleft(url)
+        self.thread_queue.add(self.process_url, url)
+        for return_value in self.thread_queue.run(hold_open=False):
+            pass
+        #try:
+        #    while len(self.queue) > 0:
+        #        url = self.queue.popleft()
+        #        self.process_url(url)
+        #        line = '{:,} Remaining'.format(len(self.queue))
+        #        write(line)
+        #except:
+        #    self.sql.commit()
+        #    raise
         self.sql.commit()
 ##                                                                                                ##
 ## WALKER ##########################################################################################
@@ -584,7 +600,7 @@ def write(line, file_handle=None, **kwargs):
 
 ## COMMANDLINE FUNCTIONS ###########################################################################
 ##                                                                                                ##
-def digest(root_url, databasename=None, fullscan=False):
+def digest(root_url, databasename=None, fullscan=False, threads=1):
     if root_url in ('!clipboard', '!c'):
         root_url = get_clipboard()
         write('From clipboard: %s' % root_url)
@@ -592,6 +608,7 @@ def digest(root_url, databasename=None, fullscan=False):
         databasename=databasename,
         fullscan=fullscan,
         root_url=root_url,
+        threads=threads,
     )
     walker.walk()
 
@@ -600,6 +617,7 @@ def digest_argparse(args):
         databasename=args.databasename,
         fullscan=args.fullscan,
         root_url=args.root_url,
+        threads=int(args.threads),
     )
 
 def download(
@@ -818,8 +836,7 @@ def measure(databasename, fullscan=False, new_only=False, threads=4):
     if threads is None:
         threads = 1
 
-    threadpool = concurrent.futures.ThreadPoolExecutor(threads)
-    thread_promises = []
+    thread_queue = threadqueue.ThreadQueue(threads)
 
     try:
         for fetch in items:
@@ -827,8 +844,7 @@ def measure(databasename, fullscan=False, new_only=False, threads=4):
 
             if fullscan or new_only:
                 url = fetch[SQL_URL]
-                promise = threadpool.submit(do_head, url, raise_for_status=False)
-                thread_promises.append(promise)
+                thread_queue.add(do_head, url, raise_for_status=False)
 
             elif size is None:
                 # Unmeasured and no intention to measure.
@@ -837,16 +853,15 @@ def measure(databasename, fullscan=False, new_only=False, threads=4):
             else:
                 totalsize += size
 
-        for head in promise_results(thread_promises):
-            fetch = smart_insert(sql, cur, head=head, commit=True)
+        for head in thread_queue.run():
+            fetch = smart_insert(sql, cur, head=head, commit=False)
             size = fetch[SQL_CONTENT_LENGTH]
             if size is None:
                 write('"%s" is not revealing Content-Length' % url)
                 size = 0
             totalsize += size
     except (Exception, KeyboardInterrupt):
-        for promise in thread_promises:
-            promise.cancel()
+        sql.commit()
         raise
 
     sql.commit()
@@ -938,6 +953,7 @@ def main(argv):
     p_digest.add_argument('root_url')
     p_digest.add_argument('-db', '--database', dest='databasename', default=None)
     p_digest.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
+    p_digest.add_argument('-t', '--threads', dest='threads', default=1)
     p_digest.set_defaults(func=digest_argparse)
 
     p_download = subparsers.add_parser('download')

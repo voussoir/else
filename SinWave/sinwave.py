@@ -1,5 +1,6 @@
-import math
+﻿import math
 import random
+import shutil
 import string
 import threading
 import time
@@ -12,7 +13,7 @@ import tkinter
 # 0, 90, 180, 270
 # ░▒▓
 
-SCREEN_WIDTH = 114
+SCREEN_WIDTH = shutil.get_terminal_size()[1] - 6
 
 DEFAULT_LINE = {
     'character': '#',
@@ -27,7 +28,7 @@ DEFAULT_LINE = {
 variables = {
     'clock': 0,
     'frames':[],
-    'delay': 0.01,
+    'delay': 0.02,
     'lines':[
     ]
 }

@@ -46,6 +46,10 @@ class Path:
         return os.path.exists(self.absolute_path)
 
     @property
+    def extension(self):
+        return os.path.splitext(self.absolute_path)[1].lstrip('.')
+
+    @property
     def is_dir(self):
         return os.path.isdir(self.absolute_path)
 
@@ -61,6 +65,11 @@ class Path:
         if not isinstance(subpath, str):
             raise TypeError('subpath must be a string')
         return Path(os.path.join(self.absolute_path, subpath))
+
+    def listdir(self):
+        children = os.listdir(self.absolute_path)
+        children = [self.with_child(child) for child in children]
+        return children
 
     @property
     def normcase(self):
@@ -90,6 +99,15 @@ class Path:
         backsteps = os.sep.join('..' for x in range(backsteps))
         return self.absolute_path.replace(common.absolute_path, backsteps)
 
+    def replace_extension(self, extension):
+        extension = extension.rsplit('.', 1)[-1]
+        base = os.path.splitext(self.absolute_path)[0]
+
+        if extension == '':
+            return Path(base)
+
+        return Path(base + '.' + extension)
+
     @property
     def size(self):
         if self.is_file:
@@ -103,6 +121,7 @@ class Path:
 
     def with_child(self, basename):
         return self.join(os.path.basename(basename))
+
 
 
 def common_path(paths, fallback):
@@ -171,9 +190,10 @@ def get_path_casing(path):
     except IndexError:
         return input_path.absolute_path
 
-    imaginary_portion = input_path.normcase
-    real_portion = os.path.normcase(cased)
-    imaginary_portion = imaginary_portion.replace(real_portion, '')
+    imaginary_portion = input_path.absolute_path
+    imaginary_portion = imaginary_portion[len(cased):]
+    #real_portion = os.path.normcase(cased)
+    #imaginary_portion = imaginary_portion.replace(real_portion, '')
     imaginary_portion = imaginary_portion.lstrip(os.sep)
     cased = os.path.join(cased, imaginary_portion)
     cased = cased.rstrip(os.sep)

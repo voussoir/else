@@ -13,6 +13,7 @@ def search(
         case_sensitive=False,
         do_regex=False,
         do_glob=False,
+        inverse=False,
         local_only=False,
         match_any=False,
     ):
@@ -23,10 +24,8 @@ def search(
             (do_glob and fnmatch.fnmatch(text, term))
         )
 
-    if case_sensitive:
-        search_terms = terms
-    else:
-        search_terms = [term.lower() for term in terms]
+    if not case_sensitive:
+        terms = [term.lower() for term in terms]
 
     anyall = any if match_any else all
 
@@ -40,7 +39,8 @@ def search(
         if not case_sensitive:
             basename = basename.lower()
 
-        if anyall(term_matches(basename, term) for term in search_terms):
+        matches = anyall(term_matches(basename, term) for term in terms)
+        if matches ^ inverse:
             safeprint.safeprint(filepath.absolute_path)
 
 
@@ -50,6 +50,7 @@ def search_argparse(args):
         case_sensitive=args.case_sensitive,
         do_glob=args.do_glob,
         do_regex=args.do_regex,
+        inverse=args.inverse,
         local_only=args.local_only,
         match_any=args.match_any,
     )
@@ -59,10 +60,11 @@ def main(argv):
 
     parser.add_argument('search_terms', nargs='+', default=None)
     parser.add_argument('--any', dest='match_any', action='store_true')
+    parser.add_argument('--case', dest='case_sensitive', action='store_true')
     parser.add_argument('--regex', dest='do_regex', action='store_true')
     parser.add_argument('--glob', dest='do_glob', action='store_true')
-    parser.add_argument('--case', dest='case_sensitive', action='store_true')
     parser.add_argument('--local', dest='local_only', action='store_true')
+    parser.add_argument('--inverse', dest='inverse', action='store_true')
     parser.set_defaults(func=search_argparse)
 
     args = parser.parse_args(argv)

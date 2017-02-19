@@ -15,8 +15,18 @@ from voussoirkit import safeprint
 from voussoirkit import spinal
 
 
-def fileswith(filepattern, terms, do_regex=False, do_glob=False):
-    search_terms = [term.lower() for term in terms]
+def fileswith(
+        filepattern,
+        terms,
+        case_sensitive=False,
+        do_regex=False,
+        do_glob=False,
+        inverse=False,
+        match_any=False,
+    ):
+
+    if not case_sensitive:
+        terms = [term.lower() for term in terms]
 
     def term_matches(text, term):
         return (
@@ -24,6 +34,8 @@ def fileswith(filepattern, terms, do_regex=False, do_glob=False):
             (do_regex and re.search(term, text)) or
             (do_glob and fnmatch.fnmatch(text, term))
         )
+
+    anyall = any if match_any else all
 
 
     generator = spinal.walk_generator(depth_first=False, yield_directories=True)
@@ -35,8 +47,12 @@ def fileswith(filepattern, terms, do_regex=False, do_glob=False):
         try:
             with handle:
                 for (index, line) in enumerate(handle):
-                    if all(term_matches(line, term) for term in terms):
-                        line = '%d | %s' % (index, line.strip())
+                    if not case_sensitive:
+                        compare_line = line.lower()
+                    else:
+                        compare_line = line
+                    if inverse ^ anyall(term_matches(compare_line, term) for term in terms):
+                        line = '%d | %s' % (index+1, line.strip())
                         matches.append(line)
         except:
             pass
@@ -50,8 +66,11 @@ def fileswith_argparse(args):
     return fileswith(
         filepattern=args.filepattern,
         terms=args.search_terms,
+        case_sensitive=args.case_sensitive,
         do_glob=args.do_glob,
         do_regex=args.do_regex,
+        inverse=args.inverse,
+        match_any=args.match_any,
     )
 
 def main(argv):
@@ -59,8 +78,11 @@ def main(argv):
 
     parser.add_argument('filepattern')
     parser.add_argument('search_terms', nargs='+', default=None)
+    parser.add_argument('--any', dest='match_any', action='store_true')
+    parser.add_argument('--case', dest='case_sensitive', action='store_true')
     parser.add_argument('--regex', dest='do_regex', action='store_true')
     parser.add_argument('--glob', dest='do_glob', action='store_true')
+    parser.add_argument('--inverse', dest='inverse', action='store_true')
     parser.set_defaults(func=fileswith_argparse)
 
     args = parser.parse_args(argv)
