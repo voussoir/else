@@ -27,6 +27,8 @@ TEMP_EXTENSION = '.downloadytemp'
 
 PRINT_LIMITER = ratelimiter.Ratelimiter(allowance=5, mode='reject')
 
+class NotEnoughBytes(Exception):
+    pass
 
 def download_file(
         url,
@@ -131,7 +133,7 @@ def download_plan(plan):
         if plan['raise_for_undersized'] and undersized:
             message = 'File does not contain expected number of bytes. Received {size} / {total}'
             message = message.format(size=localsize, total=plan['remote_total_bytes'])
-            raise Exception(message)
+            raise NotEnoughBytes(message)
 
         if localname != plan['real_localname']:
             os.rename(localname, plan['real_localname'])
@@ -406,17 +408,30 @@ def download_argparse(args):
     if args.range is not None:
         headers['range'] = 'bytes=%s' % args.range
 
-    download_file(
-        url=url,
-        localname=args.localname,
-        bytespersecond=bytespersecond,
-        callback_progress=callback,
-        do_head=args.no_head is False,
-        headers=headers,
-        overwrite=args.overwrite,
-        timeout=int(args.timeout),
-        verbose=True,
-    )
+    retry = args.retry
+    if not retry:
+        retry = 1
+
+    while retry != 0:
+        # Negative numbers permit infinite retries.
+        try:
+            download_file(
+                url=url,
+                localname=args.localname,
+                bytespersecond=bytespersecond,
+                callback_progress=callback,
+                do_head=args.no_head is False,
+                headers=headers,
+                overwrite=args.overwrite,
+                timeout=args.timeout,
+                verbose=True,
+            )
+        except (NotEnoughBytes, requests.exceptions.ConnectionError):
+            retry -= 1
+            if retry == 0:
+                raise
+        else:
+            break
 
 
 if __name__ == '__main__':
@@ -428,7 +443,8 @@ if __name__ == '__main__':
     parser.add_argument('-bps', '--bytespersecond', dest='bytespersecond', default=None)
     parser.add_argument('-ow', '--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('-r', '--range', dest='range', default=None)
-    parser.add_argument('--timeout', dest='timeout', default=TIMEOUT)
+    parser.add_argument('--timeout', dest='timeout', type=int, default=TIMEOUT)
+    parser.add_argument('--retry', dest='retry', const=-1, nargs='?', type=int, default=1)
     parser.add_argument('--no-head', dest='no_head', action='store_true')
     parser.set_defaults(func=download_argparse)
 
