@@ -3,6 +3,9 @@ Spinal
 
 A couple of tools for copying files and directories.
 
+- 2017 03 12
+    - Fix the PermissionDenied callback always being called with Source path even if the Destination is the one that caused the problem.
+
 - 2016 12 06
     - Fixed bug where dry runs would still create directories
 

@@ -392,16 +392,22 @@ def copy_file(
     destination_location = os.path.split(destination.absolute_path)[0]
     os.makedirs(destination_location, exist_ok=True)
 
-    try:
-        log.debug('Opening handles.')
-        source_handle = open(source.absolute_path, 'rb')
-        destination_handle = open(destination.absolute_path, 'wb')
-    except PermissionError as exception:
-        if callback_permission_denied is not None:
-            callback_permission_denied(source, exception)
-            return [destination, 0]
-        else:
-            raise
+    def handlehelper(path, mode):
+        try:
+            handle = open(path.absolute_path, mode)
+            return handle
+        except PermissionError as exception:
+            if callback_permission_denied is not None:
+                callback_permission_denied(path, exception)
+                return None
+            else:
+                raise
+
+    log.debug('Opening handles.')
+    source_handle = handlehelper(source, 'rb')
+    destination_handle = handlehelper(destination, 'wb')
+    if None in (source_handle, destination_handle):
+        return [destination, 0]
 
     if validate_hash:
         hasher = HASH_CLASS()
