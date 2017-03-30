@@ -11,9 +11,10 @@ import string
 import re
 import sys
 
-assert len(sys.argv) in (2, 3)
+assert len(sys.argv) in range(2, 4)
 
 ctime = '-c' in sys.argv
+dry = '--dry' in sys.argv
 
 IGNORE_EXTENSIONS = ['.py', '.lnk']
 
@@ -56,4 +57,7 @@ for (fileindex, filename) in enumerate(files):
     newname = format % (prefix, fileindex, extension)
     if os.path.basename(filename) != newname:
         print(''.join([c for c in (filename + ' -> ' + newname) if c in string.printable]))
-        os.rename(filename, newname)
+        if not dry:
+            os.rename(filename, newname)
+if dry:
+    print('Dry. No files renamed.')

@@ -8,7 +8,7 @@ var seen_urls = new Set();
 var image_height = 200;
 var video_height = 300;
 var audio_width = 1000;
-var IMAGE_TYPES = ["\\.jpg", "\\.jpeg", "\\.jpg", "\\.bmp", "\\.tiff", "\\.tif", "\\.bmp", "\\.gif", "\\.png"].join("|");
+var IMAGE_TYPES = ["\\.jpg", "\\.jpeg", "\\.jpg", "\\.bmp", "\\.tiff", "\\.tif", "\\.bmp", "\\.gif", "\\.png", "reddituploads\.com"].join("|");
 var AUDIO_TYPES = ["\\.aac", "\\.mp3", "\\.m4a", "\\.ogg", "\\.wav"].join("|");
 var VIDEO_TYPES = ["\\.mp4", "\\.m4v", "\\.webm", "\\.ogv"].join("|");
 IMAGE_TYPES = new RegExp(IMAGE_TYPES, "i");
@@ -478,8 +478,8 @@ function get_all_urls()
                 {console.log("Rejecting reddit thumb"); continue;}
             if (url.indexOf("pixel.reddit") != -1 || url.indexOf("reddit.com/static/pixel") != -1)
                 {console.log("Rejecting reddit pixel"); continue}
-            /*if (url.indexOf("/thumb/") != -1)
-                {console.log("Rejecting /thumb/"); continue;}*/
+            if (url.indexOf("/thumb/") != -1)
+                {console.log("Rejecting /thumb/"); continue;}
             if (url.indexOf("/loaders/") != -1)
                 {console.log("Rejecting loader"); continue;}
             if (url.indexOf("memegen") != -1)

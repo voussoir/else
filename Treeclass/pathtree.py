@@ -10,9 +10,9 @@ HTML_TREE_HEAD = '''
 <meta charset="UTF-8">
 
 <script type="text/javascript">
-function collapse(div)
+function collapse(div, force)
 {
-    if (div.style.display != "none")
+    if (force !== "block" && div.style.display != "none")
     {
         div.style.display = "none";
     }
@@ -49,6 +49,17 @@ function collapse(div)
 }
 </style>
 </head>
+<script type="text/javascript">
+function open_all()
+{
+    var divs = document.getElementsByTagName("div");
+    for (var index = 0; index < divs.length; index += 1)
+    {
+        collapse(divs[index], "block");
+    }
+}
+</script>
+<button onclick="open_all()">Expand all</button>
 '''
 
 HTML_FORMAT_DIRECTORY = '''

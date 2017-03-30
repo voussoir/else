@@ -42,6 +42,8 @@ def fileswith(
     for filepath in generator:
         if not fnmatch.fnmatch(filepath.basename, filepattern):
             continue
+        if not filepath.is_file:
+            continue
         handle = open(filepath.absolute_path, 'r', encoding='utf-8')
         matches = []
         try:
