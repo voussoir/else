@@ -38,6 +38,7 @@ class Cache:
             pop_count = 0
         else:
             pop_count = len(self._dict) - self.maxlen
+            pop_count = max(0, pop_count)
         keys = sorted(self._recency.keys(), key=self._recency.get)
         for key in itertools.islice(keys, 0, pop_count):
             self.remove(key)
