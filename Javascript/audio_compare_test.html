@@ -13,7 +13,7 @@
 </head>
 
 <body>
-    <p>Drag files onto the page</p>
+    <p>Drag files onto the page (Clear Existing?<input type="checkbox" id="do_clear_on_drop">)</p>
     <button onclick="cycle();">Cycle</button>
     <button onclick="pause_all();">Pause</button>
     <button onclick="play_all();">Play</button>
@@ -49,7 +49,7 @@ div
 {
     display: block;
 }
-input
+#seekbar
 {
     width: 600px;
 }
@@ -63,6 +63,7 @@ input
 <script type="text/javascript">
 var WORKSPACE = document.getElementById("workspace");
 var SEEKBAR = document.getElementById("seekbar");
+var DO_CLEAR_ON_DROP = document.getElementById("do_clear_on_drop");
 var audios = [];
 var current = 0;
 var duration = 0;
@@ -92,9 +93,12 @@ function drop_event(e)
 
     var files = Array.from(e.dataTransfer.files);
     shuffle(files);
-    while (WORKSPACE.lastChild)
+    if (DO_CLEAR_ON_DROP.checked)
     {
-        WORKSPACE.removeChild(WORKSPACE.lastChild);
+        while (WORKSPACE.lastChild)
+        {
+            WORKSPACE.removeChild(WORKSPACE.lastChild);
+        }
     }
     for (var index = 0; index < files.length; index += 1)
     {
