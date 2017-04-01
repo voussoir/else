@@ -42,6 +42,9 @@ OPERATOR_FUNCTIONS = {
     'NOT': func_not,
 }
 
+class NoTokens(Exception):
+    pass
+
 class ExpressionTree:
     def __init__(self, token, parent=None):
         self.children = []
@@ -86,6 +89,9 @@ class ExpressionTree:
     def parse(cls, tokens, spaces=0):
         if isinstance(tokens, str):
             tokens = tokenize(tokens)
+
+        if tokens == []:
+            raise NoTokens()
 
         if isinstance(tokens[0], list):
             current = cls.parse(tokens[0], spaces=spaces+1)
@@ -194,19 +200,30 @@ class ExpressionTree:
                 raise override from e
             raise e
 
+    @property
+    def is_leaf(self):
+        return self.token not in OPERATORS
+
     def map(self, function):
-        for node in self.walk():
-            if node.token in OPERATORS:
-                continue
+        '''
+        Apply this function to all of the operands.
+        '''
+        for node in self.walk_leaves():
             node.token = function(node.token)
 
     def prune(self):
         '''
         Remove any nodes where `token` is None.
         '''
-        self.children = [child for child in self.children if child is not None]
+        self.children = [child for child in self.children if child.token is not None]
+
         for child in self.children:
             child.prune()
+
+        if self.token in OPERATORS and len(self.children) == 0:
+            self.token = None
+            if self.parent is not None:
+                self.parent.children.remove(self)
 
     def rootmost(self):
         current = self
@@ -221,7 +238,7 @@ class ExpressionTree:
 
     def walk_leaves(self):
         for node in self.walk():
-            if node.token not in OPERATORS:
+            if node.is_leaf:
                 yield node
 
 
