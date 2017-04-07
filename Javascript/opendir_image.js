@@ -167,7 +167,7 @@ function create_odi_div(url)
         var load_button = document.createElement("button");
         load_button.className = "load_button";
         load_button.odi_div = div;
-        load_button.innerHTML = basename;
+        load_button.innerHTML = decodeURIComponent(unescape(basename));
         load_button.onclick = function()
         {
             this.parentElement.removeChild(this);
@@ -693,7 +693,8 @@ function normalize_url(url)
     }
     url = url.replace("http:", protocol);
     url = url.replace("https:", protocol);
-    url = decodeURIComponent(unescape(url));
+    /*url = decodeURIComponent(unescape(url));*/
+    console.log(url);
     url = url.replace("imgur.com/gallery/", "imgur.com/a/");
 
     if (url.indexOf("vidble") >= 0)
