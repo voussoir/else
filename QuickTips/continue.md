@@ -30,9 +30,9 @@ while len(directory_queue) > 0:
 ```
 
 
-####Continue is great for cleaning code with lots of conditions:
+#### Continue is great for cleaning code with lots of conditions:
 
-#####Without continue:
+##### Without continue:
 
 Nested:
 
@@ -58,7 +58,7 @@ for submission in submissions:
 
 
 
-#####With continue:
+##### With continue:
 
 ```Python
 for submission in submissions:

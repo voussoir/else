@@ -7,7 +7,7 @@ The svg has two layers. They contain identical shapes, but the lower one is slig
 
 Because each pixel of each face produces two shapes, you should probably stick to small source images.
 
-##Usage:
+## Usage:
 
     > mc3dvector.py dirt.png
     Creates a block with dirt on all sides
