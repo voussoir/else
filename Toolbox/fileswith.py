@@ -3,6 +3,13 @@ Search for a target string within the lines of files.
 
 For example:
 fileswith.py *.py "import random"
+
+Instead of a glob pattern, you can use a clipext !c or !i to take paths from your
+clipboard or stdin.
+
+For example:
+dir /b | fileswith !i sampletext
+search .md | fileswith !i "^.{100}" --regex
 '''
 
 import argparse
@@ -11,9 +18,27 @@ import glob
 import re
 import sys
 
+from voussoirkit import clipext
+from voussoirkit import pathclass
 from voussoirkit import safeprint
 from voussoirkit import spinal
 
+
+def get_filepaths(filepattern):
+    original = filepattern
+    filepattern = clipext.resolve(filepattern)
+    if filepattern != original:
+        lines = filepattern.splitlines()
+        filepaths = [pathclass.Path(l) for l in lines]
+        filepaths = [p for p in filepaths if p.is_file]
+    else:
+        filepaths = spinal.walk_generator(depth_first=False, yield_directories=True)
+        for filepath in filepaths:
+            if not fnmatch.fnmatch(filepath.basename, filepattern):
+                continue
+            if not filepath.is_file:
+                continue
+    return filepaths
 
 def fileswith(
         filepattern,
@@ -23,6 +48,7 @@ def fileswith(
         do_glob=False,
         inverse=False,
         match_any=False,
+        names_only=False,
     ):
 
     if not case_sensitive:
@@ -38,12 +64,9 @@ def fileswith(
     anyall = any if match_any else all
 
 
-    generator = spinal.walk_generator(depth_first=False, yield_directories=True)
-    for filepath in generator:
-        if not fnmatch.fnmatch(filepath.basename, filepattern):
-            continue
-        if not filepath.is_file:
-            continue
+    
+    filepaths = get_filepaths(filepattern)
+    for filepath in filepaths:
         handle = open(filepath.absolute_path, 'r', encoding='utf-8')
         matches = []
         try:
@@ -55,11 +78,16 @@ def fileswith(
                         compare_line = line
                     if inverse ^ anyall(term_matches(compare_line, term) for term in terms):
                         line = '%d | %s' % (index+1, line.strip())
+                        if names_only:
+                            matches = True
+                            break
                         matches.append(line)
         except:
             pass
         if matches:
             print(filepath.absolute_path)
+            if names_only:
+                continue
             safeprint.safeprint('\n'.join(matches))
             print()
 
@@ -73,6 +101,7 @@ def fileswith_argparse(args):
         do_regex=args.do_regex,
         inverse=args.inverse,
         match_any=args.match_any,
+        names_only=args.names_only,
     )
 
 def main(argv):
@@ -85,6 +114,7 @@ def main(argv):
     parser.add_argument('--regex', dest='do_regex', action='store_true')
     parser.add_argument('--glob', dest='do_glob', action='store_true')
     parser.add_argument('--inverse', dest='inverse', action='store_true')
+    parser.add_argument('--names_only', dest='names_only', action='store_true')
     parser.set_defaults(func=fileswith_argparse)
 
     args = parser.parse_args(argv)
