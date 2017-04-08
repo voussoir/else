@@ -5,15 +5,12 @@ INPUT_STRINGS = ['!i', '!in', '!input', '!stdin']
 EOF = '\x1a'
 
 def _input_lines():
-    userinput = []
     while True:
         try:
             additional = input()
         except EOFError:
             # If you enter nothing but ctrl-z
             additional = EOF
-        else:
-            userinput.append(additional)
 
         additional = additional.split(EOF)
         has_eof = len(additional) > 1
