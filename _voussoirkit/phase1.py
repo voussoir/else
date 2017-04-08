@@ -18,7 +18,8 @@ PATHS = [
 'C:\\git\\else\\Treeclass\\treeclass.py',
 ]
 
-os.makedirs('voussoirkit', exist_ok=True)
-for filename in PATHS:
-    shutil.copy(filename, os.path.join('voussoirkit', os.path.basename(filename)))
-open(os.path.join('voussoirkit', '__init__.py'), 'w').close()
+if __name__ == '__main__':
+    os.makedirs('voussoirkit', exist_ok=True)
+    for filename in PATHS:
+        shutil.copy(filename, os.path.join('voussoirkit', os.path.basename(filename)))
+    open(os.path.join('voussoirkit', '__init__.py'), 'w').close()
