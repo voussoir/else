@@ -5,59 +5,101 @@ of the files in the current working directory will be renamed in the format
 integer that counts each file in the folder.
 '''
 
+import argparse
 import os
 import random
 import string
 import re
 import sys
 
-assert len(sys.argv) in range(2, 4)
+from voussoirkit import pathclass
+from voussoirkit import safeprint
 
-ctime = '-c' in sys.argv
-dry = '--dry' in sys.argv
+IGNORE_EXTENSIONS = ['py', 'lnk', 'ini']
 
-IGNORE_EXTENSIONS = ['.py', '.lnk']
 
-prefix = sys.argv[1]
-if prefix != '':
-    prefix += '_'
-files = [os.path.abspath(x) for x in os.listdir()]
-files = [item for item in files if os.path.isfile(item)]
-if __file__ in files:
-    files.remove(__file__)
-
-# trust me on this.
-zeropadding = len(str(len(files)))
-zeropadding = max(2, zeropadding)
-zeropadding = str(zeropadding)
-
-format = '%s%0{pad}d%s'.format(pad=zeropadding)
-
-def natural_sort(l):
+def natural_sorter(x):
     '''
     http://stackoverflow.com/a/11150413
     '''
     convert = lambda text: int(text) if text.isdigit() else text.lower() 
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)] 
-    return sorted(l, key=alphanum_key)
+    return alphanum_key(x)
 
-if ctime:
-    print('Sorting by time')
-    files.sort(key=os.path.getctime)
-else:
-    print('Sorting by name')
-    files = natural_sort(files)
-for (fileindex, filename) in enumerate(files):
-    if '.' in filename:
-        extension = '.' + filename.split('.')[-1]
-        if extension in IGNORE_EXTENSIONS:
-            continue
+def fileprefix(
+        prefix='',
+        sep=' ',
+        ctime=False,
+        dry=False,
+    ):
+    current_directory = pathclass.Path('.')
+
+    prefix = prefix.strip()
+    if prefix == ':':
+        prefix = current_directory.basename + ' - '
+    elif prefix != '':
+        prefix += sep
+
+    filepaths = current_directory.listdir()
+    filepaths = [f for f in filepaths if f.is_file]
+    filepaths = [f for f in filepaths if f.extension.lower() not in IGNORE_EXTENSIONS]
+
+    try:
+        pyfile = pathclass.Path(__file__)
+        filepaths.remove(pyfile)
+    except ValueError:
+        pass
+
+    # trust me on this.
+    zeropadding = len(str(len(filepaths)))
+    zeropadding = max(2, zeropadding)
+    zeropadding = str(zeropadding)
+
+    format = '{{prefix}}{{index:0{pad}d}}{{extension}}'.format(pad=zeropadding)
+
+    if ctime:
+        print('Sorting by time')
+        filepaths.sort(key=lambda x: x.stat.st_ctime)
     else:
-        extension = ''
-    newname = format % (prefix, fileindex, extension)
-    if os.path.basename(filename) != newname:
-        print(''.join([c for c in (filename + ' -> ' + newname) if c in string.printable]))
-        if not dry:
-            os.rename(filename, newname)
-if dry:
-    print('Dry. No files renamed.')
+        print('Sorting by name')
+        filepaths.sort(key=lambda x: natural_sorter(x.basename))
+
+    for (index, filepath) in enumerate(filepaths):
+        extension = filepath.extension
+        if extension != '':
+            extension = '.' + extension
+
+        newname = format.format(prefix=prefix, index=index, extension=extension)
+        if filepath.basename != newname:
+            message = filepath.basename + ' -> ' + newname
+            safeprint.safeprint(message)
+            if not dry:
+                os.rename(filepath.absolute_path, newname)
+                pass
+    if dry:
+        print('Dry. No files renamed.')
+
+
+
+def fileprefix_argparse(args):
+    return fileprefix(
+        prefix=args.prefix,
+        sep=args.sep,
+        ctime=args.ctime,
+        dry=args.dry,
+    )
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('prefix', nargs='?', default='')
+    parser.add_argument('--sep', dest='sep', default=' ')
+    parser.add_argument('--ctime', dest='ctime', action='store_true')
+    parser.add_argument('--dry', dest='dry', action='store_true')
+    parser.set_defaults(func=fileprefix_argparse)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
