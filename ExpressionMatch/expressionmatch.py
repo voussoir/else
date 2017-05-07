@@ -9,6 +9,11 @@ UNARY_OPERATORS = {'NOT'}
 PRECEDENCE = ['NOT', 'AND', 'XOR', 'OR']
 OPERATORS = BINARY_OPERATORS | UNARY_OPERATORS
 
+# Sentinel values used for breaking up the tokens, so we dont' have to use
+# strings '(' and ')' which can get confused with user input.
+PAREN_OPEN = object()
+PAREN_CLOSE = object()
+
 DEFAULT_MATCH_FUNCTION = str.__contains__
 
 MESSAGE_WRITE_YOUR_OWN_MATCHER = '''
@@ -58,6 +63,8 @@ class ExpressionTree:
         if self.token not in OPERATORS:
             t = self.token
             t = t.replace('"', '\\"')
+            t = t.replace('(', '\\(')
+            t = t.replace(')', '\\)')
             if ' ' in t:
                 t = '"%s"' % t
             return t
@@ -186,6 +193,25 @@ class ExpressionTree:
         operator_function = OPERATOR_FUNCTIONS[self.token]
         children = (child.evaluate(text, match_function=match_function) for child in self.children)
         return operator_function(children)
+
+    def diagram(self):
+        if self.token is None:
+            return '""'
+        t = self.token
+        if ' ' in t:
+            t = '"%s"' % t
+
+        output = t
+        indent = 1
+        for child in self.children:
+            child = child.diagram()
+            for line in child.splitlines():
+                output += (' ' * indent)
+                output += line + '\n'
+                indent = len(t) + 1
+        output = output.strip()
+
+        return output
 
     def evaluate(self, text, match_function=None):
         if match_function is None:
@@ -408,9 +434,9 @@ def sublist_tokens(tokens, _from_index=0, depth=0):
         token = tokens[index]
         #print(index, token)
         index += 1
-        if token == '(':
+        if token is PAREN_OPEN:
             (token, index) = sublist_tokens(tokens, _from_index=index, depth=depth+1)
-        if token == ')':
+        if token is PAREN_CLOSE:
             break
         final_tokens.append(token)
     if _from_index == 0:
@@ -440,18 +466,20 @@ def tokenize(expression):
     tokens = []
     for character in expression:
         if in_escape:
-            character = ESCAPE_SEQUENCES.get(character, '\\'+character)
+            #character = ESCAPE_SEQUENCES.get(character, '\\'+character)
             in_escape = False
 
         elif character in  {'(', ')'} and not in_quotes:
             if character == '(':
+                sentinel = PAREN_OPEN
                 paren_depth += 1
             elif character == ')':
+                sentinel = PAREN_CLOSE
                 paren_depth -= 1
 
             if paren_depth >= 0:
                 tokens.append(''.join(current_word))
-                tokens.append(character)
+                tokens.append(sentinel)
                 current_word.clear()
                 continue
             else:
