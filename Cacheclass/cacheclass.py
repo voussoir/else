@@ -50,6 +50,10 @@ class Cache:
                 if age > self.maxage:
                     self.remove(key)
 
+    def clear(self):
+        self._dict.clear()
+        self._recency.clear()
+
     def get(self, key, fallback=None):
         try:
             return self[key]
