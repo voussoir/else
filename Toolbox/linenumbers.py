@@ -2,6 +2,8 @@ import sys
 
 from voussoirkit import clipext
 
+if len(sys.argv) == 1:
+    sys.argv.append('!i')
 text = clipext.resolve(sys.argv[1])
 lines = text.splitlines()
 digits = len(str(len(lines)))

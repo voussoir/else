@@ -134,7 +134,7 @@ function create_odi_div(url)
 {
     var div = null;
     var paramless_url = url.split("?")[0];
-    var basename = get_basename(url);
+    var basename = decodeURI(get_basename(url));
 
     if (paramless_url.match(IMAGE_TYPES))
     {
@@ -167,7 +167,7 @@ function create_odi_div(url)
         var load_button = document.createElement("button");
         load_button.className = "load_button";
         load_button.odi_div = div;
-        load_button.innerHTML = decodeURIComponent(unescape(basename));
+        load_button.innerText = basename;
         load_button.onclick = function()
         {
             this.parentElement.removeChild(this);
@@ -208,7 +208,7 @@ function create_odi_div(url)
 
         var a = document.createElement("a");
         a.odi_div = div;
-        a.innerHTML = get_basename(url);
+        a.innerText = basename;
         a.target = "_blank";
         a.style.display = "block";
         a.href = url;
@@ -653,8 +653,8 @@ function lazy_load_all()
         return;
     }
     lazy_load_one(element, true);
-    return
-;}
+    return;
+}
 
 function lazy_load_one(element, comeback)
 {
@@ -693,7 +693,7 @@ function normalize_url(url)
     }
     url = url.replace("http:", protocol);
     url = url.replace("https:", protocol);
-    /*url = decodeURIComponent(unescape(url));*/
+
     console.log(url);
     url = url.replace("imgur.com/gallery/", "imgur.com/a/");
 
