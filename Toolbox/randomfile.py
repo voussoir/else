@@ -1,7 +1,7 @@
 import math
 import random
 import sys
-import bytestring
+from voussoirkit import bytestring
 CHUNK_SIZE = 512 * (2 ** 10)
 def listget(li, index, fallback=None):
     try:

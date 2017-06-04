@@ -22,7 +22,7 @@ def listfiles(directory):
     files = [name for name in files if os.path.isfile(name)]
     return files
 
-def stitch(images, outputfilename):
+def stitch(images):
     largest_width = max(image.size[0] for image in images)
     largest_height = max(image.size[1] for image in images)
     print('Using cell size of %dx%dpx' % (largest_width, largest_height))
@@ -43,16 +43,18 @@ def stitch(images, outputfilename):
         gridspot_y = index // grid_width
         pixel_x = (gridspot_x * largest_width) + pad_x
         pixel_y = (gridspot_y * largest_height) + pad_y
-        print(index, image.filename, gridspot_x, gridspot_y, pixel_x, pixel_y)
+        print(index, gridspot_x, gridspot_y, pixel_x, pixel_y)
         stitched_image.paste(image, (pixel_x, pixel_y))
-    print('Saving "%s"' % outputfilename)
-    stitched_image.save(outputfilename)
+    return stitched_image
 
 
-directory = sys.argv[1]
-images = listfiles(directory)
-directory_id = 'massstitch_%s.png' % directory
-if directory_id in images:
-    images.remove(directory_id)
-images = load_all_images(images)
-stitch(images, directory_id)
+if __name__ == '__main__':
+    directory = sys.argv[1]
+    images = listfiles(directory)
+    directory_id = 'massstitch_%s.png' % directory
+    if directory_id in images:
+        images.remove(directory_id)
+    images = load_all_images(images)
+    stitched_image = stitch(images)
+    print('Saving "%s"' % directory_id)
+    stitched_image.save(directory_id)

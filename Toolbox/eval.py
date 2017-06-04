@@ -11,8 +11,20 @@ import string
 import sys
 import time
 
-x = clipext.resolve(sys.argv[1])
+if '--lines' in sys.argv:
+    by_lines = True
+    sys.argv.remove('--lines')
+else:
+    by_lines = False
+text = clipext.resolve(sys.argv[1], split_lines=by_lines)
 transformation = ' '.join(sys.argv[2:])
 
-result = eval(transformation)
-print(result)
+if by_lines:
+    for line in text:
+        x = line
+        result = eval(transformation)
+        print(result)
+else:
+    x = text
+    result = eval(transformation)
+    print(result)
