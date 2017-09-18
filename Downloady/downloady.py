@@ -18,7 +18,7 @@ HEADERS = {
 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.152 Safari/537.36'
 }
 
-FILENAME_BADCHARS = '*?"<>|\r'
+FILENAME_BADCHARS = '*?"<>|\r\n'
 
 last_request = 0
 CHUNKSIZE = 4 * bytestring.KIBIBYTE
