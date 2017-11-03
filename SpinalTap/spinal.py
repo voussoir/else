@@ -53,7 +53,7 @@ def callback_v1(fpobj, written_bytes, total_bytes):
     '''
     filename = fpobj.absolute_path.encode('ascii', 'replace').decode()
     if written_bytes >= total_bytes:
-        ends = '\n'
+        ends = '\r\n'
     else:
         ends = ''
     percent = (100 * written_bytes) / max(total_bytes, 1)
@@ -414,7 +414,11 @@ def copy_file(
 
     written_bytes = 0
     while True:
-        data_chunk = source_handle.read(CHUNK_SIZE)
+        try:
+            data_chunk = source_handle.read(CHUNK_SIZE)
+        except PermissionError as e:
+            print(source)
+            raise
         data_bytes = len(data_chunk)
         if data_bytes == 0:
             break

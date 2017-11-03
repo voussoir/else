@@ -13,17 +13,17 @@ else:
 
 if port == 443:
     http = gevent.pywsgi.WSGIServer(
-        listener=('', port),
+        listener=('0.0.0.0', port),
         application=flasksite.site,
         keyfile='https\\flasksite.key',
         certfile='https\\flasksite.crt',
     )
 else:
     http = gevent.pywsgi.WSGIServer(
-        listener=('', port),
+        listener=('0.0.0.0', port),
         application=flasksite.site,
     )
 
 
-print('Starting server')
+print('Starting server on port %d' % port)
 http.serve_forever()

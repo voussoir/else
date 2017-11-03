@@ -115,6 +115,11 @@ def get_static(filename):
     filename = os.path.join('static', filename)
     return flask.send_file(filename)
 
+@site.route("/float/<float:value>")
+def float_type(value):
+    print(value + 1)
+    return "correct"
+
 if __name__ == '__main__':
     #site.run(threaded=True)
     pass

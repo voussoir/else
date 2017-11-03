@@ -5,18 +5,16 @@ from voussoirkit import clipext
 import sys
 
 if len(sys.argv) > 1:
-    text = clipext.resolve(sys.argv[1])
+    source = sys.argv[1]
 else:
-    text = clipext.resolve('!input')
-
-text = text.split('\n')
+    source = '!input'
+lines = clipext.resolve(source, split_lines=True)
 
 new_text = []
 seen = set()
-for item in text:
-    if item not in seen:
-        new_text.append(item)
-        seen.add(item)
+for line in lines:
+    if line not in seen:
+        #new_text.append(line)
+        seen.add(line)
+        print(line)
 
-new_text = '\n'.join(new_text)
-print(new_text)

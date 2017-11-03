@@ -2,7 +2,7 @@
 This function is slow and ugly, but I need a way to safely print unicode strings
 on systems that don't support it without crippling those who do.
 '''
-def safeprint(text, file_handle=None):
+def safeprint(text, file_handle=None, end='\n'):
     for character in text:
         try:
             if file_handle:
@@ -15,4 +15,4 @@ def safeprint(text, file_handle=None):
             else:
                 print('?', end='', flush=False)
     if not file_handle:
-        print()
+        print(end, end='', flush=True)

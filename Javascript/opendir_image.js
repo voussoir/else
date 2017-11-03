@@ -9,7 +9,7 @@ var image_height = 200;
 var video_height = 300;
 var audio_width = 1000;
 var IMAGE_TYPES = ["\\.jpg", "\\.jpeg", "\\.jpg", "\\.bmp", "\\.tiff", "\\.tif", "\\.bmp", "\\.gif", "\\.png", "reddituploads\.com"].join("|");
-var AUDIO_TYPES = ["\\.aac", "\\.mp3", "\\.m4a", "\\.ogg", "\\.opus", "\\.wav"].join("|");
+var AUDIO_TYPES = ["\\.aac", "\\.flac", "\\.mp3", "\\.m4a", "\\.ogg", "\\.opus", "\\.wav"].join("|");
 var VIDEO_TYPES = ["\\.mp4", "\\.m4v", "\\.webm", "\\.ogv"].join("|");
 IMAGE_TYPES = new RegExp(IMAGE_TYPES, "i");
 AUDIO_TYPES = new RegExp(AUDIO_TYPES, "i");
@@ -22,7 +22,8 @@ var CSS = ""
 + "audio, video { display: block; }"
 + "audio { width: $audio_width$px; }"
 + "video { height: $video_height$px; }"
-+ "img { display: block; height: $image_height$px; max-width: 100% }"
++ "img { display: block; height: $image_height$px; max-width: 100%; }"
++ "a { color: #000 !important; }"
 + ".control_panel { position: relative; background-color: #aaa; min-height: 10px; width: 100%; }"
 + ".workspace { background-color: #ddd; min-height: 10px; float: left; }"
 + ".arealabel { position:absolute; right: 0; bottom: 0; opacity: 0.8; background-color: #000; color: #fff; }"

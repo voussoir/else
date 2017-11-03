@@ -1,3 +1,4 @@
+print('importing')
 import argparse
 import fnmatch
 import itertools
@@ -45,6 +46,8 @@ def search(
         local_only=False,
         text=None,
     ):
+    if text is None:
+        print('starting search')
     terms = {
         'yes_all': yes_all,
         'yes_any': yes_any,
@@ -98,6 +101,9 @@ def search(
         search_objects = text.splitlines()
 
     for (index, search_object) in enumerate(search_objects):
+        if index % 10 == 0:
+            #print(index, end='\r', flush=True)
+            pass
         if isinstance(search_object, pathclass.Path):
             search_text = search_object.basename
             result_text = search_object.absolute_path
@@ -105,7 +111,7 @@ def search(
             search_text = search_object
             result_text = search_object
         if line_numbers:
-            result_text = '%d | %s' % (index+1, result_text)
+            result_text = '%4d | %s' % (index+1, result_text)
 
         if all_terms_match(search_text, terms, term_matches):
             if not content_args:
@@ -115,9 +121,17 @@ def search(
                 if not filepath.is_file:
                     continue
                 try:
-                    with open(filepath.absolute_path, 'r', encoding='utf-8') as handle:
+                    with open(filepath.absolute_path, 'r') as handle:
                         text = handle.read()
-                except:
+                except UnicodeDecodeError:
+                    try:
+                        with open(filepath.absolute_path, 'r', encoding='utf-8') as handle:
+                            text = handle.read()
+                    except UnicodeDecodeError:
+                        #safeprint.safeprint(filepath.absolute_path)
+                        #traceback.print_exc()
+                        continue
+                except Exception:
                     safeprint.safeprint(filepath.absolute_path)
                     traceback.print_exc()
                     continue
