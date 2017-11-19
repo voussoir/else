@@ -12,23 +12,23 @@ def choose_guideline_style(guideline_mod):
     if guideline_mod % 4 == 0:
         return ('#f4bffb', 1)
 
-def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
-    def in_ellipsoid(x, y, z, rad_x, rad_y, rad_z, center_x=None, center_y=None, center_z=None):
-        '''
-        Given a point (x, y, z), return whether that point lies inside the
-        ellipsoid defined by (x/a)^2 + (y/b)^2 + (z/c)^2 = 1
-        '''
-        if center_x is None: center_x = rad_x
-        if center_y is None: center_y = rad_y
-        if center_z is None: center_z = rad_z
-        #print(x, y, z, rad_x, rad_y, rad_z, center_x, center_y, center_z)
-        x = ((x - center_x) / rad_x) ** 2
-        y = ((y - center_y) / rad_y) ** 2
-        z = ((z - center_z) / rad_z) ** 2
-        distance = x + y + z
-        #print(distance)
-        return distance < 1
+def in_ellipsoid(x, y, z, rad_x, rad_y, rad_z, center_x=None, center_y=None, center_z=None):
+    '''
+    Given a point (x, y, z), return whether that point lies inside the
+    ellipsoid defined by (x/a)^2 + (y/b)^2 + (z/c)^2 = 1
+    '''
+    if center_x is None: center_x = rad_x
+    if center_y is None: center_y = rad_y
+    if center_z is None: center_z = rad_z
+    #print(x, y, z, rad_x, rad_y, rad_z, center_x, center_y, center_z)
+    x = ((x - center_x) / rad_x) ** 2
+    y = ((y - center_y) / rad_y) ** 2
+    z = ((z - center_z) / rad_z) ** 2
+    distance = x + y + z
+    #print(distance)
+    return distance < 1
 
+def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None, specific=None):
     ODD_W = WIDTH % 2 == 1
     ODD_H = HEIGH % 2 == 1
     ODD_D = DEPTH % 2 == 1
@@ -65,10 +65,10 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
     PIXEL_MARGIN = 7
 
     # Space between the pixel area and the canvas
-    PIXELSPACE_MARGIN = 20
+    PIXELSPACE_MARGIN = 2
 
     # Space between the canvas area and the image edge
-    CANVAS_MARGIN = 20
+    CANVAS_MARGIN = 2
 
     LABEL_HEIGH = 20
     FINAL_IMAGE_SCALE = 1
@@ -76,19 +76,19 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
     PIXELSPACE_WIDTH = (WIDTH * pixel_scale) + ((WIDTH - 1) * PIXEL_MARGIN)
     PIXELSPACE_HEIGH = (HEIGH * pixel_scale) + ((HEIGH - 1) * PIXEL_MARGIN)
 
-    CANVAS_WIDTH = PIXELSPACE_WIDTH + (2 * PIXELSPACE_MARGIN)
-    CANVAS_HEIGH = PIXELSPACE_HEIGH + (2 * PIXELSPACE_MARGIN)
+    CANVAS_WIDTH = PIXELSPACE_WIDTH + (2 * PIXELSPACE_MARGIN * pixel_scale)
+    CANVAS_HEIGH = PIXELSPACE_HEIGH + (2 * PIXELSPACE_MARGIN * pixel_scale)
 
-    IMAGE_WIDTH = CANVAS_WIDTH + (2 * CANVAS_MARGIN)
-    IMAGE_HEIGH = CANVAS_HEIGH + (2 * CANVAS_MARGIN) + LABEL_HEIGH
+    IMAGE_WIDTH = CANVAS_WIDTH + (2 * CANVAS_MARGIN * pixel_scale)
+    IMAGE_HEIGH = CANVAS_HEIGH + (2 * CANVAS_MARGIN * pixel_scale) + LABEL_HEIGH
 
-    CANVAS_START_X = CANVAS_MARGIN
-    CANVAS_START_Y = CANVAS_MARGIN
+    CANVAS_START_X = CANVAS_MARGIN * pixel_scale
+    CANVAS_START_Y = CANVAS_MARGIN * pixel_scale
     CANVAS_END_X = CANVAS_START_X + CANVAS_WIDTH
     CANVAS_END_Y = CANVAS_START_Y + CANVAS_HEIGH
 
-    PIXELSPACE_START_X = CANVAS_START_X + PIXELSPACE_MARGIN
-    PIXELSPACE_START_Y = CANVAS_START_Y + PIXELSPACE_MARGIN
+    PIXELSPACE_START_X = CANVAS_START_X + (PIXELSPACE_MARGIN * pixel_scale)
+    PIXELSPACE_START_Y = CANVAS_START_Y + (PIXELSPACE_MARGIN * pixel_scale)
     PIXELSPACE_END_X = PIXELSPACE_START_X + PIXELSPACE_WIDTH
     PIXELSPACE_END_Y = PIXELSPACE_START_Y + PIXELSPACE_HEIGH
 
@@ -160,15 +160,48 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
         draw = PIL.ImageDraw.ImageDraw(layer_image)
 
         # Plot.
+        LABEL_Y = (2 * math.ceil(RAD_Y))
         for y in range(math.ceil(RAD_Y)):
+            bottom_y = (HEIGH - 1) - y
             for x in range(math.ceil(RAD_X)):
                 right_x = (WIDTH - 1) - x
-                bottom_y = (HEIGH - 1) - y
                 if layer_matrix[x][y] is not None:
                     layer_image.paste(layer_matrix[x][y], box=pixel_coord(x, y))
                     layer_image.paste(layer_matrix[x][y], box=pixel_coord(right_x, y))
                     layer_image.paste(layer_matrix[x][y], box=pixel_coord(x, bottom_y))
                     layer_image.paste(layer_matrix[x][y], box=pixel_coord(right_x, bottom_y))
+
+        # Draw the counting helpers along the bottom.
+        # Start at the center top of the circle and walk along the edge.
+        # Every time the walker 'falls' down, mark the distance.
+        def put_counterhelper(start_x, end_x, y):
+            if start_x == end_x:
+                return
+            y = (HEIGH + 1) - y
+            span = end_x - start_x
+            center = start_x + 1
+            draw.text(pixel_coord(center, y), str(span), fill='#000')
+
+        y = 0
+        x = math.floor(RAD_X) - 1
+        end_x = x
+        start_y = None
+        while x >= y and y < RAD_Y:
+            print(x, y, start_y)
+            pixel = layer_matrix[x][y]
+            if pixel is None:
+                y += 1
+                if x != end_x:
+                    put_counterhelper(x, end_x, y)
+                    if start_y is None:
+                        start_y = y
+                    else:
+                        put_counterhelper(x, end_x, start_y)
+                end_x = x
+                continue
+            x -= 1
+        y += 1
+        put_counterhelper(x, end_x, y)
         
         # To draw the guidelines, start from 
         for x in range(GUIDELINE_MOD_X % 4, WIDTH + 4, 4):
@@ -203,8 +236,15 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None):
 
         return layer_image
 
+    if specific is None:
+        zrange = range(DEPTH)
+    elif isinstance(specific, int):
+        zrange = [specific]
+    else:
+        zrange = specific
+
     layer_matrices = []
-    for z in range(DEPTH):
+    for z in zrange:
         if z < math.ceil(RAD_Z):
             layer_matrix = make_layer_matrix(z)
             layer_matrices.append(layer_matrix)
@@ -224,11 +264,14 @@ def voxelsphere_argparse(args):
         args.height = args.width
         args.depth = args.width
 
+    wall_thickness = int(args.wall_thickness) if args.wall_thickness else None
+    specific = int(args.specific) if args.specific else None
     voxelspheregenerator(
-        int(args.width),
-        int(args.height),
-        int(args.depth),
-        WALL_THICKNESS=int(args.wall_thickness) if args.wall_thickness else None,
+        WIDTH=int(args.width),
+        HEIGH=int(args.height),
+        DEPTH=int(args.depth),
+        WALL_THICKNESS=wall_thickness,
+        specific=specific,
     )
 
 
@@ -239,6 +282,7 @@ def main(argv):
     parser.add_argument('height', nargs='?', default=None)
     parser.add_argument('depth', nargs='?', default=None)
     parser.add_argument('--wall', dest='wall_thickness', default=None)
+    parser.add_argument('--specific', dest='specific', default=None)
     parser.set_defaults(func=voxelsphere_argparse)
 
     args = parser.parse_args(argv)
