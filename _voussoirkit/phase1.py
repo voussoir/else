@@ -2,20 +2,22 @@ import shutil
 import os
 
 PATHS = [
-'C:\\git\\else\\BaseNumber\\basenumber.py',
-'C:\\git\\else\\Bytestring\\bytestring.py',
-'C:\\git\\else\\Cacheclass\\cacheclass.py',
-'C:\\git\\else\\Clipext\\clipext.py',
-'C:\\git\\else\\Downloady\\downloady.py',
-'C:\\git\\else\\ExpressionMatch\\expressionmatch.py',
-'C:\\git\\else\\Fusker\\fusker.py',
-'C:\\git\\else\\Pathclass\\pathclass.py',
-'C:\\git\\else\\Ratelimiter\\ratelimiter.py',
-'C:\\git\\else\\RateMeter\\ratemeter.py',
-'C:\\git\\else\\Safeprint\\safeprint.py',
-'C:\\git\\else\\SpinalTap\\spinal.py',
-'C:\\git\\else\\Treeclass\\pathtree.py',
-'C:\\git\\else\\Treeclass\\treeclass.py',
+'D:\\git\\else\\BaseNumber\\basenumber.py',
+'D:\\git\\else\\Bytestring\\bytestring.py',
+'D:\\git\\else\\Cacheclass\\cacheclass.py',
+'D:\\git\\else\\Clipext\\clipext.py',
+'D:\\git\\else\\Downloady\\downloady.py',
+'D:\\git\\else\\ExpressionMatch\\expressionmatch.py',
+'D:\\git\\else\\Fusker\\fusker.py',
+'D:\\git\\else\\Passwordy\\passwordy.py',
+'D:\\git\\else\\Pathclass\\pathclass.py',
+'D:\\git\\else\\QuickID\\quickid.py',
+'D:\\git\\else\\Ratelimiter\\ratelimiter.py',
+'D:\\git\\else\\RateMeter\\ratemeter.py',
+'D:\\git\\else\\Safeprint\\safeprint.py',
+'D:\\git\\else\\SpinalTap\\spinal.py',
+'D:\\git\\else\\Treeclass\\pathtree.py',
+'D:\\git\\else\\Treeclass\\treeclass.py',
 ]
 
 if __name__ == '__main__':

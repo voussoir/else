@@ -2,7 +2,7 @@ import os
 
 import phase1
 
-libdir = 'C:\\python36\\lib\\site-packages\\voussoirkit'
+libdir = 'D:\\Git\\personal\\privatelib\\voussoirkit'
 os.makedirs(libdir, exist_ok=True)
 
 initfile = os.path.join(libdir, '__init__.py')
