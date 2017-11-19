@@ -9,6 +9,7 @@ class Path:
         if isinstance(path, Path):
             self.absolute_path = path.absolute_path
         else:
+            path = normalize_sep(path)
             path = os.path.normpath(path)
             path = os.path.abspath(path)
             self.absolute_path = path
