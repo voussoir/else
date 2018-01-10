@@ -229,7 +229,6 @@ def normalize_sep(path):
     for char in ('\\', '/'):
         if char != os.sep:
             path = path.replace(char, os.sep)
-    path = path.rstrip(os.sep)
     return path
 
 def system_root():
