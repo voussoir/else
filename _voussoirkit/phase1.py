@@ -16,6 +16,7 @@ PATHS = [
 'D:\\git\\else\\RateMeter\\ratemeter.py',
 'D:\\git\\else\\Safeprint\\safeprint.py',
 'D:\\git\\else\\SpinalTap\\spinal.py',
+'D:\\git\\else\\SQLHelpers\\sqlhelpers.py',
 'D:\\git\\else\\Treeclass\\pathtree.py',
 'D:\\git\\else\\Treeclass\\treeclass.py',
 ]
