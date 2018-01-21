@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 
 class Path:
     '''
@@ -9,6 +10,10 @@ class Path:
         if isinstance(path, Path):
             self.absolute_path = path.absolute_path
         else:
+            path = path.strip()
+            if re.search('[A-Za-z]:$', path):
+                # Bare Windows drive letter.
+                path += os.sep
             path = normalize_sep(path)
             path = os.path.normpath(path)
             path = os.path.abspath(path)
@@ -198,6 +203,8 @@ def get_path_casing(path):
     imaginary_portion = imaginary_portion.lstrip(os.sep)
     cased = os.path.join(cased, imaginary_portion)
     cased = cased.rstrip(os.sep)
+    if not os.sep in cased:
+        cased += os.sep
     return cased
 
 def glob_patternize(piece):
