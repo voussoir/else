@@ -40,11 +40,21 @@ def update_filler(pairs, where_key):
     to be used as the WHERE, return the "SET ..." portion of the query and the
     bindings in the correct order.
 
+    If the where_key needs to be reassigned also, let its value be a 2-tuple
+    where [0] is the current value used for WHERE, and [1] is the new value
+    used for SET.
+
     Example:
     pairs={'id': '1111', 'name': 'James', 'score': 20},
     where_key='id'
     ->
     returns ('SET name = ?, score = ? WHERE id == ?', ['James', 20, '1111'])
+
+    Example:
+    pairs={'filepath': ('/oldplace', '/newplace')},
+    where_key='filepath'
+    ->
+    returns ('SET filepath = ? WHERE filepath == ?', ['/newplace', '/oldplace'])
 
     In context:
     (query, bindings) = update_filler(data, where_key)
@@ -53,6 +63,9 @@ def update_filler(pairs, where_key):
     '''
     pairs = pairs.copy()
     where_value = pairs.pop(where_key)
+    if isinstance(where_value, tuple):
+        (where_value, pairs[where_key]) = where_value
+
     if len(pairs) == 0:
         raise ValueError('No pairs left after where_key.')
     qmarks = []
