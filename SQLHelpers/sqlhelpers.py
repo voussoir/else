@@ -1,3 +1,28 @@
+def delete_filler(pairs):
+    '''
+    Manually aligning the bindings for DELETE statements is annoying.
+    Given a dictionary of {column: value}, return the "WHERE ..." portion of
+    the query and the bindings in the correct order.
+
+    Example:
+    pairs={'test': 'toast', 'ping': 'pong'}
+    ->
+    returns ('WHERE test = ? AND ping = ?', ['toast', 'pong'])
+
+    In context:
+    (qmarks, bindings) = delete_filler(pairs)
+    query = 'DELETE FROM table %s' % qmarks
+    cur.execute(query, bindings)
+    '''
+    qmarks = []
+    bindings = []
+    for (key, value) in pairs.items():
+        qmarks.append('%s = ?' % key)
+        bindings.append(value)
+    qmarks = ' AND '.join(qmarks)
+    qmarks = 'WHERE %s' % qmarks
+    return (qmarks, bindings)
+
 def insert_filler(column_names, values, require_all=True):
     '''
     Manually aligning the bindings for INSERT statements is annoying.
@@ -57,8 +82,8 @@ def update_filler(pairs, where_key):
     returns ('SET filepath = ? WHERE filepath == ?', ['/newplace', '/oldplace'])
 
     In context:
-    (query, bindings) = update_filler(data, where_key)
-    query = 'UPDATE table %s' % query
+    (qmarks, bindings) = update_filler(data, where_key)
+    query = 'UPDATE table %s' % qmarks
     cur.execute(query, bindings)
     '''
     pairs = pairs.copy()
@@ -68,13 +93,14 @@ def update_filler(pairs, where_key):
 
     if len(pairs) == 0:
         raise ValueError('No pairs left after where_key.')
+
     qmarks = []
     bindings = []
     for (key, value) in pairs.items():
         qmarks.append('%s = ?' % key)
         bindings.append(value)
     bindings.append(where_value)
-    qmarks = ', '.join(qmarks)
-    query = 'SET {setters} WHERE {where_key} == ?'
-    query = query.format(setters=qmarks, where_key=where_key)
-    return (query, bindings)
+    setters = ', '.join(qmarks)
+    qmarks = 'SET {setters} WHERE {where_key} == ?'
+    qmarks = qmarks.format(setters=setters, where_key=where_key)
+    return (qmarks, bindings)
