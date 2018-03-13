@@ -375,9 +375,17 @@ def safeprint(*texts, **kwargs):
     print(*texts, **kwargs)
 
 def sanitize_filename(text, exclusions=''):
-    bet = FILENAME_BADCHARS.replace(exclusions, '')
-    for char in bet:
+    to_remove = FILENAME_BADCHARS
+    for exclude in exclusions:
+        to_remove = to_remove.replace(exclude, '')
+
+    for char in to_remove:
         text = text.replace(char, '')
+
+    (drive, path) = os.path.splitdrive(text)
+    path = path.replace(':', '')
+    text = drive + path
+
     return text
 
 def sanitize_url(url):

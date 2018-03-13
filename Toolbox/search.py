@@ -54,7 +54,7 @@ def search(
         'not_all': not_all,
         'not_any': not_any
     }
-    terms = {k: (v or []) for (k, v) in terms.items()}
+    terms = {k: ([v] if isinstance(v, str) else v or []) for (k, v) in terms.items()}
     #print(terms, content_args)
 
     if all(v == [] for v in terms.values()) and not content_args:

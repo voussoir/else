@@ -46,7 +46,7 @@ class ThreadQueue:
                     break
                 lam = self._lambdas.pop(0)
                 thread = threading.Thread(target=lam)
-                #thread.daemon = True
+                thread.daemon = True
                 thread.start()
                 self._threads.append(thread)
 

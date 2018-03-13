@@ -84,6 +84,7 @@ def copy(source, file_args=None, file_kwargs=None, dir_args=None, dir_kwargs=Non
 def copy_dir(
         source,
         destination=None,
+        *,
         bytes_per_second=None,
         callback_directory=None,
         callback_exclusion=None,
@@ -277,6 +278,7 @@ def copy_dir(
 def copy_file(
         source,
         destination=None,
+        *,
         destination_new_root=None,
         bytes_per_second=None,
         callback_progress=None,
@@ -565,6 +567,7 @@ def verify_hash(path, known_size, known_hash, callback=None):
 
 def walk_generator(
         path='.',
+        *,
         callback_exclusion=None,
         callback_permission_denied=None,
         depth_first=True,
