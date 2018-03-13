@@ -89,19 +89,24 @@ class Path:
 
     @property
     def relative_path(self):
-        cwd = Path(os.getcwd())
-        cwd.correct_case()
+        return self.relative_to(os.getcwd())
+
+    def relative_to(self, other):
+        other = Path(other)
+        other.correct_case()
         self.correct_case()
-        if self == cwd:
+
+        if self == other:
             return '.'
 
-        if self in cwd:
-            return self.absolute_path.replace(cwd.absolute_path, '.')
+        if self in other:
+            return self.absolute_path.replace(other.absolute_path, '.')
 
-        common = common_path([os.getcwd(), self.absolute_path], fallback=None)
+        common = common_path([other.absolute_path, self.absolute_path], fallback=None)
+        print(common)
         if common is None:
             return self.absolute_path
-        backsteps = cwd.depth - common.depth
+        backsteps = other.depth - common.depth
         backsteps = os.sep.join('..' for x in range(backsteps))
         return self.absolute_path.replace(common.absolute_path, backsteps)
 
