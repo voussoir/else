@@ -7,6 +7,7 @@ PATHS = [
 'D:\\git\\else\\Cacheclass\\cacheclass.py',
 'D:\\git\\else\\Clipext\\clipext.py',
 'D:\\git\\else\\Downloady\\downloady.py',
+'D:\\git\\else\\EternalSeptember\\eternalseptember.py',
 'D:\\git\\else\\ExpressionMatch\\expressionmatch.py',
 'D:\\git\\else\\Fusker\\fusker.py',
 'D:\\git\\else\\Passwordy\\passwordy.py',
