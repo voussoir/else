@@ -12,6 +12,9 @@ class Cache:
         self._dict = {}
         self._recency = {}
 
+    def __contains__(self, key):
+        return key in self._dict
+
     def __getitem__(self, key):
         self._shrink()
         value = self._dict[key]
