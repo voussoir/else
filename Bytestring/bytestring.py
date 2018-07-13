@@ -1,6 +1,9 @@
 import re
 import sys
 
+from voussoirkit import clipext
+
+
 __VERSION__ = '0.0.1'
 
 BYTE = 1
@@ -129,7 +132,8 @@ def main(args=None):
     if len(args) != 1:
         print('Usage: bytestring.py <number>')
         return 1
-    n = int(sys.argv[1])
+    number = clipext.resolve(sys.argv[1])
+    n = int(number)
     print(bytestring(n))
     return 0
 
