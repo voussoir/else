@@ -7,9 +7,10 @@ import requests
 
 from voussoirkit import clipext
 
-url = clipext.resolve(sys.argv[1])
-page = requests.head(url)
-headers = dict(page.headers)
-headers = json.dumps(headers, indent=4, sort_keys=True)
-print(page)
-print(headers)
+urls = clipext.resolve(sys.argv[1], split_lines=True)
+for url in urls:
+    page = requests.head(url)
+    headers = dict(page.headers)
+    headers = json.dumps(headers, indent=4, sort_keys=True)
+    print(page)
+    print(headers)
