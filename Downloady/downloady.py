@@ -42,6 +42,7 @@ def download_file(
         raise_for_undersized=True,
         timeout=None,
         verbose=False,
+        verify_ssl=True,
     ):
     headers = headers or {}
 
@@ -69,6 +70,7 @@ def download_file(
         overwrite=overwrite,
         raise_for_undersized=raise_for_undersized,
         timeout=timeout,
+        verify_ssl=verify_ssl,
     )
     #print(plan)
     if plan is None:
@@ -105,6 +107,7 @@ def download_plan(plan):
         auth=plan['auth'],
         headers=plan['headers'],
         timeout=plan['timeout'],
+        verify_ssl=plan['verify_ssl'],
     )
 
     if plan['remote_total_bytes'] is None:
@@ -151,6 +154,7 @@ def prepare_plan(
         overwrite=False,
         raise_for_undersized=True,
         timeout=TIMEOUT,
+        verify_ssl=True,
     ):
     # Chapter 1: File existence
     headers = headers or {}
@@ -218,6 +222,7 @@ def prepare_plan(
         'raise_for_undersized': raise_for_undersized,
         'remote_total_bytes': remote_total_bytes,
         'timeout': timeout,
+        'verify_ssl': verify_ssl,
     }
     plan_fulldownload = dict(
         plan_base,
@@ -349,7 +354,7 @@ def get_permission(prompt='y/n\n>', affirmative=['y', 'yes']):
     permission = input(prompt)
     return permission.lower() in affirmative
 
-def request(method, url, stream=False, headers=None, timeout=TIMEOUT, **kwargs):
+def request(method, url, stream=False, headers=None, timeout=TIMEOUT, verify_ssl=True, **kwargs):
     if headers is None:
         headers = {}
     for (key, value) in HEADERS.items():
@@ -366,7 +371,7 @@ def request(method, url, stream=False, headers=None, timeout=TIMEOUT, **kwargs):
         'head': session.head,
         'post': session.post,
     }[method]
-    req = method(url, stream=stream, headers=headers, timeout=timeout, **kwargs)
+    req = method(url, stream=stream, headers=headers, timeout=timeout, verify=verify_ssl, **kwargs)
     req.raise_for_status()
     return req
 
@@ -433,6 +438,7 @@ def download_argparse(args):
                 overwrite=args.overwrite,
                 timeout=args.timeout,
                 verbose=True,
+                verify_ssl=args.no_ssl is False,
             )
         except (NotEnoughBytes, requests.exceptions.ConnectionError):
             retry -= 1
@@ -454,6 +460,7 @@ if __name__ == '__main__':
     parser.add_argument('--timeout', dest='timeout', type=int, default=TIMEOUT)
     parser.add_argument('--retry', dest='retry', const=-1, nargs='?', type=int, default=1)
     parser.add_argument('--no-head', dest='no_head', action='store_true')
+    parser.add_argument('--no-ssl', dest='no_ssl', action='store_true')
     parser.set_defaults(func=download_argparse)
 
     args = parser.parse_args()
