@@ -2,6 +2,19 @@ import glob
 import os
 import re
 
+
+class PathclassException(Exception):
+    pass
+
+
+class NotDirectory(PathclassException):
+    pass
+
+
+class NotFile(PathclassException):
+    pass
+
+
 class Path:
     '''
     I started to use pathlib.Path, but it was too much of a pain.
@@ -34,6 +47,14 @@ class Path:
 
     def __repr__(self):
         return '{c}({path})'.format(c=self.__class__.__name__, path=repr(self.absolute_path))
+
+    def assert_is_file(self):
+        if not self.is_file:
+            raise NotFile(self)
+
+    def assert_is_directory(self):
+        if not self.is_dir:
+            raise NotDirectory(self)
 
     @property
     def basename(self):
@@ -132,7 +153,6 @@ class Path:
 
     def with_child(self, basename):
         return self.join(os.path.basename(basename))
-
 
 
 def common_path(paths, fallback):
