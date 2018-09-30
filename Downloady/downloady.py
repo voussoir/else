@@ -346,6 +346,7 @@ def basename_from_url(url):
     Determine the local filename appropriate for a URL.
     '''
     localname = urllib.parse.unquote(url)
+    localname = localname.rstrip('/')
     localname = localname.split('?')[0]
     localname = localname.split('/')[-1]
     return localname
