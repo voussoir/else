@@ -13,7 +13,7 @@ from voussoirkit import ratelimiter
 logging.basicConfig(level=logging.CRITICAL)
 log = logging.getLogger(__name__)
 
-CHUNK_SIZE = 256 * bytestring.KIBIBYTE
+CHUNK_SIZE = 2 * bytestring.MIBIBYTE
 # Number of bytes to read and write at a time
 
 HASH_CLASS = hashlib.md5

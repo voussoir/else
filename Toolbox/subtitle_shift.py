@@ -25,6 +25,7 @@ for (lineindex, line) in enumerate(lines):
 
     words = line.split(' ')
     for (wordindex, word) in enumerate(words):
+        word = word.replace('.', ',')
         if not (':' in word and ',' in word):
             continue
 

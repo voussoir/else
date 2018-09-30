@@ -90,6 +90,9 @@ def update_filler(pairs, where_key):
     where_value = pairs.pop(where_key)
     if isinstance(where_value, tuple):
         (where_value, pairs[where_key]) = where_value
+    if isinstance(where_value, dict):
+        where_value = where_value['old']
+        pairs[where_key] = where_value['new']
 
     if len(pairs) == 0:
         raise ValueError('No pairs left after where_key.')

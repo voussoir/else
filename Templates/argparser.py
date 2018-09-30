@@ -19,7 +19,7 @@ def main(argv):
     args.func(args)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    raise SystemExit(main(sys.argv[1:]))
 
 ###############################################################################
 ###############################################################################
@@ -47,4 +47,4 @@ def main(argv):
     args.func(args)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    raise SystemExit(main(sys.argv[1:]))

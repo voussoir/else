@@ -35,6 +35,16 @@ def brename(transformation):
         return
     loop(pairs, dry=False)
 
+def excise(s, mark_left, mark_right):
+    '''
+    Remove the text between the left and right landmarks, inclusive, returning
+    the rest of the text.
+
+    excise('What a wonderful day [soundtrack].mp3', ' [', ']') ->
+    returns 'What a wonderful day.mp3'
+    '''
+    return s.split(mark_left)[0] + s.split(mark_right)[-1]
+
 def longest_length(li):
     longest = 0
     for item in li:

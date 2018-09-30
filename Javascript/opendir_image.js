@@ -8,9 +8,9 @@ var seen_urls = new Set();
 var image_height = 200;
 var video_height = 300;
 var audio_width = 1000;
-var IMAGE_TYPES = ["\\.jpg", "\\.jpeg", "\\.jpg", "\\.bmp", "\\.tiff", "\\.tif", "\\.bmp", "\\.gif", "\\.png", "reddituploads\.com"].join("|");
+var IMAGE_TYPES = ["\\.jpg", "\\.jpeg", "\\.jpg", "\\.bmp", "\\.tiff", "\\.tif", "\\.bmp", "\\.gif", "\\.png", "reddituploads\.com", "\\.webp", "drscdn\\.500px\\.org\\/photo"].join("|");
 var AUDIO_TYPES = ["\\.aac", "\\.flac", "\\.mp3", "\\.m4a", "\\.ogg", "\\.opus", "\\.wav"].join("|");
-var VIDEO_TYPES = ["\\.mp4", "\\.m4v", "\\.webm", "\\.ogv"].join("|");
+var VIDEO_TYPES = ["\\.mp4", "\\.m4v", "\\.mkv", "\\.webm", "\\.ogv"].join("|");
 IMAGE_TYPES = new RegExp(IMAGE_TYPES, "i");
 AUDIO_TYPES = new RegExp(AUDIO_TYPES, "i");
 VIDEO_TYPES = new RegExp(VIDEO_TYPES, "i");
@@ -135,7 +135,15 @@ function create_odi_div(url)
 {
     var div = null;
     var paramless_url = url.split("?")[0];
-    var basename = decodeURI(get_basename(url));
+    try
+    {
+        var basename = decodeURI(get_basename(url));
+    }
+    catch (exc)
+    {
+        console.error(exc);
+        return;
+    }
 
     if (paramless_url.match(IMAGE_TYPES))
     {

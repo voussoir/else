@@ -5,6 +5,7 @@ import glob
 import os
 import sys
 
+from voussoirkit import clipext
 from voussoirkit import safeprint
 
 def touch(glob_pattern):
@@ -18,6 +19,6 @@ def touch(glob_pattern):
             os.utime(filename)
 
 if __name__ == '__main__':
-    glob_patterns = sys.argv[1:]
+    glob_patterns = [clipext.resolve(x).strip() for x in sys.argv[1:]]
     for glob_pattern in glob_patterns:
         touch(glob_pattern)

@@ -144,7 +144,7 @@ from voussoirkit import downloady
 from voussoirkit import fusker
 from voussoirkit import treeclass
 from voussoirkit import pathtree
-sys.path.append('C:\\git\\else\\threadqueue'); import threadqueue
+sys.path.append('D:\\git\\else\\threadqueue'); import threadqueue
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE
 FILENAME_BADCHARS = '/\\:*?"<>|'
@@ -285,6 +285,9 @@ class Walker:
                 continue
             href = urllib.parse.urljoin(response.url, href)
 
+            if href.startswith('javascript:'):
+                continue
+
             if not href.startswith(self.root_url):
                 # Don't go to other sites or parent directories.
                 continue
@@ -321,10 +324,10 @@ class Walker:
             # We already picked this up at some point
             return
 
-        if not url.startswith(self.root_url):
-            # Don't follow external links or parent directory.
-            write('Skipping "%s" due to external url.' % url)
-            return
+        # if not url.startswith(self.root_url):
+        #     # Don't follow external links or parent directory.
+        #     write('Skipping "%s" due to external url.' % url)
+        #     return
 
         urll = url.lower()
         if self.fullscan is False:
@@ -385,19 +388,15 @@ class Walker:
         links from the page and repeat.
         '''
         #self.queue.appendleft(url)
-        self.thread_queue.add(self.process_url, url)
-        for return_value in self.thread_queue.run(hold_open=False):
-            pass
-        #try:
-        #    while len(self.queue) > 0:
-        #        url = self.queue.popleft()
-        #        self.process_url(url)
-        #        line = '{:,} Remaining'.format(len(self.queue))
-        #        write(line)
-        #except:
-        #    self.sql.commit()
-        #    raise
-        self.sql.commit()
+        try:
+            self.thread_queue.add(self.process_url, url)
+            for return_value in self.thread_queue.run(hold_open=False):
+                pass
+        except KeyboardInterrupt:
+            self.sql.commit()
+            raise
+        else:
+            self.sql.commit()
 ##                                                                                                ##
 ## WALKER ##########################################################################################
 
@@ -447,7 +446,12 @@ def do_head(url, raise_for_status=True):
 def do_request(message, method, url, raise_for_status=True):
     form = '{message:>4s}: {url} : {status}'
     write(form.format(message=message, url=url, status=''))
-    response = method(url)
+    while True:
+        try:
+            response = method(url)
+            break
+        except requests.exceptions.ConnectionError:
+            pass
     write(form.format(message=message, url=url, status=response.status_code))
     if raise_for_status:
         response.raise_for_status()
