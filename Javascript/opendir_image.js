@@ -17,31 +17,31 @@ VIDEO_TYPES = new RegExp(VIDEO_TYPES, "i");
 
 var has_started = false;
 
-var CSS = ""
-+ "body { background-color: #fff; }"
-+ "audio, video { display: block; }"
-+ "audio { width: $audio_width$px; }"
-+ "video { height: $video_height$px; }"
-+ "img { display: block; height: $image_height$px; max-width: 100%; }"
-+ "a { color: #000 !important; }"
-+ ".control_panel { position: relative; background-color: #aaa; min-height: 10px; width: 100%; }"
-+ ".workspace { background-color: #ddd; min-height: 10px; float: left; }"
-+ ".arealabel { position:absolute; right: 0; bottom: 0; opacity: 0.8; background-color: #000; color: #fff; }"
-+ ".delete_button { color: #d00; font-family: Arial; font-size: 11px; left: 0; position: absolute; top: 0; width: 25px; }"
-+ ".ingest { position:absolute; right: 5px; top: 5px; height: 100%; width: 30% }"
-+ ".ingestbox { position:relative; height: 75%; width:100%; box-sizing: border-box; }"
-+ ".urldumpbox { overflow-y: scroll; height: 300px; width: 90% }"
-+ ".load_button { position: absolute; top: 10%; width: 100%; height: 80%; word-wrap: break-word; }"
-+ ".odi_anchor { display: block; }"
-+ ".odi_image_div, .odi_media_div { display: inline-block; margin: 5px; float: left; position: relative; background-color: #aaa; }"
-+ ".odi_image_div { min-width: $image_height$px; }"
-;
+var CSS = `
+body { background-color: #fff; }
+audio, video { display: block; }
+audio { width: ${audio_width}px; }
+video { height: ${video_height}px; }
+img { display: block; height: ${image_height}px; max-width: 100%; }
+a { color: #000 !important; }
+.control_panel { position: relative; background-color: #aaa; min-height: 10px; width: 100%; }
+.workspace { background-color: #ddd; min-height: 10px; float: left; }
+.arealabel { position:absolute; right: 0; bottom: 0; opacity: 0.8; background-color: #000; color: #fff; }
+.delete_button { color: #d00; font-family: Arial; font-size: 11px; left: 0; position: absolute; top: 0; width: 25px; }
+.ingest { position:absolute; right: 5px; top: 5px; height: 100%; width: 30% }
+.ingestbox { position:relative; height: 75%; width:100%; box-sizing: border-box; }
+.urldumpbox { overflow-y: scroll; height: 300px; width: 90% }
+.load_button { position: absolute; top: 10%; width: 100%; height: 80%; word-wrap: break-word; }
+.odi_anchor { display: block; }
+.odi_image_div, .odi_media_div { display: inline-block; margin: 5px; float: left; position: relative; background-color: #aaa; }
+.odi_image_div { min-width: ${image_height}px; }
+`;
 
 function apply_css()
 {
     console.log("applying CSS");
     var css = document.createElement("style");
-    css.innerHTML = format_css();
+    css.innerHTML = CSS;
     document.head.appendChild(css);
 }
 
@@ -133,8 +133,16 @@ function create_command_box_button(boxname, label, operation)
 
 function create_odi_div(url)
 {
+
     var div = null;
-    var paramless_url = url.split("?")[0];
+
+    var mediatype;
+    if (url["mediatype"] !== undefined)
+    {
+        mediatype = url["mediatype"];
+        url = url["url"];
+    }
+
     try
     {
         var basename = decodeURI(get_basename(url));
@@ -145,7 +153,34 @@ function create_odi_div(url)
         return;
     }
 
-    if (paramless_url.match(IMAGE_TYPES))
+    var paramless_url = url.split("?")[0];
+    if (!paramless_url)
+    {
+        return;
+    }
+
+    if (mediatype)
+    {
+        ;
+    }
+    else if (paramless_url.match(IMAGE_TYPES))
+    {
+        mediatype = "image";
+    }
+    else if (paramless_url.match(AUDIO_TYPES))
+    {
+        mediatype = "audio";
+    }
+    else if (paramless_url.match(VIDEO_TYPES))
+    {
+        mediatype = "video";
+    }
+
+    if (mediatype == null)
+    {
+        return;
+    }
+    if (mediatype === "image")
     {
         console.log("Creating image div for " + paramless_url);
         var div = document.createElement("div");
@@ -192,18 +227,6 @@ function create_odi_div(url)
     }
     else
     {
-        if (paramless_url.match(AUDIO_TYPES))
-        {
-            var mediatype = "audio";
-        }
-        else if (paramless_url.match(VIDEO_TYPES))
-        {
-            var mediatype = "video";
-        }
-        else
-        {
-            return null;
-        }
         console.log("Creating " + mediatype + " div for " + paramless_url);
 
         var div = document.createElement("div");
@@ -271,7 +294,6 @@ function create_odi_divs(urls)
     for (var index = 0; index < urls.length; index += 1)
     {
         url = urls[index];
-        var paramless_url = url.split("?")[0];
         if (!url)
         {
             continue;
@@ -442,37 +464,11 @@ function filter_re(pattern, do_delete)
     }
 }
 
-function format_css()
-{
-    console.log("Formatting CSS variables");
-    var css = CSS;
-    while (true)
-    {
-        matches = css.match("\\$.+?\\$");
-        if (!matches)
-        {
-            break;
-        }
-        console.log(matches);
-        matches = new Set(matches);
-        /* Originally used Array.from(set) and did regular iteration, but I found
-        that sites can override and break that conversion. */
-        matches.forEach(
-            function(injector)
-            {
-                var injected = injector.replace(new RegExp("\\$", 'g'), "");
-                css = css.replace(injector, this[injected]);
-            }
-        );
-    }
-    return css;
-}
-
 function get_all_urls()
 {
     console.log("Collecting urls");
     var urls = [];
-    function include(source, attr)
+    function include(source, attr, force_mediatype)
     {
         for (var index = 0; index < source.length; index += 1)
         {
@@ -506,7 +502,14 @@ function get_all_urls()
                 if (seen_urls.has(sub_url))
                     {continue;}
 
-                urls.push(sub_url);
+                if (force_mediatype !== undefined)
+                {
+                    urls.push({"url": sub_url, "mediatype": force_mediatype});
+                }
+                else
+                {
+                    urls.push(sub_url);
+                }
                 seen_urls.add(sub_url);
             }
             seen_urls.add(url);
@@ -519,9 +522,9 @@ function get_all_urls()
     {
         var d = docs.pop();
         include(d.links, "href");
-        include(d.images, "src");
-        include(d.getElementsByTagName("audio"), "src");
-        include(d.getElementsByTagName("video"), "src");
+        include(d.images, "src", "image");
+        include(d.getElementsByTagName("audio"), "src", "audio");
+        include(d.getElementsByTagName("video"), "src", "video");
         include(d.getElementsByTagName("source"), "src");
     }
     console.log("collected " + urls.length + " urls.");
@@ -777,6 +780,11 @@ function normalize_url(url)
         {
             url = get_gfycat_video(gfy_id);
         }
+    }
+
+    else if (url.indexOf("commons.wikimedia.org/wiki/File:") >= 0)
+    {
+        url = url.replace("commons.wikimedia.org/wiki/File:", "commons.wikimedia.org/wiki/Special:FilePath/");
     }
     return [url];
 }
