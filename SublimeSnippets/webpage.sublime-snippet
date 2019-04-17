@@ -1,0 +1,32 @@
+<snippet>
+    <content><![CDATA[
+<!DOCTYPE html5>
+<html>
+<head>
+    {% import "header.html" as header %}
+    <title>Title</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="/static/common.css">
+    <script src="/static/common.js"></script>
+
+<style>
+</style>
+</head>
+
+
+<body>
+</body>
+
+
+<script type="text/javascript">
+</script>
+</html>
+
+]]></content>
+<tabTrigger>webpage</tabTrigger>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <!-- <tabTrigger>hello</tabTrigger> -->
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <!-- <scope>source.python</scope> -->
+</snippet>

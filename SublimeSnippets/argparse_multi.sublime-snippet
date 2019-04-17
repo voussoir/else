@@ -1,0 +1,32 @@
+<snippet>
+    <content><![CDATA[
+import argparse
+import sys
+
+def $1_argparse(args):
+    print(args)
+
+def main(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers()
+
+    p_example = subparsers.add_parser('example1')
+    p_example.add_argument('required_positional')
+    p_example.add_argument('optional_positional', nargs='?', default=None)
+    p_example.add_argument('-k', '--kwarg', dest='kwarg', default=None)
+    p_example.add_argument('-b', '--boolkwarg', dest='boolkwarg', action='store_true')
+    p_example.set_defaults(func=$1_argparse)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
+if __name__ == '__main__':
+    raise SystemExit(main(sys.argv[1:]))
+
+]]></content>
+<tabTrigger>argparse_multi</tabTrigger>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <!-- <tabTrigger>hello</tabTrigger> -->
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <!-- <scope>source.python</scope> -->
+</snippet>
