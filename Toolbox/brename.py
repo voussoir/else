@@ -19,7 +19,7 @@ import sys
 from voussoirkit import safeprint
 
 
-def brename(transformation):
+def brename(transformation, autoyes=False):
     old = os.listdir()
     new = [eval(transformation) for x in old]
     pairs = []
@@ -27,13 +27,18 @@ def brename(transformation):
         if x == y:
             continue
         pairs.append((x, y))
+
     if not loop(pairs, dry=True):
         print('Nothing to replace')
         return
-    print('Is this correct? y/n')
-    if input('>').lower() not in ('y', 'yes', 'yeehaw'):
-        return
-    loop(pairs, dry=False)
+
+    ok = autoyes
+    if not ok:
+        print('Is this correct? y/n')
+        ok = input('>').lower() in ('y', 'yes', 'yeehaw')
+
+    if ok:
+        loop(pairs, dry=False)
 
 def excise(s, mark_left, mark_right):
     '''
@@ -81,6 +86,20 @@ def title(text):
     text = first + rest + extension
     return text
 
+import argparse
+import sys
+
+def brename_argparse(args):
+    brename(args.transformation)
+
+def main(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument('transformation', help='python command using x as variable name')
+    parser.set_defaults(func=brename_argparse)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
 if __name__ == '__main__':
-    transformation = sys.argv[1]
-    brename(transformation)
+    raise SystemExit(main(sys.argv[1:]))
