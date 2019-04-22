@@ -1,4 +1,3 @@
-print('importing')
 import argparse
 import fnmatch
 import itertools
@@ -46,8 +45,6 @@ def search(
         local_only=False,
         text=None,
     ):
-    if text is None:
-        print('starting search')
     terms = {
         'yes_all': yes_all,
         'yes_any': yes_any,
@@ -224,4 +221,4 @@ def main(argv):
     args.func(args)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    raise SystemExit(main(sys.argv[1:]))
