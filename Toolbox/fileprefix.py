@@ -28,9 +28,9 @@ def natural_sorter(x):
 
 def fileprefix(
         prefix='',
-        sep=' ',
+        sep='_',
         ctime=False,
-        dry=False,
+        autoyes=False,
     ):
     current_directory = pathclass.Path('.')
 
@@ -64,6 +64,8 @@ def fileprefix(
         print('Sorting by name')
         filepaths.sort(key=lambda x: natural_sorter(x.basename))
 
+    rename_pairs = []
+
     for (index, filepath) in enumerate(filepaths):
         extension = filepath.extension
         if extension != '':
@@ -71,14 +73,19 @@ def fileprefix(
 
         newname = format.format(prefix=prefix, index=index, extension=extension)
         if filepath.basename != newname:
-            message = filepath.basename + ' -> ' + newname
-            safeprint.safeprint(message)
-            if not dry:
-                os.rename(filepath.absolute_path, newname)
-                pass
-    if dry:
-        print('Dry. No files renamed.')
+            rename_pairs.append((filepath.absolute_path, newname))
+    for (oldname, newname) in rename_pairs:
+        message = f'{oldname} -> {newname}'
+        safeprint.safeprint(message)
 
+    ok = autoyes
+    if not ok:
+        print('Is this correct? y/n')
+        ok = input('>').lower() in ('y', 'yes', 'yeehaw')
+
+    if ok:
+        for (oldname, newname) in rename_pairs:
+            os.rename(oldname, newname)
 
 
 def fileprefix_argparse(args):
@@ -86,16 +93,16 @@ def fileprefix_argparse(args):
         prefix=args.prefix,
         sep=args.sep,
         ctime=args.ctime,
-        dry=args.dry,
+        autoyes=args.autoyes,
     )
 
 def main(argv):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('prefix', nargs='?', default='')
-    parser.add_argument('--sep', dest='sep', default=' ')
-    parser.add_argument('--ctime', dest='ctime', action='store_true')
-    parser.add_argument('--dry', dest='dry', action='store_true')
+    parser.add_argument('--sep', dest='sep', default=' ', help='the character between the prefix and remainder')
+    parser.add_argument('--ctime', dest='ctime', action='store_true', help='sort by ctime instead of filename')
+    parser.add_argument('-y', '--yes', dest='autoyes', action='store_true', help='accept results without confirming')
     parser.set_defaults(func=fileprefix_argparse)
 
     args = parser.parse_args(argv)
