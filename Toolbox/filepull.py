@@ -7,7 +7,7 @@ import sys
 
 from voussoirkit import spinal
 
-def filepull(pull_from='.'):
+def filepull(pull_from='.', autoyes=False):
     files = list(spinal.walk_generator(pull_from))
     cwd = os.getcwd()
     files = [f for f in files if os.path.split(f.absolute_path)[0] != cwd]
@@ -30,19 +30,24 @@ def filepull(pull_from='.'):
     for f in files:
         print(f.basename)
 
-    print('Move %d files?' % len(files))
-    if input('> ').lower() in ['y', 'yes']:
+    ok = autoyes
+    if not ok:
+        print('Move %d files?' % len(files))
+        ok = input('> ').lower() in ['y', 'yes']:
+
+    if ok:
         for f in files:
             local = os.path.join('.', f.basename)
             os.rename(f.absolute_path, local)
 
 def filepull_argparse(args):
-    filepull(pull_from=args.pull_from)
+    filepull(pull_from=args.pull_from, autoyes=args.autoyes)
 
 def main(argv):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('pull_from', nargs='?', default='.')
+    parser.add_argument('-y', '--yes', dest='autoyes', action='store_true')
     parser.set_defaults(func=filepull_argparse)
 
     args = parser.parse_args(argv)
