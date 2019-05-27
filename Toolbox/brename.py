@@ -11,6 +11,7 @@ brename.py "'Test_' + x"
 Keep the first word and extension:
 brename.py "(x.split(' ')[0] + '.' + x.split('.')[-1]) if ' ' in x else x"
 '''
+import argparse
 import os
 import random
 import re
@@ -18,10 +19,18 @@ import sys
 
 from voussoirkit import safeprint
 
+dot = '.'
+quote = '"'
+apostrophe = "'"
+space = ' '
 
 def brename(transformation, autoyes=False):
     old = os.listdir()
-    new = [eval(transformation) for x in old]
+    new = []
+    for (index, x) in enumerate(old):
+        (noext, ext) = os.path.splitext(x)
+        x = eval(transformation)
+        new.append(x)
     pairs = []
     for (x, y) in zip(old, new):
         if x == y:
@@ -86,16 +95,14 @@ def title(text):
     text = first + rest + extension
     return text
 
-import argparse
-import sys
-
 def brename_argparse(args):
-    brename(args.transformation)
+    brename(args.transformation, autoyes=args.autoyes)
 
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument('transformation', help='python command using x as variable name')
+    parser.add_argument('-y', '--yes', dest='autoyes', action='store_true', help='accept results without confirming')
     parser.set_defaults(func=brename_argparse)
 
     args = parser.parse_args(argv)
