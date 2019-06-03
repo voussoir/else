@@ -49,7 +49,7 @@ def threaded_dl(
 
     for (index, url) in enumerate(clean_url_list(urls)):
 
-        while len(threads) == thread_count:
+        while len(threads) >= thread_count:
             threads = remove_finished(threads)
             time.sleep(0.1)
 
@@ -96,7 +96,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument('url_file')
-    parser.add_argument('thread_count', nargs='?', default=None)
+    parser.add_argument('thread_count', nargs='?', type=int, default=None)
     parser.add_argument('filename_format', nargs='?', default='{now}_{index}_{basename}')
     parser.add_argument('--timeout', dest='timeout', default=15)
     parser.set_defaults(func=threaded_dl_argparse)
