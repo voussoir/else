@@ -143,7 +143,7 @@ from voussoirkit import bytestring
 from voussoirkit import downloady
 from voussoirkit import fusker
 from voussoirkit import treeclass
-from voussoirkit import pathtree
+import pathtree
 sys.path.append('D:\\git\\else\\threadqueue'); import threadqueue
 
 DOWNLOAD_CHUNK = 16 * bytestring.KIBIBYTE

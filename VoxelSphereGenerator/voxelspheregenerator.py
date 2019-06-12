@@ -137,6 +137,7 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None, specific=None
                     #layer_image.paste(dot, box=(pixel_coord_x, pixel_coord_y))
 
         # Mark the corner pieces
+        furthest_y = math.floor(furthest_y)
         for y in range(furthest_y, math.ceil(RAD_Y-1)):
             for x in range(furthest_x, math.ceil(RAD_X-1)):
                 is_corner = (
@@ -175,7 +176,7 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None, specific=None
         # Start at the center top of the circle and walk along the edge.
         # Every time the walker 'falls' down, mark the distance.
         def put_counterhelper(start_x, end_x, y):
-            if start_x == end_x:
+            if start_x > end_x:
                 return
             y = (HEIGH + 1) - y
             span = end_x - start_x
@@ -187,7 +188,7 @@ def voxelspheregenerator(WIDTH, HEIGH, DEPTH, WALL_THICKNESS=None, specific=None
         end_x = x
         start_y = None
         while x >= y and y < RAD_Y:
-            print(x, y, start_y)
+            #print(x, y, start_y)
             pixel = layer_matrix[x][y]
             if pixel is None:
                 y += 1
