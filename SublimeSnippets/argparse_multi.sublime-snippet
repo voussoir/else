@@ -4,7 +4,7 @@ import argparse
 import sys
 
 def $1_argparse(args):
-    print(args)
+    return $1()
 
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -18,7 +18,7 @@ def main(argv):
     p_example.set_defaults(func=$1_argparse)
 
     args = parser.parse_args(argv)
-    args.func(args)
+    return args.func(args)
 
 if __name__ == '__main__':
     raise SystemExit(main(sys.argv[1:]))
