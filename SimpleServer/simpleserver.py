@@ -159,9 +159,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 #     pass
 
 def allowed(path):
-    return path in ROOT_DIRECTORY
+    return path == ROOT_DIRECTORY or path in ROOT_DIRECTORY
 
-def anchor(path, display_name=None):
+def atag(path, display_name=None):
     path.correct_case()
     if display_name is None:
         display_name = path.basename
@@ -202,6 +202,10 @@ def generate_opendir(path):
         if item.is_dir:
             directories.append(item)
         else:
+            if item.basename.lower() == 'thumbs.db':
+                continue
+            if item.basename.lower() == 'desktop.ini':
+                continue
             files.append(item)
 
     items = directories + files
@@ -212,7 +216,9 @@ def generate_opendir(path):
     if path.absolute_path == ROOT_DIRECTORY.absolute_path:
         # This is different than a permission check, we're seeing if they're
         # actually at the top, in which case they don't need an up button.
-        pass
+        entry = table_row(path, display_name='.', shaded=shaded)
+        table_rows.append(entry)
+        shaded = not shaded
     else:
         entry = table_row(path.parent, display_name='up', shaded=shaded)
         table_rows.append(entry)
@@ -223,10 +229,10 @@ def generate_opendir(path):
         table_rows.append(entry)
         shaded = not shaded
 
-    if len(items) > 0:
-        entry = table_row(path.replace_extension('.zip'), display_name='zip', shaded=shaded)
-        shaded = not shaded
-        table_rows.append(entry)
+    # if len(items) > 0:
+    #     entry = table_row(path.replace_extension('.zip'), display_name='zip', shaded=shaded)
+    #     shaded = not shaded
+    #     table_rows.append(entry)
 
     table_rows = '\n'.join(table_rows)
     text = OPENDIR_TEMPLATE.format(table_rows=table_rows)
@@ -272,10 +278,13 @@ def table_row(path, display_name=None, shaded=False):
     else:
         size = bytestring.bytestring(size)
 
-    bg = 'ddd' if shaded else 'fff';
+    bg = 'ddd' if shaded else 'fff'
+
+    anchor = atag(path, display_name=display_name)
+
     row = form.format(
         bg=bg,
-        anchor=anchor(path, display_name=display_name),
+        anchor=anchor,
         size=size,
         )
     return row
