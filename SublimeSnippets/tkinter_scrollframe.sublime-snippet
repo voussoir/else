@@ -1,0 +1,43 @@
+<snippet>
+    <content><![CDATA[
+import tkinter
+
+class ScrollingFrame:
+    def __init__(self, t):
+        self.t = t
+        self.frame_primary = tkinter.Frame(t)
+        #self.frame_primary.pack(expand=True, fill='both')
+        self.canvas = tkinter.Canvas(self.frame_primary)
+        self.frame_inner = tkinter.Frame(self.canvas)
+
+        self.scrollbar = tkinter.Scrollbar(self.frame_primary, orient='vertical', command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.scrollbar.pack(side='right', fill='y')
+        self.canvas.pack(expand=True, fill='both')
+        self.canvas.create_window((0, 0), window=self.frame_inner, anchor='nw')
+
+        def frame_inner_fix(*event):
+            children = self.frame_inner.winfo_children()
+            if len(children) == 0:
+                w = 25
+            else:
+                w = max(item.winfo_width() for item in children)
+            h = self.t.winfo_height()
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"), width=w, height=h)
+
+        self.frame_inner.fix = frame_inner_fix
+        self.frame_primary.bind('<Configure>', self.frame_inner.fix)
+
+    def pack(self, *args, **kwargs):
+        self.frame_primary.pack(*args, **kwargs)
+
+    def grid(self, *args, **kwargs):
+        self.frame_primary.grid(*args, **kwargs)
+]]></content>
+<tabTrigger>tkscrollframe</tabTrigger>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <!-- <tabTrigger>hello</tabTrigger> -->
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <!-- <scope>source.python</scope> -->
+</snippet>
