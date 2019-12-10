@@ -16,3 +16,18 @@ If rapid_switch = 1
         sleep 20
     }
 }
+
+~*RButton::
+If rapid_switch = 1
+{
+    Loop
+    {
+        GetKeyState, var, RButton, P
+        If var = U
+        {
+            Break
+        }
+        Send {RButton}
+        sleep 20
+    }
+}
