@@ -10,12 +10,12 @@ def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
 
-    p_example = subparsers.add_parser('example1')
-    p_example.add_argument('required_positional')
-    p_example.add_argument('optional_positional', nargs='?', default=None)
-    p_example.add_argument('-k', '--kwarg', dest='kwarg', default=None)
-    p_example.add_argument('-b', '--boolkwarg', dest='boolkwarg', action='store_true')
-    p_example.set_defaults(func=$1_argparse)
+    p_$1 = subparsers.add_parser('$1')
+    p_$1.add_argument('required_positional')
+    p_$1.add_argument('optional_positional', nargs='?', default=None)
+    p_$1.add_argument('-k', '--kwarg', dest='kwarg', default=None)
+    p_$1.add_argument('-b', '--boolkwarg', dest='boolkwarg', action='store_true')
+    p_$1.set_defaults(func=$1_argparse)
 
     args = parser.parse_args(argv)
     return args.func(args)
