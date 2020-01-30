@@ -119,7 +119,7 @@ def seconds_to_hms(seconds):
     (hours, minutes) = divmod(minutes, 60)
     parts = []
     if hours: parts.append(hours)
-    if minutes: parts.append(minutes)
+    if hours or minutes: parts.append(minutes)
     parts.append(seconds)
     hms = ':'.join('%02d' % part for part in parts)
     return hms

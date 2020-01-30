@@ -13,7 +13,8 @@ import tkinter
 # 0, 90, 180, 270
 # ░▒▓
 
-SCREEN_WIDTH = shutil.get_terminal_size()[1] - 6
+SCREEN_WIDTH = shutil.get_terminal_size()[0] - 6
+print(SCREEN_WIDTH)
 
 DEFAULT_LINE = {
     'character': '#',
