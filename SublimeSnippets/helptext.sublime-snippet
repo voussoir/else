@@ -1,0 +1,39 @@
+<snippet>
+    <content><![CDATA[
+from voussoirkit import betterhelp
+
+DOCSTRING = '''
+____my__program____
+
+{____my__command____}
+
+TO SEE DETAILS ON EACH COMMAND, RUN
+> ____my__program____.py <command> --help
+'''.lstrip()
+
+SUB_DOCSTRINGS = dict(
+____my__command____='''
+____my__command____:
+    ____my__command____description
+
+    > ____my__program____.py ____my__command____
+
+    flags:
+    --____my__flag____:
+'''.strip(),
+)
+
+DOCSTRING = betterhelp.add_previews(DOCSTRING, SUB_DOCSTRINGS)
+
+@betterhelp.subparser_betterhelp(parser, main_docstring=DOCSTRING, sub_docstrings=SUB_DOCSTRINGS)
+def main(argv):
+    args = parser.parse_args(argv)
+    args.func(args)
+
+]]></content>
+<tabTrigger>helptext</tabTrigger>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <!-- <tabTrigger>hello</tabTrigger> -->
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <!-- <scope>source.python</scope> -->
+</snippet>
