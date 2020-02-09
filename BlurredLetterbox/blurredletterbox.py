@@ -99,4 +99,4 @@ def main(argv):
     image.save(new_name)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    raise SystemExit(main(sys.argv[1:]))
