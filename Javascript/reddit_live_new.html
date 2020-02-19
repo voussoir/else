@@ -49,6 +49,12 @@ body
 }
 
 
+.submission .text
+{
+    color: #aaa;
+    margin-left: 16px;
+}
+
 a
 {
     color: #ddd;
@@ -144,6 +150,43 @@ var HTTPClient = function()
     }
 }
 
+function create_submission_div(submission)
+{
+    var div = document.createElement("div");
+    div.className = "submission";
+
+    var anchor = document.createElement("a");
+    anchor.innerHTML = "/r/" + submission["subreddit"] + " - " + submission["title"];
+    anchor.href = "https://reddit.com/r/" + submission["subreddit"] + "/comments/" + submission["id"];
+    anchor.target = "_blank";
+
+    var text = document.createElement("div");
+    text.className = "text";
+    var template = document.createElement("template");
+    var txt = document.createElement("textarea");
+    txt.innerHTML = unescape(submission["selftext_html"]);
+    template.innerHTML = txt.value;
+    text.appendChild(template.content);
+
+    var delete_button = document.createElement("button");
+    delete_button.className = "delete_button";
+    delete_button.div = div;
+    delete_button.innerHTML = "X";
+    delete_button.onclick = function()
+    {
+        this.div.parentElement.removeChild(this.div);
+    }
+
+    // var timestamp = document.createElement("span");
+    // var submission_time = new Date(submission["created_utc"])
+    // timestamp.innerHTML = "" + submission_time.getHours() + ":" + submission_time.getMinutes();
+
+    div.appendChild(anchor);
+    div.appendChild(text);
+    div.appendChild(delete_button);
+    return div;
+}
+
 function apply_to_page(response_json)
 {
     var j = JSON.parse(response_json);
@@ -166,31 +209,10 @@ function apply_to_page(response_json)
         }
 
         new_items += 1;
-        var div = document.createElement("div");
-        div.className = "submission";
 
-        var anchor = document.createElement("a");
-        anchor.innerHTML = "/r/" + submission["subreddit"] + " - " + submission["title"];
-        anchor.href = "https://reddit.com/r/" + submission["subreddit"] + "/comments/" + submission["id"];
-        anchor.target = "_blank";
-
-        var delete_button = document.createElement("button")
-        delete_button.className = "delete_button";
-        delete_button.div = div;
-        delete_button.innerHTML = "X";
-        delete_button.onclick = function()
-        {
-            this.div.parentElement.removeChild(this.div);
-        }
-
-        var timestamp = document.createElement("span");
-        var submission_time = new Date(submission["created_utc"])
-        timestamp.innerHTML = "" + submission_time.getHours() + ":" + submission_time.getMinutes();
-
-        div.appendChild(anchor);
-        div.appendChild(delete_button);
-        //WORKSPACE.insertBefore(div, WORKSPACE.firstChild);
-        WORKSPACE.appendChild(div);
+        div = create_submission_div(submission);
+        WORKSPACE.insertBefore(div, WORKSPACE.firstChild);
+        // WORKSPACE.appendChild(div);
     }
     console.log("+" + new_items);
     if (new_items > 0 && !page_focused_cached)
