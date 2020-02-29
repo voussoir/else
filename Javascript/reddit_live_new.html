@@ -122,6 +122,26 @@ var check_timer = null;
 
 var page_focused_cached;
 
+function bind_box_to_button(box, button, ctrl_enter)
+{
+    // Thanks Yaroslav Yakovlev
+    // http://stackoverflow.com/a/9343095
+    var bound_box_hook = function(event)
+    {
+        if (event.key !== "Enter")
+            {return;}
+
+        ctrl_success = !ctrl_enter || (event.ctrlKey)
+
+        if (! ctrl_success)
+            {return;}
+
+        button.click();
+    }
+    box.addEventListener("keyup", bound_box_hook);
+}
+
+bind_box_to_button(document.getElementById("subreddit_field"), document.getElementById("start_button"));
 
 var HTTPClient = function()
 {
