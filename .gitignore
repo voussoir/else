@@ -5,6 +5,7 @@ Meal/meal.db
 *.key
 *.csr
 *.crt
+*.pyc
 
 # Windows image file caches
 Thumbs.db

@@ -4,6 +4,7 @@
 { "keys": ["alt+shift+."], "command": "insert_snippet", "args": { "name": "Packages/XML/long-tag.sublime-snippet" }},
 { "keys": ["shift+delete"], "command": "run_macro_file", "args": {"file": "Packages/Default/Delete Line.sublime-macro"}},
 { "keys": ["ctrl+shift+enter"], "command": "insert", "args": {"characters": "\n#"}},
+{ "keys": ["f4"], "command": "timestamp" },
 
 // Auto-pair backticks
 { "keys": ["`"], "command": "insert_snippet", "args": {"contents": "`$0`"}, "context":
