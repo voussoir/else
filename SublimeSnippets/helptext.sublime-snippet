@@ -25,10 +25,13 @@ ____my__command____:
 
 DOCSTRING = betterhelp.add_previews(DOCSTRING, SUB_DOCSTRINGS)
 
-@betterhelp.subparser_betterhelp(parser, main_docstring=DOCSTRING, sub_docstrings=SUB_DOCSTRINGS)
 def main(argv):
-    args = parser.parse_args(argv)
-    return args.func(args)
+    return betterhelp.subparser_main(
+        argv,
+        parser,
+        main_docstring=DOCSTRING,
+        sub_docstrings=SUB_DOCSTRINGS,
+    )
 
 ]]></content>
 <tabTrigger>helptext</tabTrigger>
