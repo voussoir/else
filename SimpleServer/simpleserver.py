@@ -362,11 +362,10 @@ def read_filebytes(path, range_min=None, range_max=None):
 
 def table_row(path, display_name=None, shaded=False):
     form = '<tr style="background-color:#{bg}"><td style="">{anchor}</td><td>{size}</td></tr>'
-    size = path.size
-    if size is None:
-        size = ''
+    if path.is_file:
+        size = bytestring.bytestring(path.size)
     else:
-        size = bytestring.bytestring(size)
+        size = ''
 
     bg = 'ddd' if shaded else 'fff'
 
