@@ -481,6 +481,14 @@ function get_all_urls()
             console.log(url);
             if (url.indexOf("thumbs.redditmedia") != -1)
                 {console.log("Rejecting reddit thumb"); continue;}
+            if (url.indexOf("redditstatic.com/mailgray.png") != -1)
+                {console.log("Rejecting reddit icons"); continue;
+            if (url.indexOf("redditstatic.com/start_chat.png") != -1)
+                {console.log("Rejecting reddit icons"); continue;}
+            if (url.indexOf("preview.redd.it/award_images") != -1)
+                {console.log("Rejecting reddit awards"); continue;}
+            if (url.indexOf("redditstatic.com/gold/awards") != -1)
+                {console.log("Rejecting reddit awards"); continue;}
             if (url.indexOf("pixel.reddit") != -1 || url.indexOf("reddit.com/static/pixel") != -1)
                 {console.log("Rejecting reddit pixel"); continue}
             if (url.indexOf("/thumb/") != -1)
@@ -550,7 +558,7 @@ function get_basename(url)
 function get_gfycat_video(id)
 {
     console.log("Resolving gfycat " + id);
-    var url = "https://gfycat.com/cajax/get/" + id;
+    var url = "https://api.gfycat.com/v1/gfycats/" + id;
     var request = new XMLHttpRequest();
     request.answer = null;
     request.onreadystatechange = function()
@@ -696,7 +704,7 @@ function lazy_load_one(element, comeback)
     return;
 }
 
-function normalize_url(url)
+function _normalize_url(url)
 {
     var protocol = window.location.protocol;
     if (protocol == "file:")
@@ -787,6 +795,18 @@ function normalize_url(url)
         url = url.replace("commons.wikimedia.org/wiki/File:", "commons.wikimedia.org/wiki/Special:FilePath/");
     }
     return [url];
+}
+
+function normalize_url(url)
+{
+    try
+    {
+        return _normalize_url(url);
+    }
+    catch (e)
+    {
+        return [];
+    }
 }
 
 function resize_images(height)
