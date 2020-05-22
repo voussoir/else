@@ -482,7 +482,7 @@ function get_all_urls()
             if (url.indexOf("thumbs.redditmedia") != -1)
                 {console.log("Rejecting reddit thumb"); continue;}
             if (url.indexOf("redditstatic.com/mailgray.png") != -1)
-                {console.log("Rejecting reddit icons"); continue;
+                {console.log("Rejecting reddit icons"); continue;}
             if (url.indexOf("redditstatic.com/start_chat.png") != -1)
                 {console.log("Rejecting reddit icons"); continue;}
             if (url.indexOf("preview.redd.it/award_images") != -1)
