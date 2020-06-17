@@ -1,0 +1,18 @@
+<snippet>
+    <content><![CDATA[
+from voussoirkit import pipeable
+
+def main(argv):
+    for line in pipeable.go(argv, strip=True, skip_blank=True):
+        pipeable.output(line)
+
+if __name__ == '__main__':
+    raise SystemExit(main(sys.argv[1:]))
+
+]]></content>
+<tabTrigger>pipeablemain</tabTrigger>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <!-- <tabTrigger>hello</tabTrigger> -->
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <!-- <scope>source.python</scope> -->
+</snippet>
