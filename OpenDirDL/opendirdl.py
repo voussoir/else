@@ -985,7 +985,7 @@ def main(argv):
     p_measure = subparsers.add_parser('measure')
     p_measure.add_argument('databasename')
     p_measure.add_argument('-f', '--fullscan', dest='fullscan', action='store_true')
-    p_measure.add_argument('-n', '--new_only', dest='new_only', action='store_true')
+    p_measure.add_argument('-n', '--new_only', '--new-only', dest='new_only', action='store_true')
     p_measure.add_argument('-t', '--threads', dest='threads', default=1)
     p_measure.set_defaults(func=measure_argparse)
 
