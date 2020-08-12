@@ -872,3 +872,4 @@ function main()
 }
 
 main();
+undefined;

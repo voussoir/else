@@ -1,5 +1,4 @@
 javascript:
-
 CSS = ""
 + "* {margin: 0; padding: 0}"
 + "html {height: 95%}"
@@ -112,3 +111,4 @@ function main()
 }
 
 main();
+undefined;

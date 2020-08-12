@@ -1,5 +1,4 @@
 javascript:
-
 function give_event(player, index)
 {
     /*
@@ -18,3 +17,4 @@ for (var index = 0; index < players.length - 1; index += 1)
     give_event(players[index], index);
 }
 players[0].play();
+undefined;

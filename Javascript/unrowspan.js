@@ -1,5 +1,4 @@
 javascript:
-
 function unrowspan(tbody)
 {
     var rows = tbody.children;
@@ -24,3 +23,4 @@ function unrowspan(tbody)
 
 var tbodies = Array.from(document.getElementsByTagName("tbody"));
 tbodies.forEach(unrowspan);
+undefined;
