@@ -346,7 +346,7 @@ def read_filebytes(path, range_min=None, range_max=None):
     range_span = range_max - range_min
 
     #print('read span', range_min, range_max, range_span)
-    f = open(path.absolute_path, 'rb')
+    f = path.open('rb')
     f.seek(range_min)
     sent_amount = 0
     while sent_amount < range_span:
