@@ -53,6 +53,7 @@ PASSWORD_PROMPT_HTML = '''
 '''
 
 ROOT_DIRECTORY = pathclass.Path(os.getcwd())
+TOKEN_COOKIE_NAME = 'simpleserver_token'
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def __init__(self, *args, passw=None, accepted_tokens=None, **kwargs):
@@ -79,7 +80,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if self.headers.get('Cookie'):
             cookie = http.cookies.SimpleCookie()
             cookie.load(self.headers.get('Cookie'))
-            token = cookie.get('token')
+            token = cookie.get(TOKEN_COOKIE_NAME)
             if token and token.value in self.accepted_tokens:
                 return True
 
@@ -223,7 +224,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             if self.check_password(attempt):
                 cookie = http.cookies.SimpleCookie()
                 token = random_hex(32)
-                cookie['token'] = token
+                cookie[TOKEN_COOKIE_NAME] = token
                 self.accepted_tokens.add(token)
 
                 self.send_response(302)
