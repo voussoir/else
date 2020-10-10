@@ -55,10 +55,12 @@ PASSWORD_PROMPT_HTML = '''
 ROOT_DIRECTORY = pathclass.Path(os.getcwd())
 TOKEN_COOKIE_NAME = 'simpleserver_token'
 
+# SERVER ###########################################################################################
+
 class RequestHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, *args, passw=None, accepted_tokens=None, **kwargs):
+    def __init__(self, *args, password=None, accepted_tokens=None, **kwargs):
         self.accepted_tokens = accepted_tokens
-        self.password = passw
+        self.password = password
         super().__init__(*args, **kwargs)
 
     def check_password(self, attempt):
@@ -209,7 +211,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
+        (ctype, pdict) = cgi.parse_header(self.headers.get('content-type'))
         if ctype == 'multipart/form-data':
             form = cgi.parse_multipart(self.rfile, pdict)
         elif ctype == 'application/x-www-form-urlencoded':
@@ -232,6 +234,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Location', goto)
             else:
                 self.send_response(401)
+        elif not self.check_has_password():
+            self.send_response(401)
+            self.end_headers()
+            return
         else:
             self.send_response(400)
         self.end_headers()
@@ -242,6 +248,31 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             return True
         return False
 
+class SimpleServer:
+    def __init__(self, port, password):
+        self.port = port
+        self.password = password
+        self.accepted_tokens = set()
+
+    def make_request_handler(self, *args, **kwargs):
+        return RequestHandler(
+            password=self.password,
+            accepted_tokens=self.accepted_tokens,
+            *args,
+            **kwargs,
+        )
+
+    def start(self):
+        server = http.server.ThreadingHTTPServer(('0.0.0.0', self.port), self.make_request_handler)
+        print(f'Server starting on {self.port}')
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print('Goodbye.')
+            server.shutdown()
+
+
+# HELPERS ##########################################################################################
 
 def allowed(path):
     return path == ROOT_DIRECTORY or path in ROOT_DIRECTORY
@@ -402,33 +433,11 @@ def zip_directory(path):
 
     return zipfile
 
-def RRR(password=None):
-    accepted_tokens = set()
-    def R(*args, **kwargs):
-        handler = RequestHandler(passw=password, accepted_tokens=accepted_tokens, *args, **kwargs)
-        return handler
-
-    return R
-
-def simpleserver(port, password=None):
-    server = http.server.ThreadingHTTPServer(('', port), RRR(password=password))
-    print(f'server starting on {port}')
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print('goodbye.')
-        t = threading.Thread(target=server.shutdown)
-        t.daemon = True
-        t.start()
-        server.shutdown()
-        print('really goodbye.')
-        return 0
+# COMMAND LINE ###################################################################################################
 
 def simpleserver_argparse(args):
-    return simpleserver(
-        port=args.port,
-        password=args.password,
-    )
+    server = SimpleServer(port=args.port, password=args.password)
+    server.start()
 
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
