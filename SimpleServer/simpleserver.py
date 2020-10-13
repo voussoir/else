@@ -16,6 +16,7 @@ import urllib.parse
 import zipstream
 
 # pip install voussoirkit
+from voussoirkit import betterhelp
 from voussoirkit import bytestring
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter
@@ -478,6 +479,29 @@ def zip_directory(path):
 
 # COMMAND LINE ###################################################################################################
 
+DOCSTRING = '''
+simpleserver
+============
+
+Run a simple file server from your computer.
+
+> simpleserver port <flags>
+
+port:
+    Port number, an integer.
+
+flags:
+--password X:
+    A password string. The user will be prompted to enter it before proceeding
+    to any URL. A token is stored in a cookie unless authorize_by_ip is used.
+
+--authorize_by_ip:
+    After the user enters the password, their entire IP becomes authorized for
+    all future requests. This reduces security, because a single IP can be home
+    to many different people, but increases convenience, because the user can
+    use download managers / scripts where adding auth is not convenient.
+'''
+
 def simpleserver_argparse(args):
     server = SimpleServer(
         port=args.port,
@@ -494,8 +518,7 @@ def main(argv):
     parser.add_argument('--authorize_by_ip', '--authorize-by-ip', dest='authorize_by_ip', action='store_true')
     parser.set_defaults(func=simpleserver_argparse)
 
-    args = parser.parse_args(argv)
-    return args.func(args)
+    return betterhelp.single_main(argv, parser, DOCSTRING)
 
 if __name__ == '__main__':
     raise SystemExit(main(sys.argv[1:]))
