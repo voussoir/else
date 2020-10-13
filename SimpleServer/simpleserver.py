@@ -1,4 +1,5 @@
 import argparse
+import base64
 import cgi
 import http.cookies
 import http.server
@@ -64,7 +65,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     @property
-    def auth_token(self):
+    def auth_cookie(self):
         cookie = self.headers.get('Cookie')
         if not cookie:
             return None
@@ -75,6 +76,20 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             return None
 
         return token
+
+    @property
+    def auth_header(self):
+        authorization = self.headers.get('Authorization')
+        if not authorization:
+            return None
+
+        (auth_type, authorization) = authorization.split(' ', 1)
+        if auth_type != 'Basic':
+            return None
+
+        authorization = base64.b64decode(authorization).decode()
+        (username, password) = authorization.split(':', 1)
+        return password
 
     def check_password(self, attempt):
         if self.password is None:
@@ -89,10 +104,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if self.password is None:
             return True
 
-        if self.headers.get('password', None) == self.password:
+        if self.auth_header == self.password:
             return True
 
-        if self.accepted_tokens is not None and self.auth_token in self.accepted_tokens:
+        if self.accepted_tokens is not None and self.auth_cookie in self.accepted_tokens:
             return True
 
         return False
