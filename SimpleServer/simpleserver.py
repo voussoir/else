@@ -63,6 +63,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.password = password
         super().__init__(*args, **kwargs)
 
+    @property
+    def auth_token(self):
+        cookie = self.headers.get('Cookie')
+        if not cookie:
+            return None
+
+        cookie = http.cookies.SimpleCookie(cookie)
+        token = cookie.get(TOKEN_COOKIE_NAME)
+        if not token:
+            return None
+
+        return token
+
     def check_password(self, attempt):
         if self.password is None:
             return True
@@ -79,12 +92,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if self.headers.get('password', None) == self.password:
             return True
 
-        if self.headers.get('Cookie'):
-            cookie = http.cookies.SimpleCookie()
-            cookie.load(self.headers.get('Cookie'))
-            token = cookie.get(TOKEN_COOKIE_NAME)
-            if token and token.value in self.accepted_tokens:
-                return True
+        if self.accepted_tokens is not None and self.auth_token in self.accepted_tokens:
+            return True
 
         return False
 
