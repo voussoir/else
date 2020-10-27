@@ -332,6 +332,7 @@ def atag(path, display_name=None):
     else:
         # Diamond emoji
         #icon = '\U0001F48E'
+        # Gift emoji
         icon = '\U0001F381'
 
     #print('anchor', path)
@@ -347,25 +348,21 @@ def atag(path, display_name=None):
     return a
 
 def generate_opendir(path):
-    #print('Listdir:', path)
-
-    # This places directories above files, each ordered alphabetically
     try:
         items = path.listdir()
     except FileNotFoundError:
         items = []
 
+    # This places directories above files, each ordered alphabetically
     directories = []
     files = []
 
     for item in sorted(items, key=lambda p: p.basename.lower()):
+        if item.basename.lower() in {'thumbs.db', 'desktop.ini', '$recycle.bin'}:
+            continue
         if item.is_dir:
             directories.append(item)
         else:
-            if item.basename.lower() == 'thumbs.db':
-                continue
-            if item.basename.lower() == 'desktop.ini':
-                continue
             files.append(item)
 
     items = directories + files
