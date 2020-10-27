@@ -322,7 +322,6 @@ def allowed(path):
     return path == ROOT_DIRECTORY or path in ROOT_DIRECTORY
 
 def atag(path, display_name=None):
-    path.correct_case()
     if display_name is None:
         display_name = path.basename
 
@@ -349,6 +348,7 @@ def atag(path, display_name=None):
 
 def generate_opendir(path):
     try:
+        path.correct_case()
         items = path.listdir()
     except FileNotFoundError:
         items = []
