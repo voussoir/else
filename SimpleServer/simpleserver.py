@@ -455,7 +455,7 @@ def table_row(path, display_name=None, shaded=False):
     return row
 
 def path_to_url(path):
-    url = path.relative_path[2:]
+    url = path.relative_to(ROOT_DIRECTORY, simple=True)
     url = url.replace(os.sep, '/')
     url = '/' + url
     url = urllib.parse.quote(url)
