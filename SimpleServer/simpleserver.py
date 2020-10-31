@@ -55,6 +55,7 @@ PASSWORD_PROMPT_HTML = '''
 '''
 
 ROOT_DIRECTORY = pathclass.Path(os.getcwd())
+HIDDEN_FILENAMES = {'thumbs.db', 'desktop.ini', '$recycle.bin', 'system volume information'}
 TOKEN_COOKIE_NAME = 'simpleserver_token'
 
 # SERVER ###########################################################################################
@@ -358,7 +359,7 @@ def generate_opendir(path):
     files = []
 
     for item in sorted(items, key=lambda p: p.basename.lower()):
-        if item.basename.lower() in {'thumbs.db', 'desktop.ini', '$recycle.bin'}:
+        if item.basename.lower() in HIDDEN_FILENAMES:
             continue
         if item.is_dir:
             directories.append(item)
