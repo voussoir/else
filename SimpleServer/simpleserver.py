@@ -46,7 +46,7 @@ PASSWORD_PROMPT_HTML = '''
 <style type="text/css">Body {{font-family:Consolas}}</style>
 
 <form action="/password" method="post">
-    <input type="text" name="password" placeholder="password" autocomplete="off"/>
+    <input type="text" autocapitalize="off" name="password" placeholder="password" autocomplete="off"/>
     <input type="hidden" name="goto" value="{goto}"/>
     <input type="submit" value="Submit"/>
 </form>
