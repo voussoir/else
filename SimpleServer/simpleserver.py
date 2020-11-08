@@ -29,7 +29,7 @@ OPENDIR_TEMPLATE = '''
 <body>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<style type="text/css">Body {{font-family:Consolas}}</style>
+<style type="text/css">Body {{font-family:Consolas; word-break: break-word;}}</style>
 <table style="width: 100%">
 {table_rows}
 </table>
