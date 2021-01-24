@@ -3,21 +3,16 @@ import base64
 import cgi
 import http.cookies
 import http.server
-import math
 import mimetypes
 import os
-import pathlib
-import random
-import socketserver
 import sys
-import threading
 import types
 import urllib.parse
 import zipstream
 
-# pip install voussoirkit
 from voussoirkit import betterhelp
 from voussoirkit import bytestring
+from voussoirkit import passwordy
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter
 
@@ -61,10 +56,7 @@ TOKEN_COOKIE_NAME = 'simpleserver_token'
 # SERVER ###########################################################################################
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, *args, password=None, accepted_tokens=None, accepted_ips=None, **kwargs):
-        self.accepted_tokens = accepted_tokens
-        self.accepted_ips = accepted_ips
-        self.password = password
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @property
@@ -99,25 +91,25 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         return self.request.getpeername()[0]
 
     def check_password(self, attempt):
-        if self.password is None:
+        if self.server.password is None:
             return True
 
-        if attempt == self.password:
+        if attempt == self.server.password:
             return True
 
         return False
 
     def check_has_password(self):
-        if self.password is None:
+        if self.server.password is None:
             return True
 
-        if self.auth_header == self.password:
+        if self.auth_header == self.server.password:
             return True
 
-        if self.accepted_tokens is not None and self.auth_cookie in self.accepted_tokens:
+        if self.server.accepted_tokens is not None and self.auth_cookie in self.server.accepted_tokens:
             return True
 
-        if self.accepted_ips is not None and self.remote_addr in self.accepted_ips:
+        if self.server.accepted_ips is not None and self.remote_addr in self.server.accepted_ips:
             return True
 
         return False
@@ -159,7 +151,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 helper = lambda x: int(x) if x and x.isdigit() else None
                 if '-' in desired_range:
                     (desired_min, desired_max) = desired_range.split('-')
-                    #print('desire', desired_min, desired_max)
                     range_min = helper(desired_min)
                     range_max = helper(desired_max)
                 else:
@@ -195,10 +186,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         elif path.is_dir:
             headers['Content-type'] = 'text/html'
-            response = generate_opendir(path)
+            response = generate_opendir(path, enable_zip=self.server.enable_zip)
             response = response.encode('utf-8')
 
-        elif self.path.endswith('.zip'):
+        elif self.path.endswith('.zip') and self.server.enable_zip:
             path = url_to_path(self.path.rsplit('.zip', 1)[0])
             headers['Content-type'] = 'application/octet-stream'
             download_as = urllib.parse.quote(path.basename)
@@ -260,14 +251,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             if self.check_password(attempt):
                 self.send_response(302)
 
-                if self.accepted_tokens is not None:
+                if self.server.accepted_tokens is not None:
                     cookie = http.cookies.SimpleCookie()
-                    token = random_hex(32)
+                    token = passwordy.random_hex(32)
                     cookie[TOKEN_COOKIE_NAME] = token
-                    self.accepted_tokens.add(token)
+                    self.server.accepted_tokens.add(token)
                     self.send_header('Set-Cookie', cookie.output(header='', sep=''))
-                if self.accepted_ips is not None:
-                    self.accepted_ips.add(self.remote_addr)
+                if self.server.accepted_ips is not None:
+                    self.server.accepted_ips.add(self.remote_addr)
 
                 self.send_header('Location', goto)
             else:
@@ -287,10 +278,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         return False
 
 class SimpleServer:
-    def __init__(self, port, password, authorize_by_ip):
+    def __init__(self, port, password, authorize_by_ip, enable_zip):
         self.port = port
         self.password = password
         self.authorize_by_ip = authorize_by_ip
+        self.enable_zip = enable_zip
+
         if authorize_by_ip:
             self.accepted_ips = set()
             self.accepted_tokens = None
@@ -298,14 +291,8 @@ class SimpleServer:
             self.accepted_tokens = set()
             self.accepted_ips = None
 
-    def make_request_handler(self, *args, **kwargs):
-        return RequestHandler(
-            password=self.password,
-            accepted_tokens=self.accepted_tokens,
-            accepted_ips=self.accepted_ips,
-            *args,
-            **kwargs,
-        )
+    def make_request_handler(self, request, client_info, _server):
+        return RequestHandler(request, client_info, self)
 
     def start(self):
         server = http.server.ThreadingHTTPServer(('0.0.0.0', self.port), self.make_request_handler)
@@ -330,12 +317,9 @@ def atag(path, display_name=None):
         # Folder emoji
         icon = '\U0001F4C1'
     else:
-        # Diamond emoji
-        #icon = '\U0001F48E'
         # Gift emoji
         icon = '\U0001F381'
 
-    #print('anchor', path)
     if display_name.endswith('.placeholder'):
         a = '<a>{icon} {display}</a>'
     else:
@@ -347,7 +331,7 @@ def atag(path, display_name=None):
     )
     return a
 
-def generate_opendir(path):
+def generate_opendir(path, enable_zip):
     try:
         path.correct_case()
         items = path.listdir()
@@ -387,7 +371,7 @@ def generate_opendir(path):
         table_rows.append(entry)
         shaded = not shaded
 
-    if len(items) > 0:
+    if len(items) > 0 and enable_zip:
         entry = table_row(path.replace_extension('.zip'), display_name='zip', shaded=shaded)
         shaded = not shaded
         table_rows.append(entry)
@@ -396,21 +380,7 @@ def generate_opendir(path):
     text = OPENDIR_TEMPLATE.format(table_rows=table_rows)
     return text
 
-def generate_random_filename(original_filename='', length=8):
-    import random
-    bits = length * 44
-    bits = random.getrandbits(bits)
-    identifier = '{:x}'.format(bits).rjust(length, '0')
-    return identifier
-
-def random_hex(length=12):
-    randbytes = os.urandom(math.ceil(length / 2))
-    token = ''.join('{:02x}'.format(x) for x in randbytes)
-    token = token[:length]
-    return token
-
 def read_filebytes(path, range_min=None, range_max=None):
-    #print(path)
     if range_min is None:
         range_min = 0
 
@@ -419,7 +389,6 @@ def read_filebytes(path, range_min=None, range_max=None):
 
     range_span = range_max - range_min
 
-    #print('read span', range_min, range_max, range_span)
     f = path.open('rb')
     f.seek(range_min)
     sent_amount = 0
@@ -431,7 +400,6 @@ def read_filebytes(path, range_min=None, range_max=None):
         yield chunk
         sent_amount += len(chunk)
 
-    #print('I read', len(fr))
     f.close()
 
 def table_row(path, display_name=None, shaded=False):
@@ -449,7 +417,7 @@ def table_row(path, display_name=None, shaded=False):
         bg=bg,
         anchor=anchor,
         size=size,
-        )
+    )
     return row
 
 def path_to_url(path):
@@ -475,7 +443,7 @@ def zip_directory(path):
 
     return zipfile
 
-# COMMAND LINE ###################################################################################################
+# COMMAND LINE #####################################################################################
 
 DOCSTRING = '''
 simpleserver
@@ -498,6 +466,10 @@ flags:
     all future requests. This reduces security, because a single IP can be home
     to many different people, but increases convenience, because the user can
     use download managers / scripts where adding auth is not convenient.
+
+--enable_zip:
+    Add a 'zip' link to every directory and allow the user to download the
+    entire directory as a zip file.
 '''
 
 def simpleserver_argparse(args):
@@ -505,6 +477,7 @@ def simpleserver_argparse(args):
         port=args.port,
         password=args.password,
         authorize_by_ip=args.authorize_by_ip,
+        enable_zip=args.enable_zip,
     )
     server.start()
 
@@ -514,6 +487,7 @@ def main(argv):
     parser.add_argument('port', nargs='?', type=int, default=40000)
     parser.add_argument('--password', dest='password', default=None)
     parser.add_argument('--authorize_by_ip', '--authorize-by-ip', dest='authorize_by_ip', action='store_true')
+    parser.add_argument('--enable_zip', '--enable-zip', dest='enable_zip', action='store_true')
     parser.set_defaults(func=simpleserver_argparse)
 
     return betterhelp.single_main(argv, parser, DOCSTRING)
