@@ -3,6 +3,7 @@ import base64
 import cgi
 import http.cookies
 import http.server
+import math
 import mimetypes
 import os
 import sys
@@ -12,12 +13,12 @@ import zipstream
 
 from voussoirkit import betterhelp
 from voussoirkit import bytestring
+from voussoirkit import gentools
 from voussoirkit import passwordy
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter
 
-FILE_READ_CHUNK = bytestring.MIBIBYTE
-RATELIMITER = ratelimiter.Ratelimiter(16 * bytestring.MIBIBYTE)
+CHUNK_SIZE = bytestring.MIBIBYTE
 
 OPENDIR_TEMPLATE = '''
 <html>
@@ -56,8 +57,9 @@ TOKEN_COOKIE_NAME = 'simpleserver_token'
 # SERVER ###########################################################################################
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, request, client_info, server, individual_ratelimit):
+        self.individual_ratelimit = ratelimiter.Ratelimiter(individual_ratelimit)
+        super().__init__(request, client_info, server)
 
     @property
     def auth_cookie(self):
@@ -117,12 +119,16 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     def write(self, data):
         if isinstance(data, str):
             data = data.encode('utf-8')
-        if isinstance(data, types.GeneratorType):
-            for chunk in data:
-                self.wfile.write(chunk)
-                RATELIMITER.limit(len(chunk))
-        else:
-            self.wfile.write(data)
+
+        if isinstance(data, bytes):
+            databytes = data
+            data = (databytes[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] for i in range(math.ceil(len(data)/CHUNK_SIZE)))
+
+        for chunk in data:
+            self.wfile.write(chunk)
+            chunksize = len(chunk)
+            self.server.overall_ratelimit.limit(chunksize)
+            self.individual_ratelimit.limit(chunksize)
 
     def do_GET(self):
         if not self.check_has_password():
@@ -278,11 +284,22 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         return False
 
 class SimpleServer:
-    def __init__(self, port, password, authorize_by_ip, enable_zip):
+    def __init__(
+            self,
+            port,
+            *,
+            password,
+            authorize_by_ip,
+            enable_zip,
+            overall_ratelimit,
+            individual_ratelimit,
+        ):
         self.port = port
         self.password = password
         self.authorize_by_ip = authorize_by_ip
         self.enable_zip = enable_zip
+        self.overall_ratelimit = ratelimiter.Ratelimiter(overall_ratelimit)
+        self.individual_ratelimit = individual_ratelimit
 
         if authorize_by_ip:
             self.accepted_ips = set()
@@ -292,7 +309,9 @@ class SimpleServer:
             self.accepted_ips = None
 
     def make_request_handler(self, request, client_info, _server):
-        return RequestHandler(request, client_info, self)
+        # We ignore the given _server and use self instead because _server will
+        # be the ThreadingHTTPServer instance.
+        return RequestHandler(request, client_info, self, individual_ratelimit=self.individual_ratelimit)
 
     def start(self):
         server = http.server.ThreadingHTTPServer(('0.0.0.0', self.port), self.make_request_handler)
@@ -393,7 +412,7 @@ def read_filebytes(path, range_min=None, range_max=None):
     f.seek(range_min)
     sent_amount = 0
     while sent_amount < range_span:
-        chunk = f.read(FILE_READ_CHUNK)
+        chunk = f.read(CHUNK_SIZE)
         if len(chunk) == 0:
             break
 
@@ -470,6 +489,12 @@ flags:
 --enable_zip:
     Add a 'zip' link to every directory and allow the user to download the
     entire directory as a zip file.
+
+--overall_ratelimit X:
+    An integer number of bytes, the maximum bytes/sec of the server overall.
+
+--individual_ratelimit X:
+    An integer number of bytes, the maximum bytes/sec for any single request.
 '''
 
 def simpleserver_argparse(args):
@@ -478,6 +503,8 @@ def simpleserver_argparse(args):
         password=args.password,
         authorize_by_ip=args.authorize_by_ip,
         enable_zip=args.enable_zip,
+        overall_ratelimit=args.overall_ratelimit,
+        individual_ratelimit=args.individual_ratelimit,
     )
     server.start()
 
@@ -488,6 +515,8 @@ def main(argv):
     parser.add_argument('--password', dest='password', default=None)
     parser.add_argument('--authorize_by_ip', '--authorize-by-ip', dest='authorize_by_ip', action='store_true')
     parser.add_argument('--enable_zip', '--enable-zip', dest='enable_zip', action='store_true')
+    parser.add_argument('--overall_ratelimit', '--overall-ratelimit', type=bytestring.parsebytes, default=20*bytestring.MIBIBYTE)
+    parser.add_argument('--individual_ratelimit', '--individual-ratelimit', type=bytestring.parsebytes, default=10*bytestring.MIBIBYTE)
     parser.set_defaults(func=simpleserver_argparse)
 
     return betterhelp.single_main(argv, parser, DOCSTRING)
