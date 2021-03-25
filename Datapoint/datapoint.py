@@ -3,13 +3,19 @@ import tkinter
 
 
 class DataPoint:
-    def __init__(self, width=720, height=480, autostart=False):
+    def __init__(
+            self,
+            width=720,
+            height=480,
+            autostart=False,
+            title=None,
+        ):
+        self.title = title
         self.windowtitle = 'DataPoint'
 
         self.color_outbound = '#999'
         self.color_crossbar = '#bbb'
         self.color_point = '#000'
-        self.color_point_out = '#000'
         self.crossbar_count = 10
         self.point_diameter = 4
         self.margin = 0.10
@@ -20,10 +26,9 @@ class DataPoint:
         self.t.title(self.windowtitle)
         self.w = width
         self.h = height
-        self.windowx = (self.screen_width-self.w) / 2
-        self.windowy = ((self.screen_height-self.h) / 2) - 27
-        self.geometrystring = '%dx%d+%d+%d' % (self.w, self.h,
-                                               self.windowx, self.windowy)
+        self.windowx = int((self.screen_width-self.w) / 2)
+        self.windowy = int(((self.screen_height-self.h) / 2) - 27)
+        self.geometrystring = f'{self.w}x{self.h}+{self.windowx}+{self.windowy}'
         self.t.geometry(self.geometrystring)
 
         self.countdown = -1
@@ -106,7 +111,7 @@ class DataPoint:
         if self.countdown == 0:
             # Plot.
             if not self.resized:
-                self.plot_points([])
+                self.redraw()
                 self.resized = True
             return
 
@@ -114,7 +119,9 @@ class DataPoint:
         '''
         Set the DataPoint's grid attributes back to None.
         '''
-        self.POINTS = set()
+        self.total_points = set()
+        self.point_layers = []
+        self.graph_layer = 0
         self.lowest_x = None
         self.highest_x = None
         self.lowest_y = None
@@ -146,24 +153,48 @@ class DataPoint:
         '''
         Draw the dark margin.
         '''
-        self.c.create_rectangle(0, 0, self.window_width, self.window_height,
-                                fill=self.color_outbound)
-        self.c.create_rectangle(self.margin_x, self.margin_y,
-                                self.window_width - self.margin_x,
-                                self.window_height - self.margin_y,
-                                fill='SystemButtonFace')
-        self.coordinateslabel = self.c.create_text(8, 8, text='xy',
-                                                   anchor='nw',
-                                                   font=('Consolas', 10))
+        self.c.create_rectangle(
+            0,
+            0,
+            self.window_width,
+            self.window_height,
+            fill=self.color_outbound,
+        )
+        self.c.create_rectangle(
+            self.margin_x,
+            self.margin_y,
+            self.window_width - self.margin_x,
+            self.window_height - self.margin_y,
+            fill='SystemButtonFace',
+        )
+        self.coordinateslabel = self.c.create_text(
+            8,
+            8,
+            text='xy',
+            anchor='nw',
+            font=('Consolas', 10),
+        )
+
+    def draw_title(self):
+        if not self.title:
+            return
+
+        self.c.create_text(
+            int(self.window_width / 2),
+            int(self.margin_y / 2),
+            anchor='center',
+            text=self.title,
+            font=('Consolas', 20),
+        )
 
     def draw_labels(self):
         '''
         Draw the text labels along the axes.
         '''
-        if len(self.POINTS) == 0:
+        if len(self.total_points) == 0:
             return
-        if len(self.POINTS) == 1:
-            p = next(iter(self.POINTS))
+        if len(self.total_points) == 1:
+            p = next(iter(self.total_points))
             if p == self.origin:
                 return
             lp = self.transform_coord(*p)
@@ -182,11 +213,19 @@ class DataPoint:
 
         if self.highest_x != self.lowest_x:
             # LOW X
-            self.c.create_text(low_x+5, low_y+5,
-                               text=str(round(self.lowest_x, 4)), anchor='nw')
+            self.c.create_text(
+                low_x+5,
+                low_y+5,
+                text=str(round(self.lowest_x, 4)),
+                anchor='nw',
+            )
             # FAR X
-            self.c.create_text(hi_x+5, low_y+5,
-                               text=str(round(self.highest_x, 4)), anchor='nw')
+            self.c.create_text(
+                hi_x+5,
+                low_y+5,
+                text=str(round(self.highest_x, 4)),
+                anchor='nw',
+            )
 
             increment_x = (self.highest_x - self.lowest_x) / self.crossbar_count
             crossbartop = self.margin_y
@@ -194,31 +233,49 @@ class DataPoint:
             for x in range(1, self.crossbar_count):
                 x = (x * increment_x) + self.lowest_x
                 p = self.transform_coord(x, self.lowest_y)
-                self.c.create_line(p[0], crossbartop, p[0], crossbarbot,
-                                   fill=self.color_crossbar)
+                self.c.create_line(
+                    p[0],
+                    crossbartop,
+                    p[0],
+                    crossbarbot,
+                    fill=self.color_crossbar,
+                )
                 x = str(round(x, 3))
                 self.c.create_text(p[0], low_y+5, text=x, anchor='n')
 
         if self.highest_y != self.lowest_y:
             # LOW Y
-            self.c.create_text(low_x-5, low_y,
-                               text=str(round(self.lowest_y, 4)), anchor='se')
+            self.c.create_text(
+                low_x-5,
+                low_y,
+                text=str(round(self.lowest_y, 4)),
+                anchor='se',
+            )
             # UPPER Y
-            self.c.create_text(low_x-5, hi_y,
-                               text=str(round(self.highest_y, 4)), anchor='e')
+            self.c.create_text(
+                low_x-5,
+                hi_y,
+                text=str(round(self.highest_y, 4)),
+                anchor='e',
+            )
             increment_y = (self.highest_y - self.lowest_y) / self.crossbar_count
             crossbarlef = self.margin_x
             crossbarrgt = self.window_width - self.margin_x
             for y in range(1, self.crossbar_count):
                 y = (y * increment_y) + self.lowest_y
                 p = self.transform_coord(self.lowest_x, y)
-                self.c.create_line(crossbarlef, p[1], crossbarrgt, p[1],
-                                   fill=self.color_crossbar)
+                self.c.create_line(
+                    crossbarlef,
+                    p[1],
+                    crossbarrgt,
+                    p[1],
+                    fill=self.color_crossbar,
+                )
                 y = str(round(y, 3))
                 self.c.create_text(low_x-5, p[1], text=y, anchor='e')
 
     def draw_coordinateslabel(self, event):
-        if len(self.POINTS) < 2:
+        if len(self.total_points) < 2:
             return
         l = self.transform_coord(event.x, event.y, reverse=True)
         l = '%03.12f, %03.12f' % l
@@ -267,58 +324,71 @@ class DataPoint:
 
         return (x, y)
 
-    def plot_points(self, points=[]):
+    def plot_points(self, points, point_color=None):
         '''
         Plot points onto the canvas.
         var points = list, where each element is a 2-length tuple, where [0]
         is x and [1] is y coordinate.
         '''
-        original_len = len(self.POINTS)
-        for point in points:
-            self.POINTS.add(tuple(point))
+        if point_color is None:
+            point_color = self.color_point
 
+        layer_points = set()
+
+        for point in points:
+            point = tuple(point)
+            self.total_points.add(point)
+            layer_points.add(point)
+
+        self.point_layers.append((layer_points, point_color))
+        self.redraw()
+
+    def redraw(self):
         self.clear_screen()
         self.draw_margin()
-        if len(self.POINTS) == 0:
-            return
+        self.draw_title()
 
-        xs = [point[0] for point in self.POINTS]
-        ys = [point[1] for point in self.POINTS]
+        xs = [point[0] for point in self.total_points]
+        ys = [point[1] for point in self.total_points]
         self.lowest_x = min(xs)
         self.highest_x = max(xs)
         self.lowest_y = min(ys)
         self.highest_y = max(ys)
 
         self.span_x = abs(self.highest_x - self.lowest_x)
+        self.span_x = max(1, self.span_x)
+
         self.span_y = abs(self.highest_y - self.lowest_y)
-        if self.span_x == 0:
-            self.span_x = 1
-        if self.span_y == 0:
-            self.span_y = 1
+        self.span_y = max(1, self.span_y)
+
         self.drawable_w = self.window_width - (2 * self.margin_x)
         self.drawable_h = self.window_height - (2 * self.margin_y)
 
         self.draw_labels()
-        if len(self.POINTS) > 1 or self.origin in self.POINTS:
+        if len(self.total_points) > 1 or self.origin in self.total_points:
             p = self.transform_coord(*self.origin)
             self.draw_axes(*p)
 
-        for point in self.POINTS:
-            p = self.transform_coord(point[0], point[1])
-            x = p[0]
-            y = p[1]
+        for (layer_points, point_color) in self.point_layers:
+            for point in layer_points:
+                p = self.transform_coord(point[0], point[1])
+                x = p[0]
+                y = p[1]
 
-            r = self.point_diameter / 2
-            self.c.create_oval(x-r, y-r, x+r, y+r, fill=self.color_point,
-                               outline=self.color_point)
+                r = self.point_diameter / 2
+                self.c.create_oval(
+                    x-r,
+                    y-r,
+                    x+r,
+                    y+r,
+                    fill=point_color,
+                    outline=point_color,
+                )
             self.c.update()
-
-    def plot_point(self, x, y):
-        self.plot_points([[x, y]])
 
     def set_origin(self, x, y):
         self.origin = (x, y)
-        self.plot_points([])
+        self.redraw()
 
 
 def example(function):
