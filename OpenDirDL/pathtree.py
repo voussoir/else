@@ -262,7 +262,7 @@ def recursive_print_node(node, depth=0, use_html=False, header=None, footer=None
 def pathtree_argparse(args):
     from voussoirkit import safeprint
     from voussoirkit import spinal
-    paths = spinal.walk_generator()
+    paths = spinal.walk()
     paths = [{'path': path.absolute_path, 'size': path.size} for path in paths]
     tree = from_paths(paths, '.')
     recursive_get_size(tree)
