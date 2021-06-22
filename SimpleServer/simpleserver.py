@@ -25,7 +25,11 @@ OPENDIR_TEMPLATE = '''
 <body>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<style type="text/css">Body {{font-family:Consolas; word-break: break-word;}}</style>
+<style type="text/css">
+body {{font-family:Consolas;}}
+.column_name {{word-break: break-all;}}
+.column_size {{white-space: nowrap;}}
+</style>
 <table style="width: 100%">
 {table_rows}
 </table>
@@ -42,7 +46,7 @@ PASSWORD_PROMPT_HTML = '''
 <style type="text/css">Body {{font-family:Consolas}}</style>
 
 <form action="/password" method="post">
-    <input type="text" autocapitalize="off" name="password" placeholder="password" autocomplete="off"/>
+    <input type="text" autofocus autocapitalize="off" name="password" placeholder="password" autocomplete="off"/>
     <input type="hidden" name="goto" value="{goto}"/>
     <input type="submit" value="Submit"/>
 </form>
@@ -422,7 +426,11 @@ def read_filebytes(path, range_min=None, range_max=None):
     f.close()
 
 def table_row(path, display_name=None, shaded=False):
-    form = '<tr style="background-color:#{bg}"><td style="">{anchor}</td><td>{size}</td></tr>'
+    form = '''
+    <tr style="background-color:#{bg}">
+    <td class="column_name">{anchor}</td>
+    <td class="column_size">{size}</td></tr>
+    '''.replace('\n', ' ')
     if path.is_file:
         size = bytestring.bytestring(path.size)
     else:
