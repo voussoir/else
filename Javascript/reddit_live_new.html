@@ -16,7 +16,7 @@
 <body>
     <div id="control_panel">
         <input type="text" id="subreddit_field" placeholder="/r/learnpython" autofocus>
-        <button id="start_button" onclick="start()">Start</button>
+        <button id="start_button" onclick="start_button()">Start</button>
         <a id="browser_link"></a>
         <button id="clear_button" onclick="clear_workspace()">Clear workspace</button>
     </div>
@@ -41,11 +41,14 @@ body
     padding: 5px;
 }
 
-
 #control_panel
 {
     background-color: #284142;
     padding: 5px;
+}
+#control_panel.error
+{
+    background-color: #f00;
 }
 
 .submission .text
@@ -107,26 +110,26 @@ a:hover
     http://www.html5rocks.com/en/tutorials/pagevisibility/intro/
 */
 
-var CHECK_DELAY = 30 * 1000;
-var CONTROL_PANEL = document.getElementById("control_panel");
-CONTROL_PANEL.default_color = CONTROL_PANEL.style.backgroundColor;
-var WORKSPACE = document.getElementById("workspace");
+const CHECK_DELAY = 30 * 1000;
+const CONTROL_PANEL = document.getElementById("control_panel");
+const WORKSPACE = document.getElementById("workspace");
 
-var id_cache = [];
-var id_cache_size = 20;
+const ID_CACHE = [];
+const ID_CACHE_SIZE = 20;
 
-var first_loop = true;
-var unread_notification_count = 0;
-var subreddit = "";
-var check_timer = null;
+let FIRST_LOOP = true;
+let UNREAD_NOTIFICATION_COUNT = 0;
+let SUBREDDIT = "";
+let CHECK_TIMER = null;
 
-var page_focused_cached;
+let PAGE_FOCUSED_CACHED;
+
 
 function bind_box_to_button(box, button, ctrl_enter)
 {
     // Thanks Yaroslav Yakovlev
     // http://stackoverflow.com/a/9343095
-    var bound_box_hook = function(event)
+    const bound_box_hook = function(event)
     {
         if (event.key !== "Enter")
             {return;}
@@ -143,13 +146,13 @@ function bind_box_to_button(box, button, ctrl_enter)
 
 bind_box_to_button(document.getElementById("subreddit_field"), document.getElementById("start_button"));
 
-var HTTPClient = function()
+const HTTPClient = function()
 {
     /* Thanks ttgagne http://stackoverflow.com/a/22076667 */
-    var asynchronous = true;
+    const asynchronous = true;
     this.get = function(url, callback)
     {
-        var request = new XMLHttpRequest();
+        const request = new XMLHttpRequest();
         request.onreadystatechange = function()
         {
             // console.log(request.readyState);
@@ -158,12 +161,12 @@ var HTTPClient = function()
             {
                 if (request.status == 200)
                 {
-                    CONTROL_PANEL.style.backgroundColor = CONTROL_PANEL.default_color;
+                    CONTROL_PANEL.classList.remove("error");
                     callback(request.responseText);
                 }
                 else
                 {
-                    CONTROL_PANEL.style.backgroundColor = "#f00";
+                    CONTROL_PANEL.classList.add("error");
                 }
             }
         }
@@ -172,26 +175,27 @@ var HTTPClient = function()
         request.send(null);
     }
 }
+const session = new HTTPClient();
 
 function create_submission_div(submission)
 {
-    var div = document.createElement("div");
+    const div = document.createElement("div");
     div.className = "submission";
 
-    var anchor = document.createElement("a");
+    const anchor = document.createElement("a");
     anchor.innerHTML = "/r/" + submission["subreddit"] + " - " + submission["title"];
     anchor.href = "https://reddit.com/r/" + submission["subreddit"] + "/comments/" + submission["id"];
     anchor.target = "_blank";
 
-    var text = document.createElement("div");
+    const text = document.createElement("div");
     text.className = "text";
-    var template = document.createElement("template");
-    var txt = document.createElement("textarea");
+    const template = document.createElement("template");
+    const txt = document.createElement("textarea");
     txt.innerHTML = unescape(submission["selftext_html"]);
     template.innerHTML = txt.value;
     text.appendChild(template.content);
 
-    var delete_button = document.createElement("button");
+    const delete_button = document.createElement("button");
     delete_button.className = "delete_button";
     delete_button.div = div;
     delete_button.innerHTML = "X";
@@ -199,10 +203,6 @@ function create_submission_div(submission)
     {
         this.div.parentElement.removeChild(this.div);
     }
-
-    // var timestamp = document.createElement("span");
-    // var submission_time = new Date(submission["created_utc"])
-    // timestamp.innerHTML = "" + submission_time.getHours() + ":" + submission_time.getMinutes();
 
     div.appendChild(anchor);
     div.appendChild(text);
@@ -212,21 +212,21 @@ function create_submission_div(submission)
 
 function apply_to_page(response_json)
 {
-    var j = JSON.parse(response_json);
-    var submissions = j["data"]["children"];
+    const j = JSON.parse(response_json);
+    const submissions = j["data"]["children"];
     submissions.reverse();  // newest last
-    var new_items = 0;
-    for (var index = 0; index < submissions.length; index += 1)
+    let new_items = 0;
+    for (let submission of submissions)
     {
-        var submission = submissions[index]["data"];
-        if (id_cache.includes(submission["id"]))
+        submission = submission["data"];
+        if (ID_CACHE.includes(submission["id"]))
         {
             continue;
         }
 
-        id_cache.push(submission["id"]);
+        ID_CACHE.push(submission["id"]);
 
-        if (first_loop)
+        if (FIRST_LOOP)
         {
             continue;
         }
@@ -238,36 +238,36 @@ function apply_to_page(response_json)
         // WORKSPACE.appendChild(div);
     }
     console.log("+" + new_items);
-    if (new_items > 0 && !page_focused_cached)
+    if (new_items > 0 && !PAGE_FOCUSED_CACHED)
     {
-        unread_notification_count += new_items;
+        UNREAD_NOTIFICATION_COUNT += new_items;
         update_title();
     }
 
-    while (id_cache.length < id_cache_size)
+    while (ID_CACHE.length < ID_CACHE_SIZE)
     {
-        id_cache.shift();
+        ID_CACHE.shift();
     }
 
-    first_loop = false;
+    FIRST_LOOP = false;
 }
 
 function check_forever()
 {
-    clearTimeout(check_timer);
+    clearTimeout(CHECK_TIMER);
     check_once();
-    check_timer = setTimeout(check_forever, CHECK_DELAY);
+    CHECK_TIMER = setTimeout(check_forever, CHECK_DELAY);
 }
 
 function check_once()
 {
-    console.log("checking");
-    if (subreddit == "")
+    if (SUBREDDIT == "")
     {
         console.log("no subreddit");
         return;
     }
-    var url = "https://api.reddit.com" + subreddit + "/new.json";
+    const url = "https://api.reddit.com" + SUBREDDIT + "/new.json";
+    console.log(`Checking ${url}`);
     session.get(url, apply_to_page);
 }
 
@@ -283,24 +283,24 @@ function on_focus_change()
 {
     if (page_focused_fresh())
     {
-        unread_notification_count = 0;
+        UNREAD_NOTIFICATION_COUNT = 0;
         update_title();
     }
 }
 
 function page_focused_fresh()
 {
-    var property = visibility_property();
+    const property = visibility_property();
     if (!property)
     {
-        page_focused_cached = true;
+        PAGE_FOCUSED_CACHED = true;
         return true;
     }
     else
     {
-        page_focused_cached = !document[property];
+        PAGE_FOCUSED_CACHED = !document[property];
     }
-    return page_focused_cached;
+    return PAGE_FOCUSED_CACHED;
 }
 
 function sort_submission_comparator(submission_1, submission_2)
@@ -315,21 +315,28 @@ function sort_submission_comparator(submission_1, submission_2)
     return 0;
 }
 
-function start()
+function start_button()
+{
+    const subreddit = document.getElementById("subreddit_field").value.trim();
+    if (subreddit !== "")
+    {
+        return start(subreddit);
+    }
+}
+
+function start(subreddit)
 {
     console.log("start");
-    first_loop = true;
+    FIRST_LOOP = true;
     clear_workspace();
-    var field = document.getElementById("subreddit_field");
-    var text = field.value;
-    text = text.replace("/u/", "/user/");
-    if (text.indexOf("/") == -1)
+    subreddit = subreddit.replace("/u/", "/user/");
+    if (subreddit.indexOf("/") == -1)
     {
-        text = "/r/" + text;
+        subreddit = "/r/" + subreddit;
     }
-    subreddit = text;
-    var link = document.getElementById("browser_link");
-    var url = "https://reddit.com" + subreddit + "/new";
+    SUBREDDIT = subreddit;
+    const link = document.getElementById("browser_link");
+    const url = "https://reddit.com" + SUBREDDIT + "/new";
     link.href = url;
     link.innerHTML = url;
     update_title();
@@ -338,42 +345,52 @@ function start()
 
 function update_title()
 {
-    var title = subreddit + "/new";
-    if (unread_notification_count > 0)
+    let title = SUBREDDIT + "/new";
+    if (UNREAD_NOTIFICATION_COUNT > 0)
     {
-        title = "(" + unread_notification_count + ") " + title;
+        title = "(" + UNREAD_NOTIFICATION_COUNT + ") " + title;
     }
     document.title = title;
 }
 
 function visibility_property()
 {
-    var prefixes = ["webkit","moz","ms","o"];
+    const prefixes = ["webkit", "moz", "ms", "o"];
     
     if ("hidden" in document)
     {
         return "hidden";
     }
 
-    for (var i = 0; i < prefixes.length; i++)
+    for (const prefix of prefixes)
     {
-        hidden_attribute = prefixes[i] + "Hidden";
-        if ((hidden_attribute) in document) 
+        const hidden_attribute = prefix + "Hidden";
+        if (hidden_attribute in document)
+        {
             return hidden_attribute;
+        }
     }
 
     return null;
 }
 
-
 page_focused_fresh();
 
-var my_visibility_property = visibility_property();
+const my_visibility_property = visibility_property();
 if (my_visibility_property)
 {
-      var my_event_name = my_visibility_property.replace(/[H|h]idden/,'') + 'visibilitychange';
+      const my_event_name = my_visibility_property.replace(/[H|h]idden/,'') + 'visibilitychange';
       document.addEventListener(my_event_name, on_focus_change);
 }
 
-var session = new HTTPClient();
+function on_pageload()
+{
+    const url_params = new URLSearchParams(window.location.search);
+    const subreddit = (url_params.get('subreddit') || "").trim();
+    if (subreddit !== "")
+    {
+        start(subreddit);
+    }
+}
+document.addEventListener("DOMContentLoaded", on_pageload);
 </script>
