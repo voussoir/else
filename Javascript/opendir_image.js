@@ -20,8 +20,8 @@ var has_started = false;
 var CSS = `
 body { background-color: #fff; }
 audio, video { display: block; }
-audio { width: ${audio_width}px; }
-video { height: ${video_height}px; }
+audio { width: ${audio_width}px; max-width: 100% }
+video { height: ${video_height}px; max-width: 100% }
 img { display: block; height: ${image_height}px; max-width: 100%; }
 a { color: #000 !important; }
 .control_panel { position: relative; background-color: #aaa; min-height: 10px; width: 100%; }
@@ -145,7 +145,7 @@ function create_odi_div(url)
 
     try
     {
-        var basename = decodeURI(get_basename(url));
+        var basename = decodeURIComponent(get_basename(url));
     }
     catch (exc)
     {
