@@ -22,7 +22,8 @@ CHUNK_SIZE = bytestring.MIBIBYTE
 
 OPENDIR_TEMPLATE = '''
 <html>
-<body>
+<head>
+<title>{title}</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <style type="text/css">
@@ -30,6 +31,9 @@ body {{font-family:Consolas;}}
 .column_name {{word-break: break-all;}}
 .column_size {{white-space: nowrap;}}
 </style>
+</head>
+
+<body>
 <table style="width: 100%">
 {table_rows}
 </table>
@@ -378,7 +382,8 @@ def generate_opendir(path, enable_zip):
 
     shaded = False
 
-    if path.absolute_path == ROOT_DIRECTORY.absolute_path:
+    is_root = path.absolute_path == ROOT_DIRECTORY.absolute_path
+    if is_root:
         # This is different than a permission check, we're seeing if they're
         # actually at the top, in which case they don't need an up button.
         entry = table_row(path, display_name='.', shaded=shaded)
@@ -400,7 +405,8 @@ def generate_opendir(path, enable_zip):
         table_rows.append(entry)
 
     table_rows = '\n'.join(table_rows)
-    text = OPENDIR_TEMPLATE.format(table_rows=table_rows)
+    title = '/' if is_root else path.basename
+    text = OPENDIR_TEMPLATE.format(title=title, table_rows=table_rows)
     return text
 
 def read_filebytes(path, range_min=None, range_max=None):
