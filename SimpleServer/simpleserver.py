@@ -523,7 +523,7 @@ def simpleserver_argparse(args):
     server.start()
 
 def main(argv):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DOCSTRING)
 
     parser.add_argument('port', nargs='?', type=int, default=40000)
     parser.add_argument('--password', dest='password', default=None)
