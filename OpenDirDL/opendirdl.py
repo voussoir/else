@@ -663,6 +663,7 @@ def download(
         cur.execute('SELECT url FROM urls LIMIT 1')
         url = cur.fetchone()[0]
         outputdir = url_split(url)['domain']
+        outputdir = outputdir.replace(':', '#')
 
     if isinstance(bytespersecond, str):
         bytespersecond = bytestring.parsebytes(bytespersecond)
