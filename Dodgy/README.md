@@ -19,7 +19,7 @@ Hats.
 
 Enemies move faster as the game goes on
 
-Randomzied walls in the middle of the arena
+Randomized walls in the middle of the arena
 
 Arena walls may be boobytrapped. Running alongside a wall may result in death/stun to disincentivize this tactic
 
