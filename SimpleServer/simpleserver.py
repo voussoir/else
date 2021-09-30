@@ -323,7 +323,7 @@ class SimpleServer:
 
     def start(self):
         server = http.server.ThreadingHTTPServer(('0.0.0.0', self.port), self.make_request_handler)
-        print(f'Server starting on {self.port}')
+        print(f'Server starting on {self.port}, pid={os.getpid()}.')
         try:
             server.serve_forever()
         except KeyboardInterrupt:
