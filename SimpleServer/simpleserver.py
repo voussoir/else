@@ -116,7 +116,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if self.auth_header == self.server.password:
             return True
 
-        if self.server.accepted_tokens is not None and self.auth_cookie in self.server.accepted_tokens:
+        cookie = self.auth_cookie
+        if isinstance(cookie, http.cookies.Morsel):
+            cookie = cookie.value
+
+        if self.server.accepted_tokens is not None and cookie in self.server.accepted_tokens:
             return True
 
         if self.server.accepted_ips is not None and self.remote_addr in self.server.accepted_ips:
