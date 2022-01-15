@@ -467,6 +467,7 @@ def path_to_url(path):
 def url_to_path(path):
     path = urllib.parse.unquote(path)
     path = path.strip('/')
+    path = path.split('?')[0]
     return pathclass.Path(path)
 
 def zip_directory(path):
