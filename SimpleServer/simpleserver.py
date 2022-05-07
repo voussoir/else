@@ -545,7 +545,7 @@ def main(argv):
         '--overall_ratelimit',
         '--overall-ratelimit',
         type=bytestring.parsebytes,
-        default=20*bytestring.MIBIBYTE,
+        default=200*bytestring.MIBIBYTE,
         help='''
         The maximum bytes/sec of the server overall.
         ''',
@@ -554,7 +554,7 @@ def main(argv):
         '--individual_ratelimit',
         '--individual-ratelimit',
         type=bytestring.parsebytes,
-        default=10*bytestring.MIBIBYTE,
+        default=100*bytestring.MIBIBYTE,
         help='''
         The maximum bytes/sec for any single request.
         ''',
