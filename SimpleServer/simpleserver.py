@@ -203,9 +203,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             response = read_filebytes(path, range_min=range_min, range_max=range_max)
 
         elif path.is_dir:
-            headers['Content-type'] = 'text/html'
-            response = generate_opendir(path, enable_zip=self.server.enable_zip)
-            response = response.encode('utf-8')
+            if self.server.enable_directory_listings:
+                headers['Content-type'] = 'text/html'
+                response = generate_opendir(path, enable_zip=self.server.enable_zip)
+                response = response.encode('utf-8')
+            else:
+                status_code = 404
+                self.send_error(status_code)
+                response = bytes()
 
         elif self.path.endswith('.zip') and self.server.enable_zip:
             path = url_to_path(self.path.rsplit('.zip', 1)[0])
@@ -303,12 +308,14 @@ class SimpleServer:
             password,
             authorize_by_ip,
             enable_zip,
+            enable_directory_listings,
             overall_ratelimit,
             individual_ratelimit,
         ):
         self.port = port
         self.password = password
         self.authorize_by_ip = authorize_by_ip
+        self.enable_directory_listings = enable_directory_listings
         self.enable_zip = enable_zip
         self.overall_ratelimit = ratelimiter.Ratelimiter(overall_ratelimit)
         self.individual_ratelimit = individual_ratelimit
@@ -489,6 +496,7 @@ def simpleserver_argparse(args):
         password=args.password,
         authorize_by_ip=args.authorize_by_ip,
         enable_zip=args.enable_zip,
+        enable_directory_listings=args.enable_directory_listings,
         overall_ratelimit=args.overall_ratelimit,
         individual_ratelimit=args.individual_ratelimit,
     )
@@ -548,6 +556,17 @@ def main(argv):
         default=200*bytestring.MIBIBYTE,
         help='''
         The maximum bytes/sec of the server overall.
+        ''',
+    )
+    parser.add_argument(
+        '--no_directories',
+        '--no-directories',
+        dest='enable_directory_listings',
+        action='store_false',
+        default=True,
+        help='''
+        Disable the generation of directory listing pages. They will return 404
+        instead. The visitor must have the exact link to a file.
         ''',
     )
     parser.add_argument(
