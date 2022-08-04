@@ -298,10 +298,12 @@ def handle_vidme(url, customname=None):
     pagedata = pagedata[0]
     pagedata = pagedata.split('content="')[1].split('"')[0]
     pagedata = pagedata.replace('&amp;', '&')
-    headers = {'Referer': 'https://vid.me/',
-               'Range':'bytes=0-',
-               'Host':'d1wst0behutosd.cloudfront.net',
-               'Cache-Control':'max-age=0'}
+    headers = {
+        'Referer': 'https://vid.me/',
+        'Range':'bytes=0-',
+        'Host':'d1wst0behutosd.cloudfront.net',
+        'Cache-Control':'max-age=0'
+    }
 
     return download_file(pagedata, customname, headers=headers)
 
@@ -387,7 +389,7 @@ HANDLERS = {
     'youtube.com': handle_youtube,
     'youtu.be': handle_youtube,
     'twitter.com': handle_twitter
-    }
+}
 
 def handle_master(url, customname=None):
     print('Handling %s' % url)
