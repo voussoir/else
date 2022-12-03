@@ -10,7 +10,7 @@ from voussoirkit import bytestring
 from voussoirkit import downloady
 from voussoirkit import pipeable
 
-DEFAULT_PIECE_SIZE = bytestring.MIBIBYTE
+DEFAULT_PIECE_SIZE = bytestring.MEBIBYTE
 DEFAULT_THREAD_COUNT = 10
 
 def init(url, localname=None, piece_size=DEFAULT_PIECE_SIZE):

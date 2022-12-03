@@ -41,7 +41,7 @@ def decrypt_file(aes, input_handle, output_handle):
             last_byte = chunk[-1]
             while chunk and chunk[-1] == last_byte:
                 chunk = chunk[:-1]
-        if bytes_read % bytestring.MIBIBYTE == 0:
+        if bytes_read % bytestring.MEBIBYTE == 0:
             print(bytestring.bytestring(bytes_read))
         output_handle.write(chunk)
 
@@ -59,7 +59,7 @@ def encrypt_file(aes, input_handle, output_handle):
             chunk += pad_byte * (BLOCK_SIZE - len(chunk))
             done = True
         bytes_read += len(chunk)
-        if bytes_read % bytestring.MIBIBYTE == 0:
+        if bytes_read % bytestring.MEBIBYTE == 0:
             print(bytestring.bytestring(bytes_read))
         chunk = aes.encrypt(chunk)
         output_handle.write(chunk)

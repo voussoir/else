@@ -18,7 +18,7 @@ from voussoirkit import passwordy
 from voussoirkit import pathclass
 from voussoirkit import ratelimiter
 
-CHUNK_SIZE = bytestring.MIBIBYTE
+CHUNK_SIZE = bytestring.MEBIBYTE
 
 OPENDIR_TEMPLATE = '''
 <html>
@@ -553,7 +553,7 @@ def main(argv):
         '--overall_ratelimit',
         '--overall-ratelimit',
         type=bytestring.parsebytes,
-        default=200*bytestring.MIBIBYTE,
+        default=200*bytestring.MEBIBYTE,
         help='''
         The maximum bytes/sec of the server overall.
         ''',
@@ -573,7 +573,7 @@ def main(argv):
         '--individual_ratelimit',
         '--individual-ratelimit',
         type=bytestring.parsebytes,
-        default=100*bytestring.MIBIBYTE,
+        default=100*bytestring.MEBIBYTE,
         help='''
         The maximum bytes/sec for any single request.
         ''',
