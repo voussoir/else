@@ -18,6 +18,8 @@ VIDEO_TYPES = new RegExp(VIDEO_TYPES, "i");
 var has_started = false;
 
 var CSS = `
+* { box-sizing: inherit; }
+html { box-sizing: border-box; }
 body { background-color: #fff; }
 audio, video { display: block; }
 audio { width: ${audio_width}px; max-width: 100% }
@@ -30,7 +32,7 @@ a { color: #000 !important; }
 .delete_button { color: #d00; font-family: Arial; font-size: 11px; left: 0; position: absolute; top: 0; width: 25px; }
 .ingest { position:absolute; right: 5px; top: 5px; height: 100%; width: 30% }
 .ingestbox { position:relative; height: 75%; width:100%; box-sizing: border-box; }
-.urldumpbox { overflow-y: scroll; height: 300px; width: 90% }
+.urldumpbox { overflow-y: scroll; height: 300px; width: 100% }
 .load_button { position: absolute; top: 10%; width: 100%; height: 80%; word-wrap: break-word; }
 .odi_anchor { display: block; }
 .odi_image_div, .odi_media_div { display: inline-block; margin: 5px; float: left; position: relative; background-color: #aaa; }
@@ -281,6 +283,7 @@ function create_odi_div(url)
     button.onclick = function()
     {
         delete_odi_div(this);
+        dump_urls();
     };
     div.appendChild(button);
     return div;
@@ -332,7 +335,7 @@ function create_workspace()
     var heightfilter = create_command_box_button("heightfilter", "min height", filter_height);
     var widthfilter = create_command_box_button("widthfilter", "min width", filter_width);
     var sorter = create_command_button("sort size", sort_size);
-    var dumper = create_command_button("dump urls", dump_urls);
+    /*var dumper = create_command_button("dump urls", dump_urls);*/
     var ingest_box = document.createElement("textarea");
     var ingest_button = create_command_button("ingest", ingest);
     var start_button = create_command_button("load all", function(){start();});
@@ -362,7 +365,7 @@ function create_workspace()
     control_panel.appendChild(heightfilter);
     control_panel.appendChild(widthfilter);
     control_panel.appendChild(sorter);
-    control_panel.appendChild(dumper);
+    /*control_panel.appendChild(dumper);*/
     control_panel.appendChild(ingest_div);
     control_panel.appendChild(start_button);
     document.body.appendChild(workspace);
@@ -431,6 +434,7 @@ function filter_dimension(dimension, minimum)
             continue;
         }
     }
+    dump_urls();
 }
 
 function filter_height(minimum)
@@ -462,6 +466,32 @@ function filter_re(pattern, do_delete)
             delete_odi_div(div);
         }
     }
+    dump_urls();
+}
+
+const REJECT_PATTERNS = [
+    "fuskator.com/images/",
+    "fuskator.com/small/",
+    "thumbs.redditmedia",
+    "redditstatic.com/mailgray.png",
+    "redditstatic.com/start_chat.png",
+    "preview.redd.it/award_images",
+    "redditstatic.com/gold/awards",
+    "pixel.reddit",
+    "/thumb/",
+    "/loaders/",
+    "memegen",
+];
+
+function match_any_reject(url)
+{
+    for (const pattern of REJECT_PATTERNS)
+    {
+        if (url.match(pattern))
+        {
+            return true;
+        }
+    }
 }
 
 function get_all_urls()
@@ -479,27 +509,11 @@ function get_all_urls()
             if (seen_urls.has(url))
                 {continue;}
             console.log(url);
-            if (url.indexOf("thumbs.redditmedia") != -1)
-                {console.log("Rejecting reddit thumb"); continue;}
-            if (url.indexOf("redditstatic.com/mailgray.png") != -1)
-                {console.log("Rejecting reddit icons"); continue;}
-            if (url.indexOf("redditstatic.com/start_chat.png") != -1)
-                {console.log("Rejecting reddit icons"); continue;}
-            if (url.indexOf("preview.redd.it/award_images") != -1)
-                {console.log("Rejecting reddit awards"); continue;}
-            if (url.indexOf("redditstatic.com/gold/awards") != -1)
-                {console.log("Rejecting reddit awards"); continue;}
-            if (url.indexOf("pixel.reddit") != -1 || url.indexOf("reddit.com/static/pixel") != -1)
-                {console.log("Rejecting reddit pixel"); continue}
-            if (url.indexOf("/thumb/") != -1)
-                {console.log("Rejecting /thumb/"); continue;}
-            if (url.indexOf("/loaders/") != -1)
-                {console.log("Rejecting loader"); continue;}
-            if (url.indexOf("memegen") != -1)
-                {console.log("Rejecting retardation"); continue;}
-            if (url.indexOf("4cdn") != -1 && url.indexOf("s.jpg") != -1)
-                {console.log("Rejecting 4chan thumb"); continue;}
-
+            if (match_any_reject(url))
+            {
+                console.log("Rejecting.");
+                continue;
+            }
             sub_urls = normalize_url(url);
             if (sub_urls == null)
                 {continue;}
@@ -688,15 +702,19 @@ function lazy_load_one(element, comeback)
         width = this.naturalWidth;
         height = this.naturalHeight;
         if (width == 161 && height == 81)
-            {delete_odi_div(this);}
+        {
+            delete_odi_div(this);
+        }
         this.arealabel.innerHTML = width + " x " + height;
         this.odi_div.style.minWidth = "0px";
         if (comeback){lazy_load_all()};
+        dump_urls();
     };
     image.onerror = function()
     {
         delete_odi_div(this);
         if (comeback){lazy_load_all()};
+        dump_urls();
     };
     /*console.log("Lazy loading " + element.lazy_src)*/
     image.src = image.lazy_src;
@@ -869,6 +887,7 @@ function main()
     var divs = create_odi_divs(all_urls);
     create_workspace();
     fill_workspace(divs);
+    dump_urls();
 }
 
 main();
