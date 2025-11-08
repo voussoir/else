@@ -10,7 +10,7 @@ function give_event(player, index)
     players[index].addEventListener("ended", function(){ console.log(next); players[next].play(); });
 }
 
-players = document.getElementsByTagName("audio");
+players = Array.from(document.getElementsByTagName("audio"));
 /*length - 1 because the final player doesn't need an event, only the second-last.*/
 for (var index = 0; index < players.length - 1; index += 1)
 {
