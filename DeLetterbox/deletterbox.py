@@ -25,10 +25,8 @@ def deletterbox(filename):
         #image.save('%s_%d%s' % (base, x, ext))
 
         rotated = image.rotate(90, expand=True)
-        # There is currently a bug in PIL which causes rotated images
-        # to have a 1 px black border on the top and left
         if rotated.size != image.size:
-            rotated = rotated.crop([1, 1, rotated.size[0], rotated.size[1]])
+            rotated = rotated.crop([0, 0, rotated.size[0], rotated.size[1]])
 
         image = rotated
         print()
@@ -54,7 +52,4 @@ def trim_top(image):
     image = image.crop(bounds)
     return image
 
-
-
 deletterbox(filename)
-
